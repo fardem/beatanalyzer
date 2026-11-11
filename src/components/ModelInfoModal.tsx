@@ -54,7 +54,7 @@ export const ModelInfoModal: React.FC<ModelInfoModalProps> = ({ onClose }) => {
           <div className="space-y-3">
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
               <Layers className="w-4 h-4 text-indigo-400" />
-              Warum BeatThis konventionellen Beat-Trackern überlegen ist
+              Warum beat_this konventionellen Beat-Trackern überlegen ist
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-1">

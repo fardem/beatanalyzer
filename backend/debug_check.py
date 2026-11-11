@@ -1,5 +1,5 @@
 """
-Diagnose-Skript für BeatThis
+Diagnose-Skript für BeatAnalyzer
 Prüft alle Python-Module und gibt Systeminformationen aus.
 """
 

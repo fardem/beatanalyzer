@@ -1,5 +1,5 @@
 """
-BeatThis Python Backend Server
+BeatAnalyzer Python Backend Server
 Verwendet den nativen Python HTTP-Server (http.server.ThreadingHTTPServer)
 100% frei von Pydantic/FastAPI-Abhängigkeitsproblemen, voll kompatibel mit Python 3.9 bis 3.13+
 """
@@ -113,7 +113,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeatThis - CPJKU beat_this Audio Analyzer</title>
+    <title>BeatAnalyzer - CPJKU beat_this Audio Analyzer</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: #030712; color: #f8fafc; min-height: 100vh; padding: 20px; }
@@ -166,7 +166,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
             <div class="logo">
                 <div class="logo-icon">🎵</div>
                 <div>
-                    <h1>BeatThis <span>CPJKU Transformer</span></h1>
+                    <h1>BeatAnalyzer <span>CPJKU Transformer</span></h1>
                 </div>
             </div>
             <div class="badge-engine" id="engineBadge">Python Server aktiv</div>
@@ -268,7 +268,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
                     <div class="export-box" style="border-color:#be123c;">
                         <div>
                             <h4><span style="color:#f43f5e;">🔴</span> DaVinci Resolve Marker (JSON)</h4>
-                            <p>Fuer das Skript <em>BeatThis_Markers.lua</em>: Clip im Media Pool waehlen, dann <em>Workspace → Scripts → BeatThis_Markers</em>.</p>
+                            <p>Fuer das Skript <em>BeatAnalyzer_Markers.lua</em>: Clip im Media Pool waehlen, dann <em>Workspace → Scripts → BeatAnalyzer_Markers</em>.</p>
                         </div>
                         <button class="btn-dl" id="btnDlResolve">Resolve Marker-JSON (.json)</button>
                     </div>
@@ -641,7 +641,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
 class BeatThisRequestHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         if "GET /api" in args[0] or "POST /api" in args[0]:
-            print(f"[BeatThis Server] {self.address_string()} - {args[0]}")
+            print(f"[BeatAnalyzer Server] {self.address_string()} - {args[0]}")
 
     def send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -756,7 +756,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
                 self.send_error_json(400, "Keine gültige Audiodatei empfangen.")
                 return
 
-            print(f"[BeatThis Server] Starte Analyse für: {filename} ({len(file_bytes)} Bytes)...")
+            print(f"[BeatAnalyzer Server] Starte Analyse für: {filename} ({len(file_bytes)} Bytes)...")
 
             temp_path = os.path.join(TEMP_DIR, f"track_{os.getpid()}_{filename}")
             with open(temp_path, "wb") as f_out:
@@ -771,7 +771,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
                 self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(body)
-                print(f"[BeatThis Server] Analyse erfolgreich für: {filename} ({result.get('globalBpm')} BPM)")
+                print(f"[BeatAnalyzer Server] Analyse erfolgreich für: {filename} ({result.get('globalBpm')} BPM)")
             finally:
                 if os.path.exists(temp_path):
                     try:
@@ -785,7 +785,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
     def handle_resolve_install(self):
         try:
             target = resolve_plugin.install()
-            print(f"[BeatThis Server] Resolve-Skript installiert: {target}")
+            print(f"[BeatAnalyzer Server] Resolve-Skript installiert: {target}")
             self.send_json(200, resolve_plugin.status())
         except Exception as e:
             traceback.print_exc()
@@ -829,7 +829,7 @@ def main():
     httpd = ServerClass(server_address, BeatThisRequestHandler)
 
     print("======================================================================")
-    print("      BeatThis - Lokaler Audio-Analyzer Server gestartet")
+    print("      BeatAnalyzer - Lokaler Audio-Analyzer Server gestartet")
     print("======================================================================")
     print(f" URL:            http://localhost:{port}")
     print(f" Version:        {APP_VERSION}")

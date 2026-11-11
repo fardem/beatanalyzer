@@ -157,7 +157,7 @@ export interface ResolveMarkerOptions {
 }
 
 /**
- * Marker-JSON für resolve/BeatThis_Markers.lua.
+ * Marker-JSON für resolve/BeatAnalyzer_Markers.lua.
  * Zeiten in Sekunden ab Anfang der Audiodatei; das Skript rechnet sie mit der Bildrate des Clips in Frames um.
  */
 export function generateResolveMarkerJson(

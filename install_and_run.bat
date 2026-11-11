@@ -1,21 +1,21 @@
 @echo off
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
-title BeatThis - Installation & Start mit Logging (Windows)
+title BeatAnalyzer - Installation & Start mit Logging (Windows)
 color 0B
 
 set "LOGFILE=%~dp0install_log.txt"
 
 :: Initialisiere Log-Datei mit Zeitstempel
 echo ====================================================================== > "%LOGFILE%"
-echo  BeatThis Windows Installation Log >> "%LOGFILE%"
+echo  BeatAnalyzer Windows Installation Log >> "%LOGFILE%"
 echo  Startzeit: %DATE% %TIME% >> "%LOGFILE%"
 echo  Ordner:    %~dp0 >> "%LOGFILE%"
 echo ====================================================================== >> "%LOGFILE%"
 echo. >> "%LOGFILE%"
 
 echo ======================================================================
-echo          BeatThis - CPJKU beat_this Lokale Installation
+echo          BeatAnalyzer - CPJKU beat_this Lokale Installation
 echo          Beat- & Downbeat-Erkennung in isolierter Python-Umgebung
 echo ======================================================================
 echo  Ein ausfuehrliches Protokoll wird gespeichert in:
@@ -199,14 +199,14 @@ if !errorlevel! neq 0 (
 :: DAVINCI RESOLVE SKRIPT (nur wenn Resolve installiert ist)
 :: ----------------------------------------------------------------------
 echo.
-echo Pruefe DaVinci Resolve und installiere/aktualisiere BeatThis_Markers.lua...
+echo Pruefe DaVinci Resolve und installiere/aktualisiere BeatAnalyzer_Markers.lua...
 !VENV_PY! backend\resolve_plugin.py auto
 
 :: ----------------------------------------------------------------------
 :: 6. SERVER STARTEN UND BROWSER ÖFFNEN
 :: ----------------------------------------------------------------------
 echo.
-echo [6/6] Starte BeatThis Server...
+echo [6/6] Starte BeatAnalyzer Server...
 echo ======================================================================
 echo  Serveradresse: http://localhost:8000
 echo  Web-Oberflaeche oeffnet sich automatisch in deinem Standard-Browser!

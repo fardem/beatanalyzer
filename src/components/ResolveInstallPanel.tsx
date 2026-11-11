@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Download, Loader2, PlugZap } from 'lucide-react';
 import { getResolveStatus, installResolveScript, ResolveStatus } from '../utils/localBackend';
 import { downloadTextFile } from '../utils/exportUtils';
-import resolveLuaScript from '../../resolve/BeatThis_Markers.lua?raw';
+import resolveLuaScript from '../../resolve/BeatAnalyzer_Markers.lua?raw';
 
-/** Installs resolve/BeatThis_Markers.lua into Resolve's script folder via the local server. */
+/** Installs resolve/BeatAnalyzer_Markers.lua into Resolve's script folder via the local server. */
 export const ResolveInstallPanel: React.FC = () => {
   const [status, setStatus] = useState<ResolveStatus | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -30,7 +30,7 @@ export const ResolveInstallPanel: React.FC = () => {
 
   const downloadScript = (
     <button
-      onClick={() => downloadTextFile(resolveLuaScript, 'BeatThis_Markers.lua', 'text/plain')}
+      onClick={() => downloadTextFile(resolveLuaScript, 'BeatAnalyzer_Markers.lua', 'text/plain')}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 cursor-pointer"
     >
       <Download className="w-3.5 h-3.5" />
@@ -62,6 +62,8 @@ export const ResolveInstallPanel: React.FC = () => {
   } else {
     line = !status.resolveFound
       ? 'DaVinci Resolve wurde auf diesem PC nicht gefunden. Du kannst das Skript trotzdem installieren.'
+      : status.legacyInstalled
+      ? 'In Resolve ist noch das Skript unter dem alten Namen BeatThis_Markers installiert. Aktualisieren installiert BeatAnalyzer_Markers und entfernt das alte.'
       : status.state === 'outdated'
       ? `In Resolve ist Version ${status.installedVersion || '?'} installiert, aktuell ist ${status.version}.`
       : 'Das Skript ist in Resolve noch nicht installiert.';

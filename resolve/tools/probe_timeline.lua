@@ -1,4 +1,4 @@
--- probe_timeline.lua - checks in Resolve what BeatThis_Markers.lua assumes when it puts the beat
+-- probe_timeline.lua - checks in Resolve what BeatAnalyzer_Markers.lua assumes when it puts the beat
 -- subtitles under the song in the timeline. Run it once after a Resolve update or when the subtitles
 -- are not at the right place.
 --
@@ -123,7 +123,7 @@ else
       p(string.format("Second subtitle at frame %d, expected %d -> difference %d", starts[2], expected2, starts[2] - expected2))
     end
     if math.abs(starts[1] - expected1) <= 1 then
-      p("RESULT: OK - BeatThis_Markers.lua places the subtitles correctly.")
+      p("RESULT: OK - BeatAnalyzer_Markers.lua places the subtitles correctly.")
     elseif left ~= 0 and math.abs(math.abs(starts[1] - expected1) - left) <= 1 then
       p("RESULT: difference = GetLeftOffset - the front trim is counted differently.")
     elseif tl_start ~= 0 and math.abs(math.abs(starts[1] - expected1) - tl_start) <= 1 then

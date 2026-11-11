@@ -64,7 +64,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
         <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
           Musik analysieren mit{' '}
           <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
-            BeatThis
+            BeatAnalyzer
           </span>
         </h2>
         <p className="text-slate-400 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">

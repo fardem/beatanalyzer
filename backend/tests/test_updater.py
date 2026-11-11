@@ -23,7 +23,7 @@ def make_install(folder: Path, version: str, files: dict):
         p.write_text(text, encoding="utf-8")
 
 
-def make_zip(path: Path, version: str, files: dict, prefix="BeatThis/"):
+def make_zip(path: Path, version: str, files: dict, prefix="BeatAnalyzer/"):
     with zipfile.ZipFile(path, "w") as z:
         z.writestr(prefix + "VERSION", version + "\n")
         for rel, text in files.items():
@@ -39,10 +39,22 @@ class VersionTests(unittest.TestCase):
         self.assertFalse(updater.newer("garbage", "0.0.1"))
 
     def test_parse_release_needs_asset(self):
-        data = {"tag_name": "0.0.3", "assets": [{"name": "BeatThis.zip", "url": "https://api/asset/1"}]}
+        data = {"tag_name": "0.0.3", "assets": [{"name": "BeatAnalyzer.zip", "url": "https://api/asset/1"}]}
         self.assertEqual(updater.parse_release(data)["zip"], "https://api/asset/1")
         self.assertIsNone(updater.parse_release({"tag_name": "0.0.3", "assets": []}))
         self.assertIsNone(updater.parse_release({"tag_name": "0.0.3", "prerelease": True, "assets": data["assets"]}))
+
+    def test_parse_release_takes_old_asset_name(self):
+        old = {"tag_name": "0.0.5", "assets": [{"name": "BeatThis.zip", "url": "https://api/asset/old"}]}
+        self.assertEqual(updater.parse_release(old)["zip"], "https://api/asset/old")
+        both = {"tag_name": "0.0.5", "assets": [{"name": "BeatThis.zip", "url": "https://api/asset/old"},
+                                                {"name": "BeatAnalyzer.zip", "url": "https://api/asset/new"}]}
+        self.assertEqual(updater.parse_release(both)["zip"], "https://api/asset/new")
+
+    def test_transition_script_version_matches(self):
+        # the updater up to 0.0.4 installs resolve/BeatThis_Markers.lua only if its version is new
+        legacy_source = resolve_plugin.PLUGIN_SOURCE.with_name(resolve_plugin.LEGACY_FILE)
+        self.assertEqual(resolve_plugin.script_version(legacy_source), resolve_plugin.app_version())
 
     def test_script_and_app_version_match(self):
         self.assertEqual(resolve_plugin.script_version(resolve_plugin.PLUGIN_SOURCE),
@@ -52,7 +64,7 @@ class VersionTests(unittest.TestCase):
 class UpdateTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
-        self.root = self.tmp / "BeatThis"
+        self.root = self.tmp / "BeatAnalyzer"
         old_files = {"backend/server.py": "old", "requirements.txt": "numpy\n",
                      "dist/assets/index-OLD.js": "old js", "dist/index.html": "old html"}
         make_install(self.root, "0.0.1", old_files)
@@ -68,7 +80,7 @@ class UpdateTests(unittest.TestCase):
         resolve_plugin.status, resolve_plugin.install = self._status, self._install
 
     def test_update_replaces_files_backs_up_and_keeps_venv(self):
-        release = make_zip(self.tmp / "BeatThis.zip", "0.0.2", self.new_files)
+        release = make_zip(self.tmp / "BeatAnalyzer.zip", "0.0.2", self.new_files)
         result = updater.update(self.root, release=release, log=lambda *a: None, pip=lambda r: True)
         self.assertTrue(result["updated"])
         self.assertEqual((self.root / "VERSION").read_text().strip(), "0.0.2")
@@ -85,14 +97,14 @@ class UpdateTests(unittest.TestCase):
 
     def test_changed_requirements_run_pip(self):
         self.new_files["requirements.txt"] = "numpy\nscipy\n"
-        release = make_zip(self.tmp / "BeatThis.zip", "0.0.2", self.new_files)
+        release = make_zip(self.tmp / "BeatAnalyzer.zip", "0.0.2", self.new_files)
         calls = []
         updater.update(self.root, release=release, log=lambda *a: None, pip=lambda r: calls.append(r) or True)
         self.assertEqual(calls, [self.root])
 
     def test_requirements_with_other_line_endings_do_not_run_pip(self):
         (self.root / "requirements.txt").write_bytes(b"numpy\r\n")
-        release = make_zip(self.tmp / "BeatThis.zip", "0.0.2", self.new_files)
+        release = make_zip(self.tmp / "BeatAnalyzer.zip", "0.0.2", self.new_files)
         calls = []
         result = updater.update(self.root, release=release, log=lambda *a: None,
                                 pip=lambda r: calls.append(r) or True)
@@ -100,14 +112,14 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(calls, [])
 
     def test_no_update_when_current(self):
-        release = make_zip(self.tmp / "BeatThis.zip", "0.0.1", self.new_files)
+        release = make_zip(self.tmp / "BeatAnalyzer.zip", "0.0.1", self.new_files)
         result = updater.update(self.root, release=release, log=lambda *a: None)
         self.assertFalse(result["updated"])
         self.assertEqual((self.root / "backend/server.py").read_text(), "old")
 
     def test_git_checkout_is_refused(self):
         (self.root / ".git").mkdir()
-        release = make_zip(self.tmp / "BeatThis.zip", "0.0.2", self.new_files)
+        release = make_zip(self.tmp / "BeatAnalyzer.zip", "0.0.2", self.new_files)
         with self.assertRaises(updater.UpdateError):
             updater.update(self.root, release=release, log=lambda *a: None)
 
@@ -122,12 +134,30 @@ class UpdateTests(unittest.TestCase):
         installed = []
         resolve_plugin.status = lambda: {"state": "outdated", "path": "x"}
         resolve_plugin.install = lambda: installed.append(True)
-        release = make_zip(self.tmp / "BeatThis.zip", "0.0.2", self.new_files)
+        release = make_zip(self.tmp / "BeatAnalyzer.zip", "0.0.2", self.new_files)
         updater.update(self.root, release=release, log=lambda *a: None, pip=lambda r: True)
         self.assertEqual(installed, [True])
 
 
 class ResolvePluginTests(unittest.TestCase):
+    def test_old_script_name_is_outdated_and_removed_by_install(self):
+        d = resolve_plugin.scripts_dir(self.env, "win32")
+        d.mkdir(parents=True)
+        (d / "BeatThis_Markers.lua").write_text('local VERSION = "0.0.4"\n', encoding="utf-8")
+        st = resolve_plugin.status(env=self.env, platform="win32")
+        self.assertEqual((st["state"], st["installedVersion"]), ("outdated", "0.0.4"))
+        self.assertTrue(st["legacyInstalled"])
+        resolve_plugin.install(env=self.env, platform="win32")
+        self.assertFalse((d / "BeatThis_Markers.lua").exists())
+        self.assertTrue((d / "BeatAnalyzer_Markers.lua").exists())
+        self.assertEqual(resolve_plugin.status(env=self.env, platform="win32")["state"], "current")
+
+    def test_current_script_with_old_one_next_to_it_is_outdated(self):
+        resolve_plugin.install(env=self.env, platform="win32")
+        d = resolve_plugin.scripts_dir(self.env, "win32")
+        (d / "BeatThis_Markers.lua").write_text('local VERSION = "0.0.5"\n', encoding="utf-8")
+        self.assertEqual(resolve_plugin.status(env=self.env, platform="win32")["state"], "outdated")
+
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
         self.env = {"APPDATA": str(self.tmp / "AppData"), "ProgramFiles": str(self.tmp / "Programs")}

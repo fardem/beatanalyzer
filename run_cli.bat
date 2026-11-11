@@ -1,11 +1,11 @@
 @echo off
 cd /d "%~dp0"
-title BeatThis - Drag and Drop CLI Analyzer (Windows)
+title BeatAnalyzer - Drag and Drop CLI Analyzer (Windows)
 color 0A
 
 if "%~1"=="" (
     echo ======================================================================
-    echo  BeatThis CLI Analyzer (Drag & Drop)
+    echo  BeatAnalyzer CLI Analyzer (Drag & Drop)
     echo ======================================================================
     echo  Ziehe einfach eine MP3-, WAV-, AAC- oder FLAC-Datei auf diese
     echo  .bat-Datei im Windows Explorer, um sie sofort zu analysieren!

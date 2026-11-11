@@ -16,7 +16,7 @@ export const UpdateBadge: React.FC = () => {
 
   const runUpdate = async () => {
     if (!info?.latest) return;
-    if (!window.confirm(`BeatThis ${info.latest} von GitHub laden und installieren?\nGeänderte Dateien kommen vorher nach update-backup/.`)) {
+    if (!window.confirm(`BeatAnalyzer ${info.latest} von GitHub laden und installieren?\nGeänderte Dateien kommen vorher nach update-backup/.`)) {
       return;
     }
     setBusy(true);

@@ -21,9 +21,9 @@ try:
     # voraussetzt (unter Windows meist nicht vorhanden -> MP3/AAC schlagen fehl).
     from beat_this.inference import Audio2Beats
     BEAT_THIS_AVAILABLE = True
-    print("[BeatThis Backend] CPJKU beat_this Transformer-Bibliothek erfolgreich geladen!")
+    print("[BeatAnalyzer Backend] CPJKU beat_this Transformer-Bibliothek erfolgreich geladen!")
 except Exception as e:
-    print(f"[BeatThis Backend] Hinweis: CPJKU beat_this direkt nicht verfügbar ({e}). Verwende High-Performance MIR-Fallback.")
+    print(f"[BeatAnalyzer Backend] Hinweis: CPJKU beat_this direkt nicht verfügbar ({e}). Verwende High-Performance MIR-Fallback.")
 
 
 def get_predictor():
@@ -34,12 +34,12 @@ def get_predictor():
         try:
             import torch
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            print(f"[BeatThis Backend] Initialisiere CPJKU Audio2Beats auf Device: {device}...")
+            print(f"[BeatAnalyzer Backend] Initialisiere CPJKU Audio2Beats auf Device: {device}...")
             # 'final0' ist das offizielle Standard-Checkpoint-Modell von CPJKU
             predictor_instance = Audio2Beats(checkpoint_path="final0", device=device)
-            print("[BeatThis Backend] Modell bereit für Inferenz.")
+            print("[BeatAnalyzer Backend] Modell bereit für Inferenz.")
         except Exception as err:
-            print(f"[BeatThis Backend] Fehler beim Laden des Modells: {err}")
+            print(f"[BeatAnalyzer Backend] Fehler beim Laden des Modells: {err}")
             predictor_instance = None
     return predictor_instance
 
@@ -72,7 +72,7 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
 
     if predictor is not None:
         try:
-            print(f"[BeatThis Backend] Starte CPJKU Transformer Inferenz für: {original_filename}")
+            print(f"[BeatAnalyzer Backend] Starte CPJKU Transformer Inferenz für: {original_filename}")
             preds = predictor(y, sr)
             # In CPJKU beat_this ist der Rückgabewert (beats, downbeats)
             if isinstance(preds, tuple) and len(preds) == 2:
@@ -82,7 +82,7 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
                 beats_sec = [float(b) for b in preds.get("beats", [])]
                 downbeats_sec = [float(d) for d in preds.get("downbeats", [])]
         except Exception as e:
-            print(f"[BeatThis Backend] Fehler bei Transformer-Inferenz, wechsle auf Fallback: {e}")
+            print(f"[BeatAnalyzer Backend] Fehler bei Transformer-Inferenz, wechsle auf Fallback: {e}")
             engine_used = "High-Performance Librosa MIR (Fallback)"
             beats_sec, downbeats_sec = fallback_mir_track(y, sr)
     else:
@@ -274,7 +274,7 @@ RESOLVE_MARKER_FORMAT = "beatthis-resolve-markers/1"
 
 def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) -> Dict[str, Any]:
     """
-    Marker-JSON fuer resolve/BeatThis_Markers.lua (gleiches Format wie der Export der Web-App).
+    Marker-JSON fuer resolve/BeatAnalyzer_Markers.lua (gleiches Format wie der Export der Web-App).
     Zeiten in Sekunden ab Anfang der Audiodatei.
     """
     beats = [b for b in result["beats"] if b["isDownbeat"]] if only_downbeats else result["beats"]

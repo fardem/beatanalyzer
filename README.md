@@ -1,8 +1,8 @@
-# BeatThis
+# BeatAnalyzer
 
-**Version 0.0.4** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
+**Version 0.0.5** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
 
-BeatThis erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und legt die Beats als **farbige Marker auf deinen Audio-Clip in DaVinci Resolve**. Die Erkennung läuft lokal auf deinem PC mit dem Transformer-Modell [CPJKU beat_this](https://github.com/CPJKU/beat_this). Die Oberfläche ist eine Web-App im Browser, der Server dahinter ist Python.
+BeatAnalyzer erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und legt die Beats als **farbige Marker auf deinen Audio-Clip in DaVinci Resolve**. Die Erkennung läuft lokal auf deinem PC mit dem Transformer-Modell [CPJKU beat_this](https://github.com/CPJKU/beat_this). Die Oberfläche ist eine Web-App im Browser, der Server dahinter ist Python.
 
 ![Hauptfenster](docs/images/main-window.png)
 
@@ -29,7 +29,7 @@ BeatThis erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und leg
 
 ## Funktionen
 
-- **Beat- und Downbeat-Erkennung** mit CPJKU beat_this (PyTorch, mit NVIDIA-Grafikkarte über CUDA). Ist beat_this nicht installiert, rechnet BeatThis mit librosa.
+- **Beat- und Downbeat-Erkennung** mit CPJKU beat_this (PyTorch, mit NVIDIA-Grafikkarte über CUDA). Ist beat_this nicht installiert, rechnet BeatAnalyzer mit librosa.
 - **Tempo und Taktart:** globales Tempo, Durchschnitt, Median, kleinstes und größtes Tempo, Tempo-Stabilität in Prozent, Taktart (z. B. 4/4, 3/4).
 - **Wellenform mit Beat-Raster:** Takte und Beats als Linien, dazu die Aktivierungskurven für Beats (BAF) und Downbeats (DAF). Zoom und Übersicht zum Springen.
 - **Wiedergabe mit Metronom:** Der Klick liegt auf den erkannten Beats, der Downbeat klingt höher. Geschwindigkeit 0,5× bis 1,5×.
@@ -37,7 +37,7 @@ BeatThis erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und leg
 - **Tempo-Kurve:** BPM-Verlauf über die ganze Datei.
 - **Beat-Tabelle zum Korrigieren:** jeden Beat um ±10 ms verschieben oder als Downbeat markieren. Die Korrekturen gehen in alle Exporte.
 - **Export:** Marker für DaVinci Resolve, Audacity-Textspur, JSON, MIDI-Klickspur, CSV.
-- **DaVinci Resolve:** Ein Lua-Skript setzt die Marker auf den Clip. BeatThis installiert das Skript selbst in Resolve.
+- **DaVinci Resolve:** Ein Lua-Skript setzt die Marker auf den Clip. BeatAnalyzer installiert das Skript selbst in Resolve.
 - **Update von GitHub** mit einem Klick in der App.
 - **Formate:** MP3, WAV, FLAC, AAC/M4A, OGG.
 
@@ -47,7 +47,7 @@ BeatThis erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und leg
 |---|---|---|
 | Windows | 10 oder 11 | Linux und macOS gehen auch, siehe unten |
 | Python | 3.10 bis 3.13 | Beim Installer das Häkchen bei *Add python.exe to PATH* setzen |
-| Git | beliebig | Nur für beat_this nötig. Ohne Git rechnet BeatThis mit librosa |
+| Git | beliebig | Nur für beat_this nötig. Ohne Git rechnet BeatAnalyzer mit librosa |
 | NVIDIA-Grafikkarte | optional | Beschleunigt beat_this. Ohne läuft es auf der CPU |
 | DaVinci Resolve Studio | 21.2 | Nur für die Marker in Resolve. Die kostenlose Version sperrt den Dateizugriff für Skripte |
 | Speicherplatz | ca. 5 GB | Hauptsächlich PyTorch im Ordner `venv\` |
@@ -56,23 +56,23 @@ Node.js brauchst du nicht. Die Oberfläche liegt fertig gebaut in `dist/`.
 
 ## Installation (Windows)
 
-1. **Herunterladen:** [BeatThis.zip](https://github.com/fardem/beatanalyzer/releases/latest/download/BeatThis.zip) vom neuesten Release.
-2. **Entpacken:** Rechtsklick auf die ZIP-Datei → *Alle extrahieren*. Am besten in einen Ordner ohne Umlaute und Leerzeichen, z. B. `C:\BeatThis`.
+1. **Herunterladen:** [BeatAnalyzer.zip](https://github.com/fardem/beatanalyzer/releases/latest/download/BeatAnalyzer.zip) vom neuesten Release.
+2. **Entpacken:** Rechtsklick auf die ZIP-Datei → *Alle extrahieren*. Am besten in einen Ordner ohne Umlaute und Leerzeichen, z. B. `C:\BeatAnalyzer`.
 3. **Doppelklick auf `install_and_run.bat`.** Windows warnt eventuell, weil die Datei aus dem Internet kommt: *Weitere Informationen* → *Trotzdem ausführen*.
 
 `install_and_run.bat` macht Folgendes:
 
 - sucht Python,
-- legt die Umgebung `venv\` im BeatThis-Ordner an; das übrige System bleibt unverändert,
+- legt die Umgebung `venv\` im BeatAnalyzer-Ordner an; das übrige System bleibt unverändert,
 - installiert NumPy, SciPy, librosa, soundfile, PyTorch und beat_this,
 - installiert das Resolve-Skript, wenn DaVinci Resolve auf dem PC ist,
 - startet den Server und öffnet <http://localhost:8000> im Browser.
 
 Der erste Lauf dauert einige Minuten (PyTorch ist ca. 2 GB groß). Das Protokoll steht in `install_log.txt`.
 
-**Danach** startest du BeatThis mit `start.bat`. Beenden: im schwarzen Fenster `Strg + C` oder das Fenster schließen.
+**Danach** startest du BeatAnalyzer mit `start.bat`. Beenden: im schwarzen Fenster `Strg + C` oder das Fenster schließen.
 
-**Deinstallieren:** den BeatThis-Ordner löschen. Das Resolve-Skript liegt unter `%APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility\BeatThis_Markers.lua`.
+**Deinstallieren:** den BeatAnalyzer-Ordner löschen. Das Resolve-Skript liegt unter `%APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility\BeatAnalyzer_Markers.lua`.
 
 ## Installation (Linux / macOS)
 
@@ -106,7 +106,7 @@ Ohne den Python-Server (z. B. nur `npm run dev`) rechnet der Browser selbst. Das
 
 ![Export für DaVinci Resolve](docs/images/export-resolve.png)
 
-Das Skript `BeatThis_Markers.lua` setzt einen Marker pro Beat auf den Audio-Clip im **Media Pool**:
+Das Skript `BeatAnalyzer_Markers.lua` setzt einen Marker pro Beat auf den Audio-Clip im **Media Pool**:
 
 - **Red** = Downbeat (Zählzeit 1), Name `Bar 1`, `Bar 2`, …
 - **Cyan** = übrige Beats, Name `1.2`, `1.3`, …
@@ -116,23 +116,23 @@ Die Marker gehören zur Audiodatei. Sie erscheinen auf dem Clip in jeder Timelin
 
 ### Skript installieren
 
-In BeatThis: *Exportieren → DaVinci Resolve → In Resolve installieren*. Das Feld zeigt auch, ob eine ältere Version installiert ist; dann heißt der Button *In Resolve aktualisieren*. `install_and_run.bat` und das Update erledigen das automatisch.
+In BeatAnalyzer: *Exportieren → DaVinci Resolve → In Resolve installieren*. Das Feld zeigt auch, ob eine ältere Version installiert ist; dann heißt der Button *In Resolve aktualisieren*. `install_and_run.bat` und das Update erledigen das automatisch.
 
 Danach Resolve einmal neu starten.
 
 ### Marker setzen
 
-1. In BeatThis: *Exportieren → DaVinci Resolve → Marker-JSON herunterladen*. Mit *Nur Downbeats* kommt nur ein Marker pro Takt.
+1. In BeatAnalyzer: *Exportieren → DaVinci Resolve → Marker-JSON herunterladen*. Mit *Nur Downbeats* kommt nur ein Marker pro Takt.
 2. In Resolve den Audio-Clip im Media Pool auswählen. Ohne Auswahl nimmt das Skript alle Clips mit dem Dateinamen aus der JSON.
-3. *Workspace → Scripts → BeatThis_Markers* und die JSON wählen.
+3. *Workspace → Scripts → BeatAnalyzer_Markers* und die JSON wählen.
 
-Ein neuer Lauf löscht die Marker des letzten Laufs und setzt die neuen. Von Hand gesetzte Marker bleiben. Das Skript liest die Bildrate aus dem Clip; 23,976, 29,97 und 59,94 fps werden exakt umgerechnet. Meldungen stehen unter *Workspace → Console* in den Zeilen mit `[BeatThis]`.
+Ein neuer Lauf löscht die Marker des letzten Laufs und setzt die neuen. Von Hand gesetzte Marker bleiben. Das Skript liest die Bildrate aus dem Clip; 23,976, 29,97 und 59,94 fps werden exakt umgerechnet. Meldungen stehen unter *Workspace → Console* in den Zeilen mit `[BeatAnalyzer]`.
 
 Die Farben stehen oben im Skript (`DOWNBEAT_COLOR`, `BEAT_COLOR`) und lassen sich dort ändern.
 
 ### Untertitel mit Beat-Infos
 
-Das Skript schreibt zusätzlich `<Song>.srt` in den Ordner der JSON und importiert die Datei in den Media-Pool-Ordner **BeatThis**. Jeder Beat ist ein Untertitel, der bis zum nächsten Beat steht:
+Das Skript schreibt zusätzlich `<Song>.srt` in den Ordner der JSON und importiert die Datei in den Media-Pool-Ordner **BeatAnalyzer**. Jeder Beat ist ein Untertitel, der bis zum nächsten Beat steht:
 
 ```
 Downbeat (1)
@@ -141,16 +141,16 @@ Takt 24 - Beat 1
 Konfidenz 75%
 ```
 
-Die Zeiten zählen ab Anfang der Audiodatei. Ein neuer Lauf ersetzt den Untertitel-Clip im Ordner **BeatThis**.
+Die Zeiten zählen ab Anfang der Audiodatei. Ein neuer Lauf ersetzt den Untertitel-Clip im Ordner **BeatAnalyzer**.
 
 ### Untertitel direkt in der Timeline
 
-Ist beim Start des Skripts eine Timeline offen, in der der Song auf einer Audiospur liegt, legt das Skript die Untertitel auf die Untertitelspur **BeatThis - <Song>**, genau unter das erste Vorkommen des Songs:
+Ist beim Start des Skripts eine Timeline offen, in der der Song auf einer Audiospur liegt, legt das Skript die Untertitel auf die Untertitelspur **BeatAnalyzer - <Song>**, genau unter das erste Vorkommen des Songs:
 
 - Startposition und vorne abgeschnittener Teil des Clips werden berücksichtigt. Beats außerhalb des sichtbaren Teils fallen weg.
-- Ein neuer Lauf löscht die Spur **BeatThis - <Song>** und legt sie neu an.
+- Ein neuer Lauf löscht die Spur **BeatAnalyzer - <Song>** und legt sie neu an.
 - Resolve erlaubt nur eine aktive Untertitelspur. Die neue Spur wird aktiv, andere Untertitelspuren bleiben erhalten, werden aber deaktiviert.
-- Dafür entsteht im Ordner **BeatThis** zusätzlich der Clip `<Song> (Timeline).srt`.
+- Dafür entsteht im Ordner **BeatAnalyzer** zusätzlich der Clip `<Song> (Timeline).srt`.
 
 Liegt der Song nicht in der offenen Timeline, bleibt es beim Untertitel-Clip im Media Pool.
 
@@ -162,12 +162,14 @@ Gibt es auf GitHub eine neue Version, steht neben der Versionsnummer oben in der
 
 Das Update:
 
-- lädt `BeatThis.zip` des neuesten Releases,
+- lädt `BeatAnalyzer.zip` des neuesten Releases,
 - legt jede ersetzte Datei vorher in `update-backup\<alte Version>\`,
 - lässt `venv\` unverändert und installiert Python-Pakete nur, wenn sich `requirements.txt` geändert hat,
 - aktualisiert ein installiertes Resolve-Skript.
 
-Danach BeatThis neu starten (`start.bat`).
+Danach BeatAnalyzer neu starten (`start.bat`).
+
+**Alter Name:** Bis 0.0.4 hieß das Programm *BeatThis*. Das Update von 0.0.4 funktioniert wie gewohnt. Danach in BeatAnalyzer *Exportieren → DaVinci Resolve → In Resolve aktualisieren* klicken: Das installiert `BeatAnalyzer_Markers` und entfernt `BeatThis_Markers` aus Resolve. Bis dahin startet der alte Menüeintrag `BeatThis_Markers` das neue Skript. Marker, Untertitelspur „BeatThis - <Song>“ und alte Marker-JSONs werden beim nächsten Lauf erkannt und ersetzt; der alte Media-Pool-Ordner **BeatThis** bleibt stehen und kann gelöscht werden.
 
 Ein Ordner, der mit `git clone` angelegt wurde, wird nicht per Update überschrieben; dort `git pull` verwenden.
 
@@ -196,10 +198,10 @@ Unter Windows heißt der Python-Pfad `venv\Scripts\python.exe`.
 | „Der Befehl 'python' ist entweder falsch geschrieben …“ | Python ist nicht im PATH | Python-Installer → *Modify* → *Add Python to environment variables* |
 | `/api/health` meldet „Librosa MIR Fallback“ statt beat_this | beat_this ist nicht installiert, meist fehlt Git | Git installieren, `install_and_run.bat` erneut starten |
 | Jede Analyse endet mit „Analyzer-Fehler“ | Audio-Pakete fehlen im `venv\` | `install_log.txt` lesen; Ordner `venv\` löschen und `install_and_run.bat` erneut starten |
-| `BeatThis_Markers` fehlt unter *Workspace → Scripts* | Resolve wurde nach der Installation nicht neu gestartet | Resolve neu starten; sonst in BeatThis *In Resolve installieren* |
+| `BeatAnalyzer_Markers` fehlt unter *Workspace → Scripts* | Resolve wurde nach der Installation nicht neu gestartet | Resolve neu starten; sonst in BeatAnalyzer *In Resolve installieren* |
 | Skript meldet „No clip found“ | Kein Clip ausgewählt und kein Clip mit dem Dateinamen im Media Pool | Clip im Media Pool auswählen |
 | Skript meldet „Cannot read the file“ | Kostenlose Resolve-Version oder Zugriff verweigert | Resolve Studio verwenden |
-| Update meldet „Kein Release gefunden“ | Es gibt noch kein Release, oder das Repository ist privat | Bei privatem Repository die Umgebungsvariable `BEATTHIS_GITHUB_TOKEN` mit einem Lese-Token setzen |
+| Update meldet „Kein Release gefunden“ | Es gibt noch kein Release, oder das Repository ist privat | Bei privatem Repository die Umgebungsvariable `BEATANALYZER_GITHUB_TOKEN` mit einem Lese-Token setzen |
 
 `debug_system.bat` schreibt einen Diagnosebericht nach `debug_report.txt` (Python, Pakete, Grafikkarte).
 
@@ -217,7 +219,8 @@ Unter Windows heißt der Python-Pfad `venv\Scripts\python.exe`.
 | `backend/analyze_cli.py` | Kommandozeile |
 | `backend/resolve_plugin.py` | Installiert das Resolve-Skript |
 | `backend/updater.py` | Update aus dem neuesten GitHub-Release |
-| `resolve/BeatThis_Markers.lua` | Skript für DaVinci Resolve |
+| `resolve/BeatAnalyzer_Markers.lua` | Skript für DaVinci Resolve |
+| `resolve/BeatThis_Markers.lua` | Übergangsskript für Installationen bis 0.0.4 (alter Name); startet `BeatAnalyzer_Markers.lua` |
 | `resolve/tools/probe_timeline.lua` | Prüfskript: wie Resolve die Untertitel in der Timeline platziert |
 | `src/` | Oberfläche (React, TypeScript) |
 | `dist/` | Gebaute Oberfläche; wird mit eingecheckt |
@@ -244,17 +247,17 @@ venv/bin/python -m unittest discover -s backend/tests -v
 
 Die Tests für das Lua-Skript laufen gegen einen nachgebauten Resolve und brauchen das Paket `lupa` (`pip install lupa`); ohne `lupa` werden sie übersprungen. Sie ersetzen keinen Test in Resolve.
 
-**Release:** Version in `VERSION`, `package.json` und `local VERSION` in `resolve/BeatThis_Markers.lua` anheben, CHANGELOG ergänzen, einen Tag mit der Versionsnummer pushen (z. B. `0.0.3`). Der Workflow `.github/workflows/release.yml` hängt dann `BeatThis.zip` an das Release.
+**Release:** Version in `VERSION`, `package.json` und `local VERSION` in `resolve/BeatAnalyzer_Markers.lua` anheben, CHANGELOG ergänzen, einen Tag mit der Versionsnummer pushen (z. B. `0.0.3`). Der Workflow `.github/workflows/release.yml` hängt dann `BeatAnalyzer.zip` an das Release.
 
 ## Lizenz
 
-BeatThis steht unter der [MIT-Lizenz](LICENSE).
+BeatAnalyzer steht unter der [MIT-Lizenz](LICENSE).
 
 ## Credits
 
 **CPJKU beat_this** – Beat- und Downbeat-Erkennung, Johannes Kepler Universität Linz,
 <https://github.com/CPJKU/beat_this>. Code und Modellgewichte stehen unter der MIT-Lizenz.
-BeatThis enthält weder Code noch Modellgewichte von beat_this: `install_and_run.bat` installiert
+BeatAnalyzer enthält weder Code noch Modellgewichte von beat_this: `install_and_run.bat` installiert
 das Paket von GitHub, beat_this lädt das Modell `final0` beim ersten Start selbst herunter.
 
 Hinweis von beat_this: Einige der Trainingsdaten sind urheberrechtlich geschützt oder stehen unter

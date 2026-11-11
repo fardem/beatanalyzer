@@ -1,5 +1,5 @@
 """
-Tests for resolve/BeatThis_Markers.lua against a small fake of the DaVinci Resolve API.
+Tests for resolve/BeatAnalyzer_Markers.lua against a small fake of the DaVinci Resolve API.
 Needs the package "lupa" (pip install lupa); without it the tests are skipped.
 They do not replace a test in Resolve.
 """
@@ -22,7 +22,7 @@ except ImportError:  # pragma: no cover
 
 from analyzer import resolve_marker_data  # noqa: E402
 
-SCRIPT = (ROOT / "resolve" / "BeatThis_Markers.lua").read_text(encoding="utf-8")
+SCRIPT = (ROOT / "resolve" / "BeatAnalyzer_Markers.lua").read_text(encoding="utf-8")
 
 # Fake Resolve: media pool with clips; AddMarker refuses a second marker on the same frame (as Resolve does).
 MOCK = r"""
@@ -237,7 +237,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertNotIn("is not", msg)
         self.assertFalse([line for line in self.out if "API not available" in line], self.out)
 
-    def bin_clips(self, name="BeatThis"):
+    def bin_clips(self, name="BeatAnalyzer"):
         for f in self.mock.root.subs.values():
             if f.name == name:
                 return [c.name for c in f.clips.values()]
@@ -255,7 +255,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(cues[2].split("\n")[2:4], ["Beat 2", "Takt 1 - Beat 2"])
         self.assertEqual(cues[5].split("\n")[1], "00:00:02,500 --> 00:00:03,000")  # last: + previous interval
         self.assertEqual(self.bin_clips(), ["Müller Song.srt"])
-        self.assertIn("Subtitles: Müller Song.srt in media pool bin 'BeatThis'", msg)
+        self.assertIn("Subtitles: Müller Song.srt in media pool bin 'BeatAnalyzer'", msg)
         self.assertTrue(self.lua.eval("MOCK.pool:GetCurrentFolder() == MOCK.root"))
 
     def test_second_run_replaces_subtitle_clip(self):
@@ -296,10 +296,10 @@ class ResolveScriptTests(unittest.TestCase):
         tracks = self.sub_tracks(tl)
         self.assertEqual(len(tracks), 1)
         name, enabled, starts = tracks[0]
-        self.assertEqual((name, enabled), ("BeatThis - Müller Song", True))
+        self.assertEqual((name, enabled), ("BeatAnalyzer - Müller Song", True))
         # beats 1.0, 1.5 ... 3.5 s of the song -> timeline 10.0 ... 12.5 s
         self.assertEqual(starts, [90250, 90263, 90275, 90288, 90300, 90313])  # .5 frames rounded up
-        self.assertIn("Timeline: 6 subtitles on track ST1 'BeatThis - Müller Song'", msg)
+        self.assertIn("Timeline: 6 subtitles on track ST1 'BeatAnalyzer - Müller Song'", msg)
         self.assertNotIn("difference", msg)
         srt = (self.tmp / "Müller Song (Timeline).srt").read_text(encoding="utf-8")
         self.assertTrue(srt.startswith("1\n00:00:10,000 --> 00:00:10,500\nBeat 2\nTakt 1 - Beat 2"), srt[:80])
@@ -322,7 +322,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertTrue(ok, msg)
         tracks = self.sub_tracks(tl)
         self.assertEqual([(n, e, len(s)) for n, e, s in tracks],
-                         [("Dialog", False, 1), ("BeatThis - Müller Song", True, 6)])
+                         [("Dialog", False, 1), ("BeatAnalyzer - Müller Song", True, 6)])
         self.assertIn("(old track replaced)", msg)
 
     def test_timeline_uses_first_use_of_the_song(self):
@@ -425,3 +425,43 @@ class ProbeScriptTests(unittest.TestCase):
         self.assertIn("[probe] RESULT: OK", text)
         self.assertIn("Test track and test clip removed", text)
         self.assertEqual(len(list(lua.globals().MOCK.timeline.subs.values())), 0)
+
+
+@unittest.skipIf(luajit21 is None, "lupa not installed")
+class RenameTransitionTests(unittest.TestCase):
+    def setUp(self):
+        self.lua = luajit21.LuaRuntime(unpack_returned_tuples=True)
+        self.out = []
+        self.lua.globals().print = lambda *a: self.out.append(" ".join(str(x) for x in a))
+        self.lua.globals().PY_READ = lambda p: Path(p).read_text(encoding="utf-8")
+        self.lua.execute(MOCK)
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def test_old_track_name_is_replaced(self):
+        M = self.lua.execute(SCRIPT)
+        self.lua.execute("""
+            MOCK.timeline = MOCK.new_timeline(25, 90000)
+            MOCK.timeline.audio[1][1] = MOCK.timeline_item(MOCK.song, 90000, 0, 500)
+            MOCK.timeline:AddTrack("subtitle")
+            MOCK.timeline.subs[1].name = "BeatThis - Müller Song"
+            MOCK.timeline.subs[1].items[1] = { GetStart = function() return 90010 end, last = 90010 }
+        """)
+        path = self.tmp / "Müller Song_resolve_markers.json"
+        path.write_text(json.dumps(resolve_marker_data(sample_result()), ensure_ascii=False), encoding="utf-8")
+        ok, msg = M.apply(str(path))
+        self.assertTrue(ok, msg)
+        names = [t.name for t in self.lua.globals().MOCK.timeline.subs.values()]
+        self.assertEqual(names, ["BeatAnalyzer - Müller Song"])
+        self.assertIn("(old track replaced)", msg)
+
+    def test_transition_script_starts_the_new_script(self):
+        # Both files in one folder, as in Resolve's Scripts/Utility; dofile gives the stub its own path
+        for name in ("BeatAnalyzer_Markers.lua", "BeatThis_Markers.lua"):
+            (self.tmp / name).write_text((ROOT / "resolve" / name).read_text(encoding="utf-8"), encoding="utf-8")
+        self.lua.execute("BEATTHIS_NO_RUN = nil")
+        self.lua.globals().STUB = str(self.tmp / "BeatThis_Markers.lua")
+        self.lua.execute("dofile(STUB)")
+        text = "\n".join(self.out)
+        self.assertIn("[BeatAnalyzer] BeatAnalyzer_Markers 0.0.5", text)
+        self.assertIn("No file chosen.", text)          # main() ran; no file dialog without Resolve
+        self.assertNotIn("Not found or not started", text)

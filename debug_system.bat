@@ -1,13 +1,13 @@
 @echo off
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
-title BeatThis - Diagnose & Debug Tool (Windows)
+title BeatAnalyzer - Diagnose & Debug Tool (Windows)
 color 0E
 
 set "REPORT=%~dp0debug_report.txt"
 
 echo ======================================================================
-echo          BeatThis - Windows Systemdiagnose & Fehlerpruefung
+echo          BeatAnalyzer - Windows Systemdiagnose & Fehlerpruefung
 echo ======================================================================
 echo.
 echo Erstelle Diagnosebericht in debug_report.txt...
@@ -15,7 +15,7 @@ echo.
 
 (
     echo ======================================================================
-    echo  BeatThis System-Diagnosebericht
+    echo  BeatAnalyzer System-Diagnosebericht
     echo  Erstellt am: %DATE% %TIME%
     echo ======================================================================
     echo.

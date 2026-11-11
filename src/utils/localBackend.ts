@@ -7,6 +7,7 @@ export interface ResolveStatus {
   path: string;
   installedVersion: string | null;
   version: string;
+  legacyInstalled?: boolean;
   state: 'missing' | 'outdated' | 'current';
 }
 
