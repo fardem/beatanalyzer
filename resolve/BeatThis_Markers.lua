@@ -15,7 +15,7 @@ Log:     Workspace -> Console (lines starting with "[BeatThis]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.0.2"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.0.3"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -61,22 +61,40 @@ if fu == nil and resolve ~= nil then
   fu = ok and f or nil
 end
 
--- Call a method of a Resolve object; errors are logged, never thrown.
+-- Call a method of a Resolve object; errors are logged (the same one at most 3 times), never thrown.
+local api_problems = {}
 local function api(obj, method, ...)
   if obj == nil then
     return nil
   end
   local okf, fn = pcall(function() return obj[method] end)
   if not okf or type(fn) ~= "function" then
-    log("API not available:", method)
+    api_problems[method] = (api_problems[method] or 0) + 1
+    if api_problems[method] <= 3 then
+      log("API not available:", method)
+    end
     return nil
   end
   local ok, a, b = pcall(fn, obj, ...)
   if not ok then
-    log("API error in " .. method .. ":", a)
+    api_problems[method] = (api_problems[method] or 0) + 1
+    if api_problems[method] <= 3 then
+      log("API error in " .. method .. ":", a)
+    end
     return nil
   end
   return a, b
+end
+
+-- A media pool clip: an object with the marker methods. GetSelectedClips() of Resolve Studio 21.2
+-- also returned an entry without them, which must not be treated as a clip.
+local function is_clip(obj)
+  local t = type(obj)
+  if t ~= "userdata" and t ~= "table" then
+    return false
+  end
+  local ok, fn = pcall(function() return obj.AddMarker end)
+  return ok and type(fn) == "function"
 end
 
 -- ─── JSON ────────────────────────────────────────────────────────────────────
@@ -325,16 +343,23 @@ end
 
 -- Clips selected in the media pool; without a selection the clips with the file name from the JSON.
 local function target_clips(media_pool, file_name)
-  local selected = {}
-  for _, clip in pairs(api(media_pool, "GetSelectedClips") or {}) do
-    selected[#selected + 1] = clip
+  local selected, ignored = {}, {}
+  for key, clip in pairs(api(media_pool, "GetSelectedClips") or {}) do
+    if is_clip(clip) then
+      selected[#selected + 1] = clip
+    else
+      ignored[#ignored + 1] = tostring(key) .. "=" .. type(clip)
+    end
+  end
+  if #ignored > 0 then
+    log("Selection: ignored entries that are not clips:", table.concat(ignored, ", "))
   end
   if #selected > 0 then
     return selected, "selection"
   end
   local found = {}
   for _, clip in ipairs(clip_list(api(media_pool, "GetRootFolder"), {})) do
-    if tostring(api(clip, "GetClipProperty", "File Name") or "") == file_name then
+    if is_clip(clip) and tostring(api(clip, "GetClipProperty", "File Name") or "") == file_name then
       found[#found + 1] = clip
     end
   end

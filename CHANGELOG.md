@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.3] – 2026-11-11
+
+### Behoben
+- Resolve-Skript: `GetSelectedClips()` lieferte in Resolve Studio 21.2 neben dem ausgewählten Clip einen Eintrag ohne Clip-Methoden. Das Skript zählte ihn als Clip („2 clip(s): ?, …“), meldete 359 übersprungene Marker und warnte fälschlich, der Clip passe nicht zur JSON. Einträge ohne `AddMarker` werden jetzt ignoriert und im Log mit Typ genannt.
+- Resolve-Skript: Dieselbe Meldung „API not available“ steht höchstens dreimal im Log.
+
 ## [0.0.2] – 2026-11-11
 
 ### Hinzugefügt
