@@ -601,7 +601,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
                 timeSignature: currentResult.timeSignature.name,
                 markers: currentResult.beats.map(b => ({
                     time: b.time, type: b.isDownbeat ? "downbeat" : "beat",
-                    bar: b.barIndex, beat: b.beatInBar, bpm: b.instantBpm
+                    bar: b.barIndex, beat: b.beatInBar, bpm: b.instantBpm, confidence: b.confidence
                 }))
             };
             downloadFile(JSON.stringify(data, null, 2), baseName + "_resolve_markers.json", "application/json");

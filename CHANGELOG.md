@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.4] – 2026-11-11
+
+### Hinzugefügt
+- Resolve-Skript: legt zusätzlich eine Untertiteldatei mit dem Namen des Songs an (`<Song>.srt`, neben der Marker-JSON) und importiert sie in den Media-Pool-Ordner `BeatThis`. Ein Untertitel pro Beat, bis zum nächsten Beat, mit drei Zeilen: Typ (`Downbeat (1)` / `Beat 2`), `Takt 24 - Beat 1`, `01:02.880 - 89.6 BPM - 75%`. Der erste Untertitel läuft von 0 s bis zum ersten Beat, damit die Zeiten passen, wenn die SRT am Anfang des Clips liegt. Ein neuer Lauf ersetzt den Untertitel-Clip des letzten Laufs.
+- Marker-JSON: Konfidenz pro Beat (`confidence`).
+
 ## [0.0.3] – 2026-11-11
 
 ### Behoben

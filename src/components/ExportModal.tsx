@@ -216,7 +216,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
                   </li>
                 </ol>
                 <p className="text-slate-500 leading-relaxed">
-                  Ein neuer Lauf ersetzt die Marker des letzten Laufs. Von Hand gesetzte Marker bleiben.
+                  Ein neuer Lauf ersetzt die Marker des letzten Laufs. Von Hand gesetzte Marker bleiben. Zusätzlich legt das Skript den Untertitel-Clip <code className="text-rose-300">{result.metadata.fileName.replace(/\.[^/.]+$/, '')}.srt</code> mit Typ, Takt, Zeit, Tempo und Konfidenz pro Beat im Media-Pool-Ordner <strong>BeatThis</strong> an.
                 </p>
               </div>
 

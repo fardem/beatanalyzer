@@ -177,6 +177,7 @@ export function generateResolveMarkerJson(
       bar: b.barIndex,
       beat: b.beatInBar,
       bpm: b.instantBpm,
+      confidence: b.confidence,
     })),
   };
   return JSON.stringify(data, null, 2);

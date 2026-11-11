@@ -291,6 +291,7 @@ def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) ->
                 "bar": b["barIndex"],
                 "beat": b["beatInBar"],
                 "bpm": b["instantBpm"],
+                "confidence": b["confidence"],
             }
             for b in beats
         ],

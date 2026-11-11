@@ -15,7 +15,7 @@ Log:     Workspace -> Console (lines starting with "[BeatThis]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.0.3"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.0.4"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -24,6 +24,7 @@ local M = { VERSION = VERSION }
 local DOWNBEAT_COLOR = "Red"     -- marker colour of beat 1 of each bar
 local BEAT_COLOR     = "Cyan"    -- marker colour of all other beats
 local MARKER_TAG     = "beatthis"
+local BIN_NAME       = "BeatThis"  -- media pool bin for the subtitle file
 local JSON_FORMAT    = "beatthis-resolve-markers/1"
 M.DOWNBEAT_COLOR, M.BEAT_COLOR, M.MARKER_TAG, M.JSON_FORMAT = DOWNBEAT_COLOR, BEAT_COLOR, MARKER_TAG, JSON_FORMAT
 
@@ -233,40 +234,55 @@ M.json_decode = json_decode
 
 -- On Windows, io.open in Resolve's Lua cannot open paths with non-ASCII characters.
 -- _wfopen with the UTF-8 path converted to UTF-16 can.
-local ffi_ready = nil
-local function read_file_wide(path)
+local ffi_lib, msvcrt = nil, nil
+local function wide_open(path, mode)
   if not IS_WIN then
     return nil
   end
-  local okr, ffi = pcall(require, "ffi")
-  if not okr or not ffi then
-    return nil
-  end
-  if ffi_ready == nil then
-    ffi_ready = pcall(ffi.cdef, [[
+  if ffi_lib == nil then
+    local okr, ffi = pcall(require, "ffi")
+    if not okr or not ffi then
+      ffi_lib = false
+      return nil
+    end
+    pcall(ffi.cdef, [[
       int MultiByteToWideChar(unsigned int cp, unsigned long flags, const char* s, int n, wchar_t* out, int outn);
       void* _wfopen(const wchar_t* name, const wchar_t* mode);
       size_t fread(void* buf, size_t size, size_t n, void* f);
+      size_t fwrite(const void* buf, size_t size, size_t n, void* f);
       int fclose(void* f);
     ]])
+    local okl, lib = pcall(ffi.load, "msvcrt")
+    ffi_lib, msvcrt = ffi, okl and lib or nil
   end
+  if not ffi_lib or not msvcrt then
+    return nil
+  end
+  local ffi = ffi_lib
+  local function wide(s)
+    local n = ffi.C.MultiByteToWideChar(65001, 0, s, -1, nil, 0)
+    local buf = ffi.new("wchar_t[?]", n)
+    ffi.C.MultiByteToWideChar(65001, 0, s, -1, buf, n)
+    return buf
+  end
+  local f = msvcrt._wfopen(wide(path), wide(mode))
+  if f == nil then
+    return nil
+  end
+  return f
+end
+
+local function read_file_wide(path)
   local ok, text = pcall(function()
-    local function wide(s)
-      local n = ffi.C.MultiByteToWideChar(65001, 0, s, -1, nil, 0)
-      local buf = ffi.new("wchar_t[?]", n)
-      ffi.C.MultiByteToWideChar(65001, 0, s, -1, buf, n)
-      return buf
-    end
-    local msvcrt = ffi.load("msvcrt")
-    local f = msvcrt._wfopen(wide(path), wide("rb"))
-    if f == nil then
+    local f = wide_open(path, "rb")
+    if not f then
       return nil
     end
-    local chunks, buf = {}, ffi.new("char[65536]")
+    local chunks, buf = {}, ffi_lib.new("char[65536]")
     while true do
       local got = tonumber(msvcrt.fread(buf, 1, 65536, f))
       if got <= 0 then break end
-      chunks[#chunks + 1] = ffi.string(buf, got)
+      chunks[#chunks + 1] = ffi_lib.string(buf, got)
     end
     msvcrt.fclose(f)
     return table.concat(chunks)
@@ -290,6 +306,33 @@ local function read_file(path)
   return read_file_wide(path)
 end
 M.read_file = read_file
+
+-- Write text to a file. On Windows a path with non-ASCII characters goes through _wfopen,
+-- because io.open would create the file under a garbled name instead of failing.
+local function write_file(path, text)
+  if IS_WIN and path:find("[\128-\255]") then
+    local ok, done = pcall(function()
+      local f = wide_open(path, "wb")
+      if not f then
+        return false
+      end
+      local n = tonumber(msvcrt.fwrite(text, 1, #text, f))
+      msvcrt.fclose(f)
+      return n == #text
+    end)
+    return ok and done
+  end
+  if type(G_io) == "table" and type(G_io.open) == "function" then
+    local f = G_io.open(path, "wb")
+    if f then
+      f:write(text)
+      f:close()
+      return true
+    end
+  end
+  return false
+end
+M.write_file = write_file
 
 -- ─── Markers ─────────────────────────────────────────────────────────────────
 
@@ -406,6 +449,105 @@ local function mark_clip(clip, markers, fallback_fps)
 end
 M.mark_clip = mark_clip
 
+-- ─── Subtitles ──────────────────────────────────────────────────────────────
+
+local function srt_time(sec)
+  local ms = math.max(0, round(sec * 1000))
+  return string.format("%02d:%02d:%02d,%03d", math.floor(ms / 3600000), math.floor(ms / 60000) % 60,
+                       math.floor(ms / 1000) % 60, ms % 1000)
+end
+
+local function clock(sec)
+  local ms = math.max(0, round(sec * 1000))
+  return string.format("%02d:%02d.%03d", math.floor(ms / 60000), math.floor(ms / 1000) % 60, ms % 1000)
+end
+
+-- SRT with one subtitle per marker, shown until the next one. Three lines per subtitle:
+--   Downbeat (1) | Beat 2
+--   Takt 24 - Beat 1
+--   01:02.880 - 89.6 BPM - 75%
+-- A first subtitle from 0 s to the first beat keeps the timing when the SRT is placed at the clip start.
+local function build_srt(data)
+  local markers = data.markers
+  local cues = {}
+  local first = tonumber(markers[1].time) or 0
+  if first > 0.05 then
+    cues[#cues + 1] = { 0, first, string.format("BeatThis\n%s\n%s BPM - %s", tostring(data.fileName or ""),
+                                                tostring(data.globalBpm or "?"), tostring(data.timeSignature or "?")) }
+  end
+  for i, m in ipairs(markers) do
+    local t = tonumber(m.time) or 0
+    local nxt = markers[i + 1] and tonumber(markers[i + 1].time)
+    if not nxt then
+      local prev = markers[i - 1] and tonumber(markers[i - 1].time)
+      nxt = t + (prev and math.max(0.1, t - prev) or 0.5)
+    end
+    local bar, beat = tonumber(m.bar) or 0, tonumber(m.beat) or 0
+    local kind = m.type == "downbeat" and "Downbeat (1)" or string.format("Beat %d", beat)
+    local conf = tonumber(m.confidence)
+    local line3 = string.format("%s - %.1f BPM - %s", clock(t), tonumber(m.bpm) or 0,
+                                conf and string.format("%d%%", round(conf * 100)) or "-")
+    cues[#cues + 1] = { t, nxt, string.format("%s\nTakt %d - Beat %d\n%s", kind, bar, beat, line3) }
+  end
+  local out = {}
+  for i, c in ipairs(cues) do
+    out[#out + 1] = string.format("%d\n%s --> %s\n%s\n", i, srt_time(c[1]), srt_time(c[2]), c[3])
+  end
+  return table.concat(out, "\n")
+end
+M.build_srt = build_srt
+
+-- "C:\\Downloads\\x.json" + "01. Song.flac" -> "C:\\Downloads\\01. Song.srt"
+local function srt_path(json_path, file_name)
+  local dir = json_path:match("^(.*[/\\])") or ""
+  local base = file_name:gsub("%.[^%.]*$", "")
+  if base == "" then
+    base = (json_path:match("([^/\\]+)$") or "BeatThis"):gsub("%.[^%.]*$", "")
+  end
+  base = base:gsub('[<>:"/\\|%?%*]', "_")
+  return dir .. base .. ".srt", base .. ".srt"
+end
+M.srt_path = srt_path
+
+local function find_bin(media_pool)
+  local root = api(media_pool, "GetRootFolder")
+  for _, sub in pairs(api(root, "GetSubFolderList") or {}) do
+    if api(sub, "GetName") == BIN_NAME then
+      return sub
+    end
+  end
+  return api(media_pool, "AddSubFolder", root, BIN_NAME)
+end
+
+-- Import the SRT into the bin BIN_NAME; a clip of the same name from an earlier run is replaced.
+local function import_subtitles(media_pool, path, name)
+  local bin = find_bin(media_pool)
+  if not bin then
+    return nil, "media pool bin '" .. BIN_NAME .. "' not available"
+  end
+  local old = {}
+  for _, clip in pairs(api(bin, "GetClipList") or {}) do
+    if is_clip(clip) and api(clip, "GetName") == name then
+      old[#old + 1] = clip
+    end
+  end
+  if #old > 0 then
+    api(media_pool, "DeleteClips", old)
+  end
+  local previous = api(media_pool, "GetCurrentFolder")
+  api(media_pool, "SetCurrentFolder", bin)
+  local items = api(media_pool, "ImportMedia", { path })
+  if previous then
+    api(media_pool, "SetCurrentFolder", previous)
+  end
+  local item = items and items[1]
+  if not item then
+    return nil, "Resolve did not import " .. path
+  end
+  log(string.format("Subtitles imported: %s (%d replaced)", tostring(api(item, "GetName") or name), #old))
+  return item
+end
+
 -- Apply a marker JSON file. Returns true/false and a message for the user.
 function M.apply(path)
   local text = read_file(path)
@@ -454,6 +596,18 @@ function M.apply(path)
         msg = msg .. "\nNote: the selected clip is not '" .. file_name .. "' from the JSON."
         break
       end
+    end
+  end
+
+  local srt_file, srt_name = srt_path(path, file_name)
+  if not write_file(srt_file, build_srt(data)) then
+    msg = msg .. "\nSubtitles: cannot write " .. srt_file
+  else
+    local item, ierr = import_subtitles(media_pool, srt_file, srt_name)
+    if item then
+      msg = msg .. "\nSubtitles: " .. srt_name .. " in media pool bin '" .. BIN_NAME .. "'"
+    else
+      msg = msg .. "\nSubtitles: " .. tostring(ierr) .. " - import " .. srt_file .. " by hand"
     end
   end
   return total > 0, msg

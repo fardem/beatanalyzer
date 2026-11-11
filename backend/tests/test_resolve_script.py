@@ -48,16 +48,58 @@ local function clip(name, file, fps, frames)
   end
   return c
 end
-MOCK = { clip = clip, selected = {} }
+local function folder(name, clips)
+  local f = { name = name, clips = clips or {}, subs = {} }
+  function f:GetName() return self.name end
+  function f:GetClipList() local out = {} for i, c in ipairs(self.clips) do out[i] = c end return out end
+  function f:GetSubFolderList() local out = {} for i, s in ipairs(self.subs) do out[i] = s end return out end
+  return f
+end
+MOCK = { clip = clip, selected = {}, imported = {} }
 local song = clip("Song", "Müller Song.wav", "25", "500")
 local other = clip("Other", "other.wav", "25", "500")
 MOCK.song, MOCK.other = song, other
-local sub = { GetClipList = function() return { song } end, GetSubFolderList = function() return {} end }
-local root = { GetClipList = function() return { other } end, GetSubFolderList = function() return { sub } end }
+local sub = folder("Songs", { song })
+local root = folder("Master", { other })
+root.subs[1] = sub
+MOCK.root = root
+local current = root
 local pool = {
   GetRootFolder = function() return root end,
   GetSelectedClips = function() return MOCK.selected end,
+  GetCurrentFolder = function() return current end,
+  SetCurrentFolder = function(_, f) current = f return true end,
+  AddSubFolder = function(_, parent, name)
+    local f = folder(name)
+    parent.subs[#parent.subs + 1] = f
+    return f
+  end,
+  ImportMedia = function(_, paths)
+    local out = {}
+    for _, p in ipairs(paths) do
+      local name = p:match("([^/\\]+)$")
+      local c = clip(name, name, "25", "500")
+      c.path = p
+      current.clips[#current.clips + 1] = c
+      MOCK.imported[#MOCK.imported + 1] = p
+      out[#out + 1] = c
+    end
+    return out
+  end,
+  DeleteClips = function(_, list)
+    local gone = {}
+    for _, c in ipairs(list) do gone[c] = true end
+    local function purge(f)
+      local keep = {}
+      for _, c in ipairs(f.clips) do if not gone[c] then keep[#keep + 1] = c end end
+      f.clips = keep
+      for _, s in ipairs(f.subs) do purge(s) end
+    end
+    purge(root)
+    return true
+  end,
 }
+MOCK.pool = pool
 local project = {
   GetMediaPool = function() return pool end,
   GetSetting = function(_, k) if k == "timelineFrameRate" then return "25" end end,
@@ -130,6 +172,41 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertNotIn("skipped", msg)
         self.assertNotIn("is not", msg)
         self.assertFalse([line for line in self.out if "API not available" in line], self.out)
+
+    def bin_clips(self, name="BeatThis"):
+        for f in self.mock.root.subs.values():
+            if f.name == name:
+                return [c.name for c in f.clips.values()]
+        return None
+
+    def test_subtitles_are_written_and_imported_with_song_name(self):
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result(n_beats=5))))
+        self.assertTrue(ok, msg)
+        srt = (self.tmp / "Müller Song.srt").read_text(encoding="utf-8")
+        cues = srt.strip().split("\n\n")
+        self.assertEqual(len(cues), 6)  # intro 0 s -> first beat, then one per beat
+        self.assertEqual(cues[0].split("\n")[:2], ["1", "00:00:00,000 --> 00:00:00,500"])
+        self.assertEqual(cues[1].split("\n"), ["2", "00:00:00,500 --> 00:00:01,000", "Downbeat (1)",
+                                               "Takt 1 - Beat 1", "00:00.500 - 120.0 BPM - 90%"])
+        self.assertEqual(cues[2].split("\n")[2:4], ["Beat 2", "Takt 1 - Beat 2"])
+        self.assertEqual(cues[5].split("\n")[1], "00:00:02,500 --> 00:00:03,000")  # last: + previous interval
+        self.assertEqual(self.bin_clips(), ["Müller Song.srt"])
+        self.assertIn("Subtitles: Müller Song.srt in media pool bin 'BeatThis'", msg)
+        self.assertTrue(self.lua.eval("MOCK.pool:GetCurrentFolder() == MOCK.root"))
+
+    def test_second_run_replaces_subtitle_clip(self):
+        path = self.write_json(resolve_marker_data(sample_result()))
+        self.M.apply(path)
+        self.M.apply(path)
+        self.assertEqual(self.bin_clips(), ["Müller Song.srt"])
+        self.assertEqual(len(self.mock.imported), 2)
+
+    def test_missing_confidence_shows_dash(self):
+        data = resolve_marker_data(sample_result(n_beats=1))
+        del data["markers"][0]["confidence"]
+        self.M.apply(self.write_json(data))
+        srt = (self.tmp / "Müller Song.srt").read_text(encoding="utf-8")
+        self.assertIn("00:00.500 - 120.0 BPM - -", srt)
 
     def test_second_run_replaces_own_markers_and_keeps_manual_ones(self):
         self.mock.song.AddMarker(self.mock.song, 300, "Green", "manual", "", 1, "")

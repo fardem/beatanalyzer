@@ -1,6 +1,6 @@
 # BeatThis
 
-**Version 0.0.3** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
+**Version 0.0.4** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
 
 BeatThis erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und legt die Beats als **farbige Marker auf deinen Audio-Clip in DaVinci Resolve**. Die Erkennung läuft lokal auf deinem PC mit dem Transformer-Modell [CPJKU beat_this](https://github.com/CPJKU/beat_this). Die Oberfläche ist eine Web-App im Browser, der Server dahinter ist Python.
 
@@ -129,6 +129,18 @@ Danach Resolve einmal neu starten.
 Ein neuer Lauf löscht die Marker des letzten Laufs und setzt die neuen. Von Hand gesetzte Marker bleiben. Das Skript liest die Bildrate aus dem Clip; 23,976, 29,97 und 59,94 fps werden exakt umgerechnet. Meldungen stehen unter *Workspace → Console* in den Zeilen mit `[BeatThis]`.
 
 Die Farben stehen oben im Skript (`DOWNBEAT_COLOR`, `BEAT_COLOR`) und lassen sich dort ändern.
+
+### Untertitel mit Beat-Infos
+
+Das Skript schreibt zusätzlich `<Song>.srt` in den Ordner der JSON und importiert die Datei in den Media-Pool-Ordner **BeatThis**. Jeder Beat ist ein Untertitel, der bis zum nächsten Beat steht:
+
+```
+Downbeat (1)
+Takt 24 - Beat 1
+01:02.880 - 89.6 BPM - 75%
+```
+
+Die Zeiten zählen ab Anfang der Audiodatei. Den Untertitel-Clip so auf eine Untertitelspur legen, dass er am Anfang des Audio-Clips beginnt; der erste Untertitel läuft dafür von 0 s bis zum ersten Beat. Ein neuer Lauf ersetzt den Untertitel-Clip im Ordner **BeatThis**.
 
 ## Update
 
