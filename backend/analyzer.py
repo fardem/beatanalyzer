@@ -267,3 +267,31 @@ def fallback_mir_track(y: np.ndarray, sr: int):
             downbeats_sec.append(beats_sec[i])
 
     return beats_sec, downbeats_sec
+
+
+RESOLVE_MARKER_FORMAT = "beatthis-resolve-markers/1"
+
+
+def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) -> Dict[str, Any]:
+    """
+    Marker-JSON fuer resolve/BeatThis_Markers.lua (gleiches Format wie der Export der Web-App).
+    Zeiten in Sekunden ab Anfang der Audiodatei.
+    """
+    beats = [b for b in result["beats"] if b["isDownbeat"]] if only_downbeats else result["beats"]
+    return {
+        "format": RESOLVE_MARKER_FORMAT,
+        "fileName": result["metadata"]["fileName"],
+        "duration": result["metadata"]["duration"],
+        "globalBpm": result["globalBpm"],
+        "timeSignature": result["timeSignature"]["name"],
+        "markers": [
+            {
+                "time": b["time"],
+                "type": "downbeat" if b["isDownbeat"] else "beat",
+                "bar": b["barIndex"],
+                "beat": b["beatInBar"],
+                "bpm": b["instantBpm"],
+            }
+            for b in beats
+        ],
+    }

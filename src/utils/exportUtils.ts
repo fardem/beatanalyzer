@@ -150,126 +150,36 @@ export function generateMidiClickBlob(result: AnalysisResult): Blob {
   return new Blob([fullMidi], { type: 'audio/midi' });
 }
 
-/**
- * Wandelt Sekunden in einen SMPTE Timecode (HH:MM:SS:FF) um
- */
-export function secondsToTimecode(
-  seconds: number,
-  fps: number = 24,
-  startHour: number = 1
-): string {
-  const totalFrames = Math.max(0, Math.round(seconds * fps));
-  const framesPerHour = Math.round(3600 * fps);
-  const framesPerMinute = Math.round(60 * fps);
+export const RESOLVE_MARKER_FORMAT = 'beatthis-resolve-markers/1';
 
-  const h = Math.floor(totalFrames / framesPerHour) + startHour;
-  const rem1 = totalFrames % framesPerHour;
-
-  const m = Math.floor(rem1 / framesPerMinute);
-  const rem2 = rem1 % framesPerMinute;
-
-  const s = Math.floor(rem2 / fps);
-  const f = Math.round(rem2 % fps);
-
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
-}
-
-export interface DaVinciExportOptions {
-  fps?: number;
-  startHour?: number; // 1 = 01:00:00:00 (DaVinci Default) oder 0 = 00:00:00:00
+export interface ResolveMarkerOptions {
   onlyDownbeats?: boolean;
 }
 
 /**
- * Generiert eine DaVinci Resolve CMX 3600 Marker EDL Datei (.edl)
- * Kann direkt importiert werden via:
- * Timeline -> Timelines -> Marker aus EDL importieren
+ * Marker-JSON für resolve/BeatThis_Markers.lua.
+ * Zeiten in Sekunden ab Anfang der Audiodatei; das Skript rechnet sie mit der Bildrate des Clips in Frames um.
  */
-export function generateDaVinciEdlMarkers(
+export function generateResolveMarkerJson(
   result: AnalysisResult,
-  options: DaVinciExportOptions = {}
+  options: ResolveMarkerOptions = {}
 ): string {
-  const fps = options.fps || 24;
-  const startHour = options.startHour !== undefined ? options.startHour : 1;
-  const onlyDownbeats = options.onlyDownbeats || false;
-
-  const beatsToExport = onlyDownbeats
-    ? result.beats.filter((b) => b.isDownbeat)
-    : result.beats;
-
-  const lines: string[] = [
-    `TITLE: ${result.metadata.fileName.replace(/\.[^/.]+$/, '')}_DaVinci_Markers`,
-    'FCM: NON-DROP FRAME',
-    '',
-  ];
-
-  beatsToExport.forEach((b, idx) => {
-    const eventNum = String(idx + 1).padStart(3, '0');
-    const inTc = secondsToTimecode(b.time, fps, startHour);
-    const outTc = secondsToTimecode(b.time + 1 / fps, fps, startHour);
-
-    // DaVinci Marker Farben: Red für Downbeat, Cyan für reguläre Beats
-    const color = b.isDownbeat ? 'ResolveColorRed' : 'ResolveColorCyan';
-    const markerName = b.isDownbeat
-      ? `Takt ${b.barIndex} (Downbeat)`
-      : `Takt ${b.barIndex}.${b.beatInBar} (${b.instantBpm.toFixed(0)} BPM)`;
-
-    lines.push(`${eventNum}  001      V     C        ${inTc} ${outTc} ${inTc} ${outTc}`);
-    lines.push(` |C:${color} |M:${markerName} |D:1`);
-    lines.push('');
-  });
-
-  return lines.join('\n');
-}
-
-/**
- * Generiert DaVinci Resolve CSV Marker Datei (.csv)
- */
-export function generateDaVinciCsvMarkers(
-  result: AnalysisResult,
-  options: DaVinciExportOptions = {}
-): string {
-  const fps = options.fps || 24;
-  const startHour = options.startHour !== undefined ? options.startHour : 1;
-  const onlyDownbeats = options.onlyDownbeats || false;
-
-  const beatsToExport = onlyDownbeats
-    ? result.beats.filter((b) => b.isDownbeat)
-    : result.beats;
-
-  const headers = [
-    'EDL Clip Name',
-    'Color',
-    'Source In',
-    'Source Out',
-    'Record In',
-    'Record Out',
-    'Duration',
-    'Name',
-    'Notes',
-  ];
-
-  const rows = beatsToExport.map((b) => {
-    const inTc = secondsToTimecode(b.time, fps, startHour);
-    const outTc = secondsToTimecode(b.time + 1 / fps, fps, startHour);
-    const color = b.isDownbeat ? 'Red' : 'Cyan';
-    const name = b.isDownbeat ? `Takt ${b.barIndex} (1)` : `Takt ${b.barIndex}.${b.beatInBar}`;
-    const notes = `${b.instantBpm.toFixed(1)} BPM - ${b.time.toFixed(3)}s`;
-
-    return [
-      'Timeline',
-      color,
-      inTc,
-      outTc,
-      inTc,
-      outTc,
-      '00:00:00:01',
-      `"${name}"`,
-      `"${notes}"`,
-    ];
-  });
-
-  return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  const beats = options.onlyDownbeats ? result.beats.filter((b) => b.isDownbeat) : result.beats;
+  const data = {
+    format: RESOLVE_MARKER_FORMAT,
+    fileName: result.metadata.fileName,
+    duration: result.metadata.duration,
+    globalBpm: result.globalBpm,
+    timeSignature: result.timeSignature.name,
+    markers: beats.map((b) => ({
+      time: b.time,
+      type: b.isDownbeat ? 'downbeat' : 'beat',
+      bar: b.barIndex,
+      beat: b.beatInBar,
+      bpm: b.instantBpm,
+    })),
+  };
+  return JSON.stringify(data, null, 2);
 }
 
 function writeVarLength(arr: number[], value: number) {

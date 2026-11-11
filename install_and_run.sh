@@ -29,6 +29,8 @@ if [ ! -f "dist/index.html" ] && command -v npm &> /dev/null; then
     npm run build
 fi
 
+python3 backend/resolve_plugin.py auto || true
+
 echo "======================================================================"
 echo " Starte Server auf http://localhost:8000 ..."
 echo "======================================================================"

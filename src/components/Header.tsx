@@ -1,6 +1,7 @@
 import React from 'react';
 import { Activity, BookOpen, Download, RefreshCw, ExternalLink, Terminal } from 'lucide-react';
 import { AnalysisResult } from '../types/analyzer';
+import { UpdateBadge } from './UpdateBadge';
 
 interface HeaderProps {
   result: AnalysisResult | null;
@@ -34,9 +35,12 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </h1>
             </div>
-            <p className="text-xs text-slate-400">
-              Präzise Beat- & Downbeat-Erkennung für MP3, WAV, AAC & FLAC
-            </p>
+            <div className="flex flex-wrap items-center gap-x-3">
+              <p className="text-xs text-slate-400">
+                Präzise Beat- & Downbeat-Erkennung für MP3, WAV, AAC & FLAC
+              </p>
+              <UpdateBadge />
+            </div>
           </div>
         </div>
 

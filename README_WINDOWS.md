@@ -17,7 +17,8 @@ Falls du Python noch nicht installiert hast:
 Mache einfach einen Doppelklick auf die Datei **`install_and_run.bat`** im Projektordner:
 - ✅ Prüft deine Python-Installation.
 - ✅ Erstellt automatisch die isolierte Umgebung im Ordner `venv\` (dein restliches Windows-System bleibt völlig unberührt).
-- ✅ Installiert **PyTorch**, **CPJKU beat_this**, **Librosa**, **SoundFile** und **FastAPI**.
+- ✅ Installiert **PyTorch**, **CPJKU beat_this**, **Librosa** und **SoundFile**.
+- ✅ Installiert das Skript für DaVinci Resolve, wenn Resolve auf dem PC ist (siehe unten).
 - ✅ Startet den lokalen Server und öffnet automatisch deinen Browser auf **`http://localhost:8000`**!
 
 ---
@@ -28,9 +29,25 @@ Mache einfach einen Doppelklick auf die Datei **`install_and_run.bat`** im Proje
 |---|---|
 | **`install_and_run.bat`** | **Erstinstallation**: Erstellt das `venv`, lädt alle Pakete herunter und startet die Web-App. |
 | **`start.bat`** | **Täglicher Schnellstart**: Überspringt die Installation und startet Server & Browser direkt in 1 Sekunde. |
+| **`update.bat`** | **Update**: Lädt die neueste Version von GitHub. Geänderte Dateien kommen vorher nach `update-backup\`. |
 | **`run_cli.bat`** | **Drag & Drop**: Ziehe eine beliebige `.mp3`, `.wav`, `.aac` oder `.flac` Datei direkt mit der Maus auf die `run_cli.bat` im Windows Explorer, um sie sofort im Terminal zu analysieren! |
 
 ---
+
+## 🎬 Beat-Marker in DaVinci Resolve
+
+Getestet für DaVinci Resolve **Studio** 21.2. Die kostenlose Version sperrt den Dateizugriff für Skripte.
+
+1. **Skript installieren** (einmalig): In BeatThis *Exportieren → DaVinci Resolve → In Resolve installieren*. `install_and_run.bat` macht das automatisch, wenn Resolve installiert ist. Das Skript liegt dann unter `%APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility\BeatThis_Markers.lua`. Resolve einmal neu starten.
+2. **Marker-JSON herunterladen**: *Exportieren → DaVinci Resolve → Marker-JSON herunterladen*.
+3. In Resolve den Audio-Clip im **Media Pool** auswählen. Ohne Auswahl nimmt das Skript den Clip mit dem Dateinamen aus der JSON.
+4. *Workspace → Scripts → BeatThis_Markers* und die JSON wählen.
+
+Ergebnis: ein Marker pro Beat am Clip, **Red** = Downbeat, **Cyan** = Beat. Die Marker gehören zum Clip im Media Pool und erscheinen in jeder Timeline, in der der Clip liegt. Ein neuer Lauf ersetzt die Marker des letzten Laufs; von Hand gesetzte Marker bleiben. Meldungen stehen unter *Workspace → Console*.
+
+## 🔄 Update
+
+Ist auf GitHub eine neue Version, zeigt BeatThis neben der Versionsnummer im Header einen Button *Update x.y.z*. Alternativ `update.bat` doppelklicken. Danach BeatThis neu starten (`start.bat`).
 
 ## 🚀 Brauche ich Node.js / npm?
 **Nein!**  

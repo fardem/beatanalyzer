@@ -5,11 +5,11 @@ import {
   generateBeatThisJson,
   generateCsv,
   generateMidiClickBlob,
-  generateDaVinciEdlMarkers,
-  generateDaVinciCsvMarkers,
+  generateResolveMarkerJson,
   downloadTextFile,
   downloadBlob,
 } from '../utils/exportUtils';
+import { ResolveInstallPanel } from './ResolveInstallPanel';
 import {
   X,
   Download,
@@ -35,22 +35,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
   const [activeTab, setActiveTab] = useState<TabType>('davinci');
   const [copied, setCopied] = useState(false);
 
-  // DaVinci Resolve spezifische Einstellungen
-  const [davinciFps, setDavinciFps] = useState<number>(24);
-  const [davinciStartHour, setDavinciStartHour] = useState<number>(1); // 1 = 01:00:00:00
   const [davinciOnlyDownbeats, setDavinciOnlyDownbeats] = useState<boolean>(false);
 
   const baseFileName = result.metadata.fileName.replace(/\.[^/.]+$/, '');
 
-  const davinciEdlContent = generateDaVinciEdlMarkers(result, {
-    fps: davinciFps,
-    startHour: davinciStartHour,
-    onlyDownbeats: davinciOnlyDownbeats,
-  });
-
-  const davinciCsvContent = generateDaVinciCsvMarkers(result, {
-    fps: davinciFps,
-    startHour: davinciStartHour,
+  const resolveJsonContent = generateResolveMarkerJson(result, {
     onlyDownbeats: davinciOnlyDownbeats,
   });
 
@@ -66,11 +55,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
 
   const handleDownload = () => {
     if (activeTab === 'davinci') {
-      downloadTextFile(
-        davinciEdlContent,
-        `${baseFileName}_DaVinci_${davinciFps}fps.edl`,
-        'text/plain'
-      );
+      downloadTextFile(resolveJsonContent, `${baseFileName}_resolve_markers.json`, 'application/json');
     } else if (activeTab === 'json') {
       downloadTextFile(jsonContent, `${baseFileName}_beat_this.json`, 'application/json');
     } else if (activeTab === 'audacity') {
@@ -171,111 +156,78 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
               <div className="p-3.5 rounded-xl bg-gradient-to-r from-rose-950/40 to-slate-900 border border-rose-800/40 space-y-1.5">
                 <div className="flex items-center gap-2 text-rose-300 font-bold text-sm">
                   <Film className="w-4 h-4 text-rose-400" />
-                  <span>DaVinci Resolve Timeline- & Clip-Marker</span>
+                  <span>DaVinci Resolve: Marker am Audio-Clip</span>
                 </div>
                 <p className="text-slate-400 text-xs leading-relaxed">
-                  Exportiert präzise Marker als <strong>EDL</strong> oder <strong>CSV</strong>. DaVinci Resolve importiert diese direkt auf die Timeline oder über deine Audio- und Videoclips für perfekten Taktschnitt!
+                  Exportiert eine Marker-JSON. Das Skript <strong>BeatThis_Markers.lua</strong> setzt daraus in Resolve
+                  einen Marker pro Beat auf den Clip im Media Pool. Die Marker erscheinen auf jeder Verwendung des
+                  Clips in jeder Timeline. Die Bildrate liest das Skript aus dem Clip.
                 </p>
               </div>
 
-              {/* Marker Options & Settings */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-                {/* Framerate */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
                 <div className="space-y-1">
-                  <label className="text-slate-400 font-medium block">Timeline-Bildrate (FPS):</label>
-                  <select
-                    value={davinciFps}
-                    onChange={(e) => setDavinciFps(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono focus:border-rose-500 focus:outline-none"
-                  >
-                    <option value={24}>24 fps (Kino standard)</option>
-                    <option value={25}>25 fps (PAL / Europa)</option>
-                    <option value={29.97}>29.97 fps (NTSC)</option>
-                    <option value={30}>30 fps (Web / Video)</option>
-                    <option value={50}>50 fps (PAL High)</option>
-                    <option value={59.94}>59.94 fps (NTSC High)</option>
-                    <option value={60}>60 fps (Gaming / High FPS)</option>
-                  </select>
-                </div>
-
-                {/* Start Timecode */}
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-medium block">Start-Timecode:</label>
-                  <select
-                    value={davinciStartHour}
-                    onChange={(e) => setDavinciStartHour(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono focus:border-rose-500 focus:outline-none"
-                  >
-                    <option value={1}>01:00:00:00 (DaVinci Standard)</option>
-                    <option value={0}>00:00:00:00 (Null-Start)</option>
-                  </select>
-                </div>
-
-                {/* Marker Density Filter */}
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-medium block">Marker-Dichte:</label>
+                  <label className="text-slate-400 font-medium block">Marker:</label>
                   <select
                     value={davinciOnlyDownbeats ? 'downbeats' : 'all'}
                     onChange={(e) => setDavinciOnlyDownbeats(e.target.value === 'downbeats')}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:border-rose-500 focus:outline-none"
                   >
-                    <option value="all">Alle Beats (Rot & Cyan)</option>
-                    <option value="downbeats">Nur Taktanfänge (Downbeats)</option>
+                    <option value="all">Alle Beats ({result.totalBeats})</option>
+                    <option value="downbeats">Nur Downbeats ({result.totalBars})</option>
                   </select>
                 </div>
-              </div>
-
-              {/* Marker Color Scheme Legend */}
-              <div className="flex flex-wrap items-center gap-4 text-xs bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 font-medium">Marker-Farben in DaVinci:</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-rose-500/30"></span>
-                  <span className="text-slate-200">
-                    <strong>Roter Marker</strong> = Downbeat (Takt 1)
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 ring-2 ring-cyan-400/30"></span>
-                  <span className="text-slate-200">
-                    <strong>Cyan Marker</strong> = Beats (2, 3, 4...)
-                  </span>
+                <div className="space-y-1">
+                  <span className="text-slate-400 font-medium block">Farben:</span>
+                  <div className="flex flex-wrap items-center gap-3 pt-1.5">
+                    <span className="flex items-center gap-1.5 text-slate-200">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>Red = Downbeat
+                    </span>
+                    <span className="flex items-center gap-1.5 text-slate-200">
+                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>Cyan = Beat
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Step-by-Step Instructions for DaVinci Resolve */}
+              <ResolveInstallPanel />
+
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
                 <div className="flex items-center gap-1.5 text-cyan-300 font-semibold">
                   <Info className="w-4 h-4 text-cyan-400" />
-                  <span>So importierst du die Marker in DaVinci Resolve:</span>
+                  <span>So kommen die Marker in DaVinci Resolve Studio:</span>
                 </div>
                 <ol className="list-decimal pl-5 space-y-1 text-slate-300 leading-relaxed">
                   <li>
-                    Lade unten die <strong>.EDL</strong> Datei (oder .CSV) herunter.
+                    Einmalig: das Skript in Resolve installieren (Feld oben).
                   </li>
                   <li>
-                    Öffne dein Projekt in DaVinci Resolve (Edit- oder Fairlight-Page).
+                    <strong>Marker-JSON herunterladen</strong>.
                   </li>
                   <li>
-                    Rechtsklick auf die gewünschte Timeline im Media Pool (oder im Timeline-Menü):<br />
+                    In Resolve den Audio-Clip im <strong>Media Pool</strong> auswählen. Ohne Auswahl sucht das Skript
+                    den Clip mit dem Dateinamen <code className="text-rose-300">{result.metadata.fileName}</code>.
+                  </li>
+                  <li>
                     <code className="text-rose-300 bg-slate-900 px-1.5 py-0.5 rounded">
-                      Timelines → Importieren → Timeline-Marker aus EDL...
-                    </code>
-                  </li>
-                  <li>
-                    Wähle die heruntergeladene Datei aus. Fertig! Alle Beats liegen nun millimetergenau als Marker auf der Timeline über deinem Song.
+                      Workspace → Scripts → BeatThis_Markers
+                    </code>{' '}
+                    und die JSON wählen.
                   </li>
                 </ol>
+                <p className="text-slate-500 leading-relaxed">
+                  Ein neuer Lauf ersetzt die Marker des letzten Laufs. Von Hand gesetzte Marker bleiben.
+                </p>
               </div>
 
-              {/* EDL Preview snippet */}
               <div className="space-y-1.5 font-mono">
                 <div className="flex justify-between items-center text-[11px] text-slate-400">
-                  <span>CMX 3600 EDL Vorschau:</span>
+                  <span>JSON-Vorschau:</span>
                   <span>{davinciOnlyDownbeats ? result.totalBars : result.totalBeats} Marker</span>
                 </div>
                 <pre className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] overflow-x-auto text-rose-300 max-h-36">
-                  {davinciEdlContent.split('\n').slice(0, 16).join('\n')}
-                  {'\n... (weitere Marker)'}
+                  {resolveJsonContent.split('\n').slice(0, 24).join('\n')}
+                  {'\n...'}
                 </pre>
               </div>
             </div>
@@ -343,30 +295,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-3">
           {activeTab === 'davinci' ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() =>
-                  downloadTextFile(
-                    davinciCsvContent,
-                    `${baseFileName}_DaVinci_Markers.csv`,
-                    'text/csv'
-                  )
-                }
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-750 border border-slate-700 transition-colors cursor-pointer"
-                title="Als DaVinci CSV Marker exportieren"
-              >
-                <Table className="w-3.5 h-3.5 text-rose-400" />
-                <span>Als .CSV laden</span>
-              </button>
-
-              <button
-                onClick={() => handleCopy(davinciEdlContent)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-750 border border-slate-700 transition-colors cursor-pointer"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Kopiert!' : 'EDL kopieren'}</span>
-              </button>
-            </div>
+            <div />
           ) : activeTab !== 'midi' ? (
             <button
               onClick={() =>
@@ -405,7 +334,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
               <Download className="w-4 h-4" />
               <span>
                 {activeTab === 'davinci'
-                  ? 'DaVinci EDL Marker herunterladen'
+                  ? 'Marker-JSON herunterladen'
                   : 'Datei herunterladen'}
               </span>
             </button>

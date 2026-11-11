@@ -196,6 +196,13 @@ if !errorlevel! neq 0 (
 )
 
 :: ----------------------------------------------------------------------
+:: DAVINCI RESOLVE SKRIPT (nur wenn Resolve installiert ist)
+:: ----------------------------------------------------------------------
+echo.
+echo Pruefe DaVinci Resolve und installiere/aktualisiere BeatThis_Markers.lua...
+!VENV_PY! backend\resolve_plugin.py auto
+
+:: ----------------------------------------------------------------------
 :: 6. SERVER STARTEN UND BROWSER ÖFFNEN
 :: ----------------------------------------------------------------------
 echo.
