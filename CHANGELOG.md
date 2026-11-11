@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.3] – 2026-11-11
+
+### Behoben
+- Resolve-Skript: `GetSelectedClips()` lieferte in Resolve Studio 21.2 neben dem ausgewählten Clip einen Eintrag ohne Clip-Methoden. Das Skript zählte ihn als Clip („2 clip(s): ?, …“), meldete 359 übersprungene Marker und warnte fälschlich, der Clip passe nicht zur JSON. Einträge ohne `AddMarker` werden jetzt ignoriert und im Log mit Typ genannt.
+- Resolve-Skript: Dieselbe Meldung „API not available“ steht höchstens dreimal im Log.
+
 ## [0.0.2] – 2026-11-11
 
 ### Hinzugefügt
@@ -8,11 +14,12 @@
 - Update von GitHub: Hinweis mit Update-Button im Header, `update.bat`, `backend/updater.py`. Ersetzte Dateien kommen nach `update-backup/<alte Version>/`.
 - GitHub Actions: `release.yml` hängt `BeatThis.zip` an jedes Release eines Versions-Tags, `tests.yml` prüft Backend, Frontend und `dist/`.
 - CLI: `--export-resolve`, `--only-downbeats`.
-
 - `LICENSE` (MIT), Abschnitt „Lizenz“ und „Credits“ in der README mit Hinweis und Zitat zu CPJKU beat_this.
 - Der Frontend-Build schreibt die Lizenzen der gebündelten Pakete nach `dist/.vite/license.md`.
-
 - README neu geschrieben, mit Bildschirmfotos (`docs/images/`); `README_WINDOWS.md` ist darin aufgegangen.
+
+### Behoben
+- Updater: Eine `requirements.txt` mit CRLF-Zeilenenden galt als geändert und löste ein unnötiges `pip install` aus.
 
 ### Entfernt
 - Reste aus Google AI Studio: `metadata.json`, `.env.example` und die nicht benutzten Pakete `@google/genai`, `express`, `dotenv`, `tsx`, `motion`.

@@ -119,6 +119,18 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(len(self.markers(self.mock.song)), 0)
         self.assertIn("is not 'Müller Song.wav'", msg)
 
+    def test_selection_entries_that_are_not_clips_are_ignored(self):
+        # Resolve Studio 21.2: GetSelectedClips() returned the clip plus an entry without clip methods
+        not_a_clip = self.lua.eval("{}")
+        self.mock.selected = self.lua.table_from([not_a_clip, self.mock.song, 42])
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertTrue(ok, msg)
+        self.assertEqual(len(self.markers(self.mock.song)), 8)
+        self.assertIn("8 markers on 1 clip(s): Song", msg)
+        self.assertNotIn("skipped", msg)
+        self.assertNotIn("is not", msg)
+        self.assertFalse([line for line in self.out if "API not available" in line], self.out)
+
     def test_second_run_replaces_own_markers_and_keeps_manual_ones(self):
         self.mock.song.AddMarker(self.mock.song, 300, "Green", "manual", "", 1, "")
         path = self.write_json(resolve_marker_data(sample_result()))
