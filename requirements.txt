@@ -1,4 +1,4 @@
-# Python Dependencies für lokales BeatThis (CPJKU beat_this)
+# Python Dependencies für BeatAnalyzer (CPJKU beat_this)
 # Getestet mit Python 3.9, 3.10, 3.11, 3.12, 3.13 (Windows 10 / 11)
 
 # Audio & Signalverarbeitung (High-Performance MIR)

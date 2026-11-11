@@ -159,7 +159,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
                   <span>DaVinci Resolve: Marker am Audio-Clip</span>
                 </div>
                 <p className="text-slate-400 text-xs leading-relaxed">
-                  Exportiert eine Marker-JSON. Das Skript <strong>BeatThis_Markers.lua</strong> setzt daraus in Resolve
+                  Exportiert eine Marker-JSON. Das Skript <strong>BeatAnalyzer_Markers.lua</strong> setzt daraus in Resolve
                   einen Marker pro Beat auf den Clip im Media Pool. Die Marker erscheinen auf jeder Verwendung des
                   Clips in jeder Timeline. Die Bildrate liest das Skript aus dem Clip.
                 </p>
@@ -210,13 +210,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
                   </li>
                   <li>
                     <code className="text-rose-300 bg-slate-900 px-1.5 py-0.5 rounded">
-                      Workspace → Scripts → BeatThis_Markers
+                      Workspace → Scripts → BeatAnalyzer_Markers
                     </code>{' '}
                     und die JSON wählen.
                   </li>
                 </ol>
                 <p className="text-slate-500 leading-relaxed">
-                  Ein neuer Lauf ersetzt die Marker des letzten Laufs. Von Hand gesetzte Marker bleiben. Zusätzlich legt das Skript den Untertitel-Clip <code className="text-rose-300">{result.metadata.fileName.replace(/\.[^/.]+$/, '')}.srt</code> mit Typ, Takt, Zeit, Tempo und Konfidenz pro Beat im Media-Pool-Ordner <strong>BeatThis</strong> an. Ist eine Timeline mit dem Song offen, kommen die Untertitel auf die Spur <strong>BeatThis - Song</strong> unter den Song.
+                  Ein neuer Lauf ersetzt die Marker des letzten Laufs. Von Hand gesetzte Marker bleiben. Zusätzlich legt das Skript den Untertitel-Clip <code className="text-rose-300">{result.metadata.fileName.replace(/\.[^/.]+$/, '')}.srt</code> mit Typ, Takt, Zeit, Tempo und Konfidenz pro Beat im Media-Pool-Ordner <strong>BeatAnalyzer</strong> an. Ist eine Timeline mit dem Song offen, kommen die Untertitel auf die Spur <strong>BeatAnalyzer - Song</strong> unter den Song.
                 </p>
               </div>
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.5] – 2026-11-12
+
+### Geändert
+- Das Programm heißt **BeatAnalyzer** (vorher BeatThis): Oberfläche, Browser-Tab, Batch-Fenster, Server-Meldungen, README.
+- Resolve-Skript heißt `BeatAnalyzer_Markers.lua`, Media-Pool-Ordner und Untertitelspur heißen **BeatAnalyzer** bzw. „BeatAnalyzer - <Song>“. Ein neuer Lauf löscht auch die alte Spur „BeatThis - <Song>“.
+- Release-Datei heißt `BeatAnalyzer.zip`. Umgebungsvariable für private Repositories: `BEATANALYZER_GITHUB_TOKEN` (`BEATTHIS_GITHUB_TOKEN` gilt weiter).
+
+### Übergang von 0.0.4
+- Jedes Release enthält zusätzlich `BeatThis.zip`, weil der Updater bis 0.0.4 diese Datei sucht.
+- `resolve/BeatThis_Markers.lua` bleibt als Übergangsskript: Der Updater bis 0.0.4 installiert es, und es startet `BeatAnalyzer_Markers.lua`. *In Resolve aktualisieren* installiert das neue Skript und entfernt das alte aus Resolve.
+- Unverändert und damit weiter gültig: Kennung der Marker-JSON und der Marker, sodass alte JSONs funktionieren und alte Marker ersetzt werden.
+
 ## [0.0.4] – 2026-11-11
 
 ### Hinzugefügt

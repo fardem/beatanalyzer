@@ -1,12 +1,12 @@
 """
-Update BeatThis from the newest GitHub release.
+Update BeatAnalyzer from the newest GitHub release.
 
-The release ZIP (BeatThis.zip) is built by .github/workflows/release.yml for every version tag.
+The release ZIP (BeatAnalyzer.zip) is built by .github/workflows/release.yml for every version tag.
 Files the update replaces or removes go to update-backup/<old version>/ first. venv/ and files
 that are not part of a release stay untouched. A Git checkout is not updated (use git pull there).
 
 Command line: python backend/updater.py [check|update]
-Private repository: set BEATTHIS_GITHUB_TOKEN to a token with read access to the repository.
+Private repository: set BEATANALYZER_GITHUB_TOKEN to a token with read access to the repository.
 """
 
 import json
@@ -27,7 +27,8 @@ import resolve_plugin  # noqa: E402
 
 GITHUB_REPO = "fardem/beatanalyzer"
 RELEASE_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
-RELEASE_ASSET = "BeatThis.zip"
+RELEASE_ASSET = "BeatAnalyzer.zip"
+OLD_ASSET = "BeatThis.zip"             # name up to 0.0.4; release.yml still uploads it for older updaters
 TEMP_DIR = "update-temp"
 BACKUP_DIR = "update-backup"
 MANIFEST = ".beatthis-files"           # program files of the installed release, one path per line
@@ -57,8 +58,8 @@ def read_version(folder: Path) -> str:
 
 
 def _headers(accept: str) -> dict:
-    h = {"User-Agent": "BeatThis-Updater", "Accept": accept}
-    token = os.environ.get("BEATTHIS_GITHUB_TOKEN", "").strip()
+    h = {"User-Agent": "BeatAnalyzer-Updater", "Accept": accept}
+    token = (os.environ.get("BEATANALYZER_GITHUB_TOKEN") or os.environ.get("BEATTHIS_GITHUB_TOKEN") or "").strip()
     if token:
         h["Authorization"] = f"Bearer {token}"
     return h
@@ -74,7 +75,8 @@ def parse_release(data: dict) -> Optional[dict]:
     tag = str(data.get("tag_name") or "").strip()
     if not tag or data.get("draft") or data.get("prerelease") or version_key(tag) == (-1,):
         return None
-    asset = next((a for a in data.get("assets", []) if a.get("name") == RELEASE_ASSET), None)
+    assets = {a.get("name"): a for a in data.get("assets", [])}
+    asset = assets.get(RELEASE_ASSET) or assets.get(OLD_ASSET)
     if not asset:
         return None
     # The API URL of the asset works for public repositories and, with a token, for private ones.
@@ -88,7 +90,7 @@ def latest_release(timeout: float = 10) -> Optional[dict]:
     except urllib.error.HTTPError as e:
         if e.code == 404:
             raise UpdateError("Kein Release gefunden (oder das Repository ist privat und "
-                              "BEATTHIS_GITHUB_TOKEN ist nicht gesetzt).") from e
+                              "BEATANALYZER_GITHUB_TOKEN ist nicht gesetzt).") from e
         raise UpdateError(f"GitHub antwortet mit HTTP {e.code}.") from e
     except OSError as e:
         raise UpdateError(f"GitHub nicht erreichbar: {e}") from e
@@ -128,7 +130,7 @@ def extract_release(zip_path: Path, dest: Path) -> Path:
     for cand in [dest, *sorted(p for p in dest.iterdir() if p.is_dir())]:
         if (cand / "VERSION").is_file() and (cand / "backend" / "server.py").is_file():
             return cand
-    raise UpdateError("Das ZIP enthält kein BeatThis (VERSION oder backend/server.py fehlt).")
+    raise UpdateError("Das ZIP enthält kein BeatAnalyzer (VERSION oder backend/server.py fehlt).")
 
 
 def release_files(folder: Path) -> list:
@@ -204,10 +206,10 @@ def update(root: Path = PROJECT_ROOT, release: Optional[dict] = None, log=print,
     if info.get("error"):
         raise UpdateError(info["error"])
     if not info["available"]:
-        return {"updated": False, "version": info["current"], "message": f"BeatThis {info['current']} ist aktuell."}
+        return {"updated": False, "version": info["current"], "message": f"BeatAnalyzer {info['current']} ist aktuell."}
     tmp = root / TEMP_DIR
     zip_path = tmp / RELEASE_ASSET
-    log(f"[Update] Lade BeatThis {info['latest']} ...")
+    log(f"[Update] Lade BeatAnalyzer {info['latest']} ...")
     download(info["zip"], zip_path)
     src = extract_release(zip_path, tmp / "unpacked")
     if read_version(src) != info["latest"]:
@@ -221,7 +223,7 @@ def update(root: Path = PROJECT_ROOT, release: Optional[dict] = None, log=print,
     if plugin["state"] == "outdated":
         resolve_plugin.install()
         log(f"[Update] Resolve-Skript aktualisiert: {plugin['path']}")
-    msg = f"BeatThis {info['latest']} installiert. Starte BeatThis neu (start.bat)."
+    msg = f"BeatAnalyzer {info['latest']} installiert. Starte BeatAnalyzer neu (start.bat)."
     if not pip_ok:
         msg += " Achtung: Die Python-Pakete konnten nicht installiert werden - starte install_and_run.bat."
     return {"updated": True, "version": info["latest"], "message": msg, **result}

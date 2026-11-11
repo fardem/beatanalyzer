@@ -1,5 +1,5 @@
 """
-Kommandozeilen-Tool (CLI) für BeatThis
+Kommandozeilen-Tool (CLI) für BeatAnalyzer
 Erlaubt die direkte Analyse von MP3, WAV, AAC, FLAC im Terminal
 Beispiel: python backend/analyze_cli.py meinsong.mp3
 """
@@ -14,10 +14,10 @@ from analyzer import analyze_audio_file, resolve_marker_data
 
 
 def main():
-    parser = argparse.ArgumentParser(description="BeatThis CLI - Beat & Downbeat Erkennung")
+    parser = argparse.ArgumentParser(description="BeatAnalyzer CLI - Beat & Downbeat Erkennung")
     parser.add_argument("audio_path", help="Pfad zur MP3-, WAV-, AAC- oder FLAC-Audiodatei")
     parser.add_argument("--export-json", help="Optionaler Pfad zum Speichern der JSON-Ergebnisse", default=None)
-    parser.add_argument("--export-resolve", help="Optionaler Pfad für die DaVinci Resolve Marker-JSON (BeatThis_Markers.lua)", default=None)
+    parser.add_argument("--export-resolve", help="Optionaler Pfad für die DaVinci Resolve Marker-JSON (BeatAnalyzer_Markers.lua)", default=None)
     parser.add_argument("--only-downbeats", help="Resolve-Marker nur auf Downbeats", action="store_true")
     parser.add_argument("--export-audacity", help="Optionaler Pfad für Audacity Label Track (.txt)", default=None)
     parser.add_argument("--export-csv", help="Optionaler Pfad für CSV-Datei", default=None)
@@ -52,7 +52,7 @@ def main():
         json.dump(result, f, indent=2, ensure_ascii=False)
     print(f"[OK] JSON gespeichert: {out_json}")
 
-    # DaVinci Resolve Marker-JSON (fuer resolve/BeatThis_Markers.lua)
+    # DaVinci Resolve Marker-JSON (fuer resolve/BeatAnalyzer_Markers.lua)
     out_resolve = args.export_resolve or f"{base_name}_resolve_markers.json"
     with open(out_resolve, "w", encoding="utf-8") as f:
         json.dump(resolve_marker_data(result, args.only_downbeats), f, indent=2, ensure_ascii=False)

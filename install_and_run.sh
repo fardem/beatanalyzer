@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# BeatThis Linux/macOS Installation & Runner
+# BeatAnalyzer Linux/macOS Installation & Runner
 set -e
 
 echo "======================================================================"
-echo "         BeatThis - CPJKU beat_this Setup (Linux / macOS)"
+echo "         BeatAnalyzer - CPJKU beat_this Setup (Linux / macOS)"
 echo "======================================================================"
 
 if ! command -v python3 &> /dev/null; then

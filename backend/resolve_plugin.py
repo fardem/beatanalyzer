@@ -1,5 +1,5 @@
 """
-Install resolve/BeatThis_Markers.lua into DaVinci Resolve's script folder.
+Install resolve/BeatAnalyzer_Markers.lua into DaVinci Resolve's script folder.
 Used by the web app (/api/resolve/*), install_and_run.bat and the updater.
 """
 
@@ -10,8 +10,9 @@ from pathlib import Path
 from typing import Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PLUGIN_FILE = "BeatThis_Markers.lua"
+PLUGIN_FILE = "BeatAnalyzer_Markers.lua"
 PLUGIN_SOURCE = PROJECT_ROOT / "resolve" / PLUGIN_FILE
+LEGACY_FILE = "BeatThis_Markers.lua"   # name up to 0.0.4; install() removes it from Resolve
 
 _VERSION_LINE = re.compile(r'^local\s+VERSION\s*=\s*"([^"]*)"', re.M)
 
@@ -46,7 +47,7 @@ def resolve_installed(env=os.environ, platform: str = sys.platform) -> bool:
 
 
 def script_version(path: Path) -> Optional[str]:
-    """VERSION of a BeatThis_Markers.lua, or None if the file does not exist."""
+    """VERSION of a BeatAnalyzer_Markers.lua, or None if the file does not exist."""
     try:
         text = Path(path).read_text(encoding="utf-8", errors="replace")
     except OSError:
@@ -61,9 +62,12 @@ def status(target_dir: Optional[Path] = None, env=os.environ, platform: str = sy
     target = target_dir / PLUGIN_FILE
     installed = script_version(target)
     current = script_version(PLUGIN_SOURCE) or ""
-    if installed is None:
+    legacy = script_version(target_dir / LEGACY_FILE)
+    if installed is None and legacy is not None:
+        installed, state = legacy, "outdated"   # only the script of an older version under its old name
+    elif installed is None:
         state = "missing"
-    elif installed != current:
+    elif installed != current or legacy is not None:
         state = "outdated"
     else:
         state = "current"
@@ -72,6 +76,7 @@ def status(target_dir: Optional[Path] = None, env=os.environ, platform: str = sy
         "path": str(target),
         "installedVersion": installed,
         "version": current,
+        "legacyInstalled": legacy is not None,
         "state": state,
     }
 
@@ -84,6 +89,9 @@ def install(target_dir: Optional[Path] = None, env=os.environ, platform: str = s
     tmp = target.with_name(target.name + ".tmp")
     tmp.write_bytes(PLUGIN_SOURCE.read_bytes())
     os.replace(tmp, target)
+    legacy = target_dir / LEGACY_FILE
+    if legacy.exists():
+        legacy.unlink()
     return target
 
 
@@ -103,7 +111,7 @@ def main(argv) -> int:
     if cmd in ("install", "auto"):
         target = install()
         print(f"[Resolve] Skript installiert ({st['version']}): {target}")
-        print("[Resolve] In Resolve: Workspace -> Scripts -> BeatThis_Markers (Resolve ggf. neu starten).")
+        print("[Resolve] In Resolve: Workspace -> Scripts -> BeatAnalyzer_Markers (Resolve ggf. neu starten).")
         return 0
     print("Aufruf: python backend/resolve_plugin.py [status|install|auto]")
     return 2

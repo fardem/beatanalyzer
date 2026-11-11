@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0"
-title BeatThis - Schnellstart (Windows)
+title BeatAnalyzer - Schnellstart (Windows)
 color 0B
 
 if not exist "venv\Scripts\activate.bat" (
@@ -13,7 +13,7 @@ if not exist "venv\Scripts\activate.bat" (
 echo Aktiviere isolierte Python-Umgebung...
 call venv\Scripts\activate.bat
 
-echo Starte BeatThis Server auf http://localhost:8000 ...
+echo Starte BeatAnalyzer Server auf http://localhost:8000 ...
 start "" http://localhost:8000
 venv\Scripts\python.exe backend\server.py
 
