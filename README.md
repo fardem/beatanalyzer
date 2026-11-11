@@ -1,11 +1,36 @@
-<div align="center">
+# BeatThis – Beat- & Downbeat-Analyzer
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Lokale Web-App zur Beat-, Downbeat-, Tempo- und Taktart-Erkennung für MP3, WAV, AAC und FLAC.
+Backend in Python (CPJKU *beat_this* Transformer, Librosa als Fallback), Frontend in React/Vite.
 
-  <h1>Built with AI Studio</h2>
+## Windows
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+Siehe [README_WINDOWS.md](README_WINDOWS.md) – kurz: `install_and_run.bat` doppelklicken,
+danach reicht `start.bat`. Das Frontend liegt fertig gebaut in `dist/`, Node.js ist nicht nötig.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Linux / macOS
 
-</div>
+```bash
+./install_and_run.sh
+```
+
+Der Server läuft danach auf <http://localhost:8000>.
+
+## Frontend neu bauen (nur bei Änderungen in `src/`)
+
+```bash
+npm install
+npm run build
+```
+
+## Tests (Backend)
+
+```bash
+venv/bin/python -m unittest discover -s backend/tests -v
+```
+
+## CLI
+
+```bash
+python backend/analyze_cli.py song.mp3 --export-csv beats.csv
+```

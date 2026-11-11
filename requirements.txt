@@ -1,0 +1,15 @@
+# Python Dependencies für lokales BeatThis (CPJKU beat_this)
+# Getestet mit Python 3.9, 3.10, 3.11, 3.12, 3.13 (Windows 10 / 11)
+
+# Audio & Signalverarbeitung (High-Performance MIR)
+numpy>=1.24  # kein <2: fuer Python 3.13+ gibt es keine numpy-1.x-Wheels
+scipy>=1.10.0
+librosa>=0.10.0
+soundfile>=0.12.1
+
+# Deep Learning / PyTorch Engine
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# CPJKU beat_this Transformer Modell direkt von GitHub
+git+https://github.com/CPJKU/beat_this.git#egg=beat_this
