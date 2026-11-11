@@ -149,7 +149,7 @@ pool.AppendToTimeline = function(_, items)
   if not active then return {} end
   local out = {}
   for _, c in ipairs(items) do
-    local f = io.open(c.path, "rb") local text = f:read("*a") f:close()
+    local text = PY_READ(c.path)  -- Resolve reads the file itself; Lua io.open fails on non-ASCII paths on Windows
     local base = tl.start
     for _, it in ipairs(active.items) do base = math.max(base, it.last) end
     for h, m, sec, ms in text:gmatch("(%d+):(%d+):(%d+),(%d+) %-%->") do
@@ -191,6 +191,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.lua = luajit21.LuaRuntime(unpack_returned_tuples=True)
         self.out = []
         self.lua.globals().print = lambda *a: self.out.append(" ".join(str(x) for x in a))
+        self.lua.globals().PY_READ = lambda p: Path(p).read_text(encoding="utf-8")
         self.lua.execute(MOCK)
         self.M = self.lua.execute(SCRIPT)
         self.mock = self.lua.globals().MOCK
@@ -397,6 +398,7 @@ class ProbeScriptTests(unittest.TestCase):
         lua = luajit21.LuaRuntime(unpack_returned_tuples=True)
         out = []
         lua.globals().print = lambda *a: out.append(" ".join(str(x) for x in a))
+        lua.globals().PY_READ = lambda p: Path(p).read_text(encoding="utf-8")
         lua.execute(MOCK)
         tmp = tempfile.mkdtemp()
         lua.globals().PROBE_TMP = tmp
