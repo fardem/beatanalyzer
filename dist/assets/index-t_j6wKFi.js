@@ -477,10 +477,11 @@ local function clock(sec)
   return string.format("%02d:%02d.%03d", math.floor(ms / 60000), math.floor(ms / 1000) % 60, ms % 1000)
 end
 
--- SRT with one subtitle per marker, shown until the next one. Three lines per subtitle:
+-- SRT with one subtitle per marker, shown until the next one. Four lines per subtitle:
 --   Downbeat (1) | Beat 2
 --   Takt 24 - Beat 1
---   01:02.880 - 89.6 BPM - 75%
+--   01:02.880 - 89.6 BPM
+--   Konfidenz 75%
 -- Without opts: times from the start of the audio file, and a first subtitle from 0 s to the first
 -- beat keeps the timing when the SRT is placed at the clip start.
 -- opts.from / opts.to: only beats in this part of the song (seconds), the last subtitle ends at "to".
@@ -518,9 +519,9 @@ local function build_srt(data, opts)
     local bar, beat = tonumber(m.bar) or 0, tonumber(m.beat) or 0
     local kind = m.type == "downbeat" and "Downbeat (1)" or string.format("Beat %d", beat)
     local conf = tonumber(m.confidence)
-    local line3 = string.format("%s - %.1f BPM - %s", clock(t), tonumber(m.bpm) or 0,
-                                conf and string.format("%d%%", round(conf * 100)) or "-")
-    cues[#cues + 1] = { t, nxt, string.format("%s\\nTakt %d - Beat %d\\n%s", kind, bar, beat, line3) }
+    local line3 = string.format("%s - %.1f BPM", clock(t), tonumber(m.bpm) or 0)
+    local line4 = "Konfidenz " .. (conf and string.format("%d%%", round(conf * 100)) or "-")
+    cues[#cues + 1] = { t, nxt, string.format("%s\\nTakt %d - Beat %d\\n%s\\n%s", kind, bar, beat, line3, line4) }
   end
   local out = {}
   for i, c in ipairs(cues) do
