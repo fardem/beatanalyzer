@@ -1,20 +1,36 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# BeatThis – Beat- & Downbeat-Analyzer
 
-# Run and deploy your AI Studio app
+Lokale Web-App zur Beat-, Downbeat-, Tempo- und Taktart-Erkennung für MP3, WAV, AAC und FLAC.
+Backend in Python (CPJKU *beat_this* Transformer, Librosa als Fallback), Frontend in React/Vite.
 
-This contains everything you need to run your app locally.
+## Windows
 
-View your app in AI Studio: https://ai.studio/apps/8e0677cf-f026-4cc4-a9b5-f889658b7d27
+Siehe [README_WINDOWS.md](README_WINDOWS.md) – kurz: `install_and_run.bat` doppelklicken,
+danach reicht `start.bat`. Das Frontend liegt fertig gebaut in `dist/`, Node.js ist nicht nötig.
 
-## Run Locally
+## Linux / macOS
 
-**Prerequisites:**  Node.js
+```bash
+./install_and_run.sh
+```
 
+Der Server läuft danach auf <http://localhost:8000>.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Frontend neu bauen (nur bei Änderungen in `src/`)
+
+```bash
+npm install
+npm run build
+```
+
+## Tests (Backend)
+
+```bash
+venv/bin/python -m unittest discover -s backend/tests -v
+```
+
+## CLI
+
+```bash
+python backend/analyze_cli.py song.mp3 --export-csv beats.csv
+```

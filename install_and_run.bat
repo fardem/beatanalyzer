@@ -148,7 +148,7 @@ echo [4/6] Starte Paketinstallation... >> "%LOGFILE%"
 echo   - Webserver: Nutzt nativen Python HTTP-Server (keine externen Web-Frameworks noetig)
 
 echo   - Installiere Audio-Signalverarbeitung (NumPy, SciPy, Librosa, SoundFile)...
-!VENV_PIP! install "numpy<2.0.0" scipy>=1.10.0 librosa>=0.10.0 soundfile>=0.12.1 >> "%LOGFILE%" 2>&1
+!VENV_PIP! install "numpy>=1.24" "scipy>=1.10.0" "librosa>=0.10.0" "soundfile>=0.12.1" >> "%LOGFILE%" 2>&1
 if !errorlevel! neq 0 (
     echo   [WARNUNG] Problem bei Audio-Installation, siehe install_log.txt
 ) else (
@@ -156,7 +156,7 @@ if !errorlevel! neq 0 (
 )
 
 echo   - Installiere Deep-Learning Engine (PyTorch & Torchaudio)...
-!VENV_PIP! install torch>=2.0.0 torchaudio>=2.0.0 >> "%LOGFILE%" 2>&1
+!VENV_PIP! install "torch>=2.0.0" "torchaudio>=2.0.0" >> "%LOGFILE%" 2>&1
 if !errorlevel! neq 0 (
     echo   [WARNUNG] PyTorch Standard-Install fehlgeschlagen, versuche CPU-Version...
     !VENV_PIP! install torch torchaudio --index-url https://download.pytorch.org/whl/cpu >> "%LOGFILE%" 2>&1

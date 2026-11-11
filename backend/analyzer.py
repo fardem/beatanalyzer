@@ -16,7 +16,10 @@ predictor_instance = None
 
 try:
     # Versuche offiziellen CPJKU beat_this Import
-    from beat_this.inference import File2Beats
+    # Audio2Beats statt File2Beats: Wir uebergeben das bereits dekodierte Signal.
+    # File2Beats laedt per torchaudio.load, das ab torchaudio 2.9 TorchCodec + FFmpeg
+    # voraussetzt (unter Windows meist nicht vorhanden -> MP3/AAC schlagen fehl).
+    from beat_this.inference import Audio2Beats
     BEAT_THIS_AVAILABLE = True
     print("[BeatThis Backend] CPJKU beat_this Transformer-Bibliothek erfolgreich geladen!")
 except Exception as e:
@@ -31,13 +34,9 @@ def get_predictor():
         try:
             import torch
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            print(f"[BeatThis Backend] Initialisiere CPJKU File2Beats auf Device: {device}...")
+            print(f"[BeatThis Backend] Initialisiere CPJKU Audio2Beats auf Device: {device}...")
             # 'final0' ist das offizielle Standard-Checkpoint-Modell von CPJKU
-            try:
-                predictor_instance = File2Beats(checkpoint_path="final0", device=device)
-            except Exception:
-                # Falls final0 keinen expliziten Pfad hat, Standard-Initialisierung
-                predictor_instance = File2Beats(device=device)
+            predictor_instance = Audio2Beats(checkpoint_path="final0", device=device)
             print("[BeatThis Backend] Modell bereit für Inferenz.")
         except Exception as err:
             print(f"[BeatThis Backend] Fehler beim Laden des Modells: {err}")
@@ -74,7 +73,7 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
     if predictor is not None:
         try:
             print(f"[BeatThis Backend] Starte CPJKU Transformer Inferenz für: {original_filename}")
-            preds = predictor(file_path)
+            preds = predictor(y, sr)
             # In CPJKU beat_this ist der Rückgabewert (beats, downbeats)
             if isinstance(preds, tuple) and len(preds) == 2:
                 beats_sec = [float(b) for b in preds[0]]
