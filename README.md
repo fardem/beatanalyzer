@@ -1,6 +1,6 @@
 # BeatThis
 
-**Version 0.0.3** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
+**Version 0.0.4** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
 
 BeatThis erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und legt die Beats als **farbige Marker auf deinen Audio-Clip in DaVinci Resolve**. Die Erkennung läuft lokal auf deinem PC mit dem Transformer-Modell [CPJKU beat_this](https://github.com/CPJKU/beat_this). Die Oberfläche ist eine Web-App im Browser, der Server dahinter ist Python.
 
@@ -130,6 +130,32 @@ Ein neuer Lauf löscht die Marker des letzten Laufs und setzt die neuen. Von Han
 
 Die Farben stehen oben im Skript (`DOWNBEAT_COLOR`, `BEAT_COLOR`) und lassen sich dort ändern.
 
+### Untertitel mit Beat-Infos
+
+Das Skript schreibt zusätzlich `<Song>.srt` in den Ordner der JSON und importiert die Datei in den Media-Pool-Ordner **BeatThis**. Jeder Beat ist ein Untertitel, der bis zum nächsten Beat steht:
+
+```
+Downbeat (1)
+Takt 24 - Beat 1
+01:02.880 - 89.6 BPM
+Konfidenz 75%
+```
+
+Die Zeiten zählen ab Anfang der Audiodatei. Ein neuer Lauf ersetzt den Untertitel-Clip im Ordner **BeatThis**.
+
+### Untertitel direkt in der Timeline
+
+Ist beim Start des Skripts eine Timeline offen, in der der Song auf einer Audiospur liegt, legt das Skript die Untertitel auf die Untertitelspur **BeatThis - <Song>**, genau unter das erste Vorkommen des Songs:
+
+- Startposition und vorne abgeschnittener Teil des Clips werden berücksichtigt. Beats außerhalb des sichtbaren Teils fallen weg.
+- Ein neuer Lauf löscht die Spur **BeatThis - <Song>** und legt sie neu an.
+- Resolve erlaubt nur eine aktive Untertitelspur. Die neue Spur wird aktiv, andere Untertitelspuren bleiben erhalten, werden aber deaktiviert.
+- Dafür entsteht im Ordner **BeatThis** zusätzlich der Clip `<Song> (Timeline).srt`.
+
+Liegt der Song nicht in der offenen Timeline, bleibt es beim Untertitel-Clip im Media Pool.
+
+Das Skript prüft danach, ob der erste Untertitel am erwarteten Frame liegt. Meldet es eine Abweichung, `resolve/tools/probe_timeline.lua` nach `%APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility\` kopieren, Resolve neu starten, Audio-Clip im Media Pool auswählen, *Workspace → Scripts → probe_timeline* starten und die Zeilen mit `[probe]` aus der Console schicken. Das Prüfskript speichert vorher das Projekt und entfernt seine Testspur wieder.
+
 ## Update
 
 Gibt es auf GitHub eine neue Version, steht neben der Versionsnummer oben in der App der Button **Update x.y.z**. Alternativ `update.bat` doppelklicken.
@@ -192,6 +218,7 @@ Unter Windows heißt der Python-Pfad `venv\Scripts\python.exe`.
 | `backend/resolve_plugin.py` | Installiert das Resolve-Skript |
 | `backend/updater.py` | Update aus dem neuesten GitHub-Release |
 | `resolve/BeatThis_Markers.lua` | Skript für DaVinci Resolve |
+| `resolve/tools/probe_timeline.lua` | Prüfskript: wie Resolve die Untertitel in der Timeline platziert |
 | `src/` | Oberfläche (React, TypeScript) |
 | `dist/` | Gebaute Oberfläche; wird mit eingecheckt |
 | `VERSION` | Versionsnummer; gilt für App, Skript und Release |

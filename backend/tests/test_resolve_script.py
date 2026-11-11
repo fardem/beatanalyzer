@@ -48,19 +48,124 @@ local function clip(name, file, fps, frames)
   end
   return c
 end
-MOCK = { clip = clip, selected = {} }
+local function folder(name, clips)
+  local f = { name = name, clips = clips or {}, subs = {} }
+  function f:GetName() return self.name end
+  function f:GetClipList() local out = {} for i, c in ipairs(self.clips) do out[i] = c end return out end
+  function f:GetSubFolderList() local out = {} for i, s in ipairs(self.subs) do out[i] = s end return out end
+  return f
+end
+MOCK = { clip = clip, selected = {}, imported = {} }
 local song = clip("Song", "Müller Song.wav", "25", "500")
 local other = clip("Other", "other.wav", "25", "500")
 MOCK.song, MOCK.other = song, other
-local sub = { GetClipList = function() return { song } end, GetSubFolderList = function() return {} end }
-local root = { GetClipList = function() return { other } end, GetSubFolderList = function() return { sub } end }
+local sub = folder("Songs", { song })
+local root = folder("Master", { other })
+root.subs[1] = sub
+MOCK.root = root
+local current = root
 local pool = {
   GetRootFolder = function() return root end,
   GetSelectedClips = function() return MOCK.selected end,
+  GetCurrentFolder = function() return current end,
+  SetCurrentFolder = function(_, f) current = f return true end,
+  AddSubFolder = function(_, parent, name)
+    local f = folder(name)
+    parent.subs[#parent.subs + 1] = f
+    return f
+  end,
+  ImportMedia = function(_, paths)
+    local out = {}
+    for _, p in ipairs(paths) do
+      local name = p:match("([^/\\]+)$")
+      local c = clip(name, name, "25", "500")
+      c.path = p
+      current.clips[#current.clips + 1] = c
+      MOCK.imported[#MOCK.imported + 1] = p
+      out[#out + 1] = c
+    end
+    return out
+  end,
+  DeleteClips = function(_, list)
+    local gone = {}
+    for _, c in ipairs(list) do gone[c] = true end
+    local function purge(f)
+      local keep = {}
+      for _, c in ipairs(f.clips) do if not gone[c] then keep[#keep + 1] = c end end
+      f.clips = keep
+      for _, s in ipairs(f.subs) do purge(s) end
+    end
+    purge(root)
+    return true
+  end,
 }
+MOCK.pool = pool
+local function media_id(c) return "MID-" .. tostring(c.name) end
+song.GetMediaId = function(self) return media_id(self) end
+other.GetMediaId = function(self) return media_id(self) end
+
+-- Timeline as measured in Resolve Studio 21.1.2 (WhisperX Workbench, probe_subtitles.lua):
+-- AppendToTimeline puts an SRT only on the active subtitle track; on an empty track the SRT times count
+-- from the timeline start; AddTrack("subtitle") creates an inactive track.
+local function timeline_item(clip, start, left, duration)
+  local it = { clip = clip, start = start, left = left, duration = duration }
+  function it:GetMediaPoolItem() return self.clip end
+  function it:GetStart() return self.start end
+  function it:GetLeftOffset() return self.left end
+  function it:GetDuration() return self.duration end
+  return it
+end
+MOCK.timeline_item = timeline_item
+local function new_timeline(fps, start_frame)
+  local tl = { fps = fps, start = start_frame, audio = { {} }, subs = {} }
+  function tl:GetName() return "Timeline 1" end
+  function tl:GetSetting(k) if k == "timelineFrameRate" then return tostring(self.fps) end end
+  function tl:GetStartFrame() return self.start end
+  function tl:GetTrackCount(kind) return kind == "audio" and #self.audio or #self.subs end
+  function tl:GetItemListInTrack(kind, i)
+    local list = kind == "audio" and self.audio[i] or (self.subs[i] and self.subs[i].items)
+    local out = {} for k, v in ipairs(list or {}) do out[k] = v end return out
+  end
+  function tl:AddTrack(kind)
+    if kind ~= "subtitle" then return false end
+    self.subs[#self.subs + 1] = { name = "Subtitle " .. (#self.subs + 1), enabled = false, items = {} }
+    return true
+  end
+  function tl:DeleteTrack(kind, i)
+    if kind ~= "subtitle" or not self.subs[i] then return false end
+    table.remove(self.subs, i) return true
+  end
+  function tl:SetTrackEnable(kind, i, on) if self.subs[i] then self.subs[i].enabled = on end return true end
+  function tl:GetIsTrackEnabled(kind, i) return self.subs[i] and self.subs[i].enabled or false end
+  function tl:GetTrackName(kind, i) return self.subs[i] and self.subs[i].name end
+  function tl:SetTrackName(kind, i, name) self.subs[i].name = name return true end
+  return tl
+end
+MOCK.new_timeline = new_timeline
+pool.AppendToTimeline = function(_, items)
+  local tl = MOCK.timeline
+  local active
+  for _, t in ipairs(tl.subs) do if t.enabled then active = t end end
+  if not active then return {} end
+  local out = {}
+  for _, c in ipairs(items) do
+    local text = PY_READ(c.path)  -- Resolve reads the file itself; Lua io.open fails on non-ASCII paths on Windows
+    local base = tl.start
+    for _, it in ipairs(active.items) do base = math.max(base, it.last) end
+    for h, m, sec, ms in text:gmatch("(%d+):(%d+):(%d+),(%d+) %-%->") do
+      local t = h * 3600 + m * 60 + sec + ms / 1000
+      local st = base + math.floor(t * tl.fps + 0.5)
+      local it = { GetStart = function() return st end, last = st }
+      active.items[#active.items + 1] = it
+      out[#out + 1] = it
+    end
+  end
+  return out
+end
 local project = {
   GetMediaPool = function() return pool end,
   GetSetting = function(_, k) if k == "timelineFrameRate" then return "25" end end,
+  GetCurrentTimeline = function() return MOCK.timeline end,
 }
 resolve = { GetProjectManager = function() return { GetCurrentProject = function() return project end } end }
 BEATTHIS_NO_RUN = true
@@ -86,6 +191,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.lua = luajit21.LuaRuntime(unpack_returned_tuples=True)
         self.out = []
         self.lua.globals().print = lambda *a: self.out.append(" ".join(str(x) for x in a))
+        self.lua.globals().PY_READ = lambda p: Path(p).read_text(encoding="utf-8")
         self.lua.execute(MOCK)
         self.M = self.lua.execute(SCRIPT)
         self.mock = self.lua.globals().MOCK
@@ -130,6 +236,108 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertNotIn("skipped", msg)
         self.assertNotIn("is not", msg)
         self.assertFalse([line for line in self.out if "API not available" in line], self.out)
+
+    def bin_clips(self, name="BeatThis"):
+        for f in self.mock.root.subs.values():
+            if f.name == name:
+                return [c.name for c in f.clips.values()]
+        return None
+
+    def test_subtitles_are_written_and_imported_with_song_name(self):
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result(n_beats=5))))
+        self.assertTrue(ok, msg)
+        srt = (self.tmp / "Müller Song.srt").read_text(encoding="utf-8")
+        cues = srt.strip().split("\n\n")
+        self.assertEqual(len(cues), 6)  # intro 0 s -> first beat, then one per beat
+        self.assertEqual(cues[0].split("\n")[:2], ["1", "00:00:00,000 --> 00:00:00,500"])
+        self.assertEqual(cues[1].split("\n"), ["2", "00:00:00,500 --> 00:00:01,000", "Downbeat (1)",
+                                               "Takt 1 - Beat 1", "00:00.500 - 120.0 BPM", "Konfidenz 90%"])
+        self.assertEqual(cues[2].split("\n")[2:4], ["Beat 2", "Takt 1 - Beat 2"])
+        self.assertEqual(cues[5].split("\n")[1], "00:00:02,500 --> 00:00:03,000")  # last: + previous interval
+        self.assertEqual(self.bin_clips(), ["Müller Song.srt"])
+        self.assertIn("Subtitles: Müller Song.srt in media pool bin 'BeatThis'", msg)
+        self.assertTrue(self.lua.eval("MOCK.pool:GetCurrentFolder() == MOCK.root"))
+
+    def test_second_run_replaces_subtitle_clip(self):
+        path = self.write_json(resolve_marker_data(sample_result()))
+        self.M.apply(path)
+        self.M.apply(path)
+        self.assertEqual(self.bin_clips(), ["Müller Song.srt"])
+        self.assertEqual(len(self.mock.imported), 2)
+
+    def test_missing_confidence_shows_dash(self):
+        data = resolve_marker_data(sample_result(n_beats=1))
+        del data["markers"][0]["confidence"]
+        self.M.apply(self.write_json(data))
+        srt = (self.tmp / "Müller Song.srt").read_text(encoding="utf-8")
+        self.assertIn("00:00.500 - 120.0 BPM\nKonfidenz -\n", srt)
+
+    # Timeline at 25 fps starting at 01:00:00:00 (frame 90000). The song lies at 10 s, 1 s trimmed at the
+    # front, 3 s long: song seconds 1.0-4.0 are visible, song second 0 is at timeline second 9.
+    def setup_timeline(self, extra_items=()):
+        self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 90000)")
+        tl = self.lua.globals().MOCK.timeline
+        item = self.lua.globals().MOCK.timeline_item(self.mock.song, 90000 + 250, 25, 75)
+        tl.audio[1][1] = item
+        for track, start in extra_items:
+            if track not in tl.audio:
+                tl.audio[track] = self.lua.table()
+            other = self.lua.globals().MOCK.timeline_item(self.mock.song, start, 0, 500)
+            tl.audio[track][len(tl.audio[track]) + 1] = other
+        return tl
+
+    def sub_tracks(self, tl):
+        return [(t.name, t.enabled, [it.GetStart() for it in t["items"].values()]) for t in tl.subs.values()]
+
+    def test_timeline_subtitles_under_the_song(self):
+        tl = self.setup_timeline()
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertTrue(ok, msg)
+        tracks = self.sub_tracks(tl)
+        self.assertEqual(len(tracks), 1)
+        name, enabled, starts = tracks[0]
+        self.assertEqual((name, enabled), ("BeatThis - Müller Song", True))
+        # beats 1.0, 1.5 ... 3.5 s of the song -> timeline 10.0 ... 12.5 s
+        self.assertEqual(starts, [90250, 90263, 90275, 90288, 90300, 90313])  # .5 frames rounded up
+        self.assertIn("Timeline: 6 subtitles on track ST1 'BeatThis - Müller Song'", msg)
+        self.assertNotIn("difference", msg)
+        srt = (self.tmp / "Müller Song (Timeline).srt").read_text(encoding="utf-8")
+        self.assertTrue(srt.startswith("1\n00:00:10,000 --> 00:00:10,500\nBeat 2\nTakt 1 - Beat 2"), srt[:80])
+        self.assertIn("00:00:12,500 --> 00:00:13,000", srt)  # last subtitle ends at the clip end
+        self.assertIn("00:01.000 - 120.0 BPM", srt)          # line 3 keeps the song time
+        self.assertEqual(sorted(self.bin_clips()), ["Müller Song (Timeline).srt", "Müller Song.srt"])
+
+    def test_timeline_second_run_replaces_track_and_keeps_other_tracks(self):
+        tl = self.setup_timeline()
+        self.lua.execute("""
+            local tl = MOCK.timeline
+            tl:AddTrack("subtitle")
+            tl.subs[1].name = "Dialog"
+            tl.subs[1].enabled = true
+            tl.subs[1].items[1] = { GetStart = function() return 90010 end, last = 90020 }
+        """)
+        path = self.write_json(resolve_marker_data(sample_result()))
+        self.M.apply(path)
+        ok, msg = self.M.apply(path)
+        self.assertTrue(ok, msg)
+        tracks = self.sub_tracks(tl)
+        self.assertEqual([(n, e, len(s)) for n, e, s in tracks],
+                         [("Dialog", False, 1), ("BeatThis - Müller Song", True, 6)])
+        self.assertIn("(old track replaced)", msg)
+
+    def test_timeline_uses_first_use_of_the_song(self):
+        tl = self.setup_timeline(extra_items=[(2, 90000 + 50)])  # earlier use on A2 at 2 s, nothing trimmed
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        starts = self.sub_tracks(tl)[0][2]
+        self.assertEqual(len(starts), 8)
+        self.assertEqual(starts[0], 90000 + 50 + 13)  # 0.5 s x 25 fps = 12.5, rounded up
+
+    def test_no_timeline_track_when_song_is_not_in_timeline(self):
+        self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 90000)")
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertTrue(ok, msg)
+        self.assertNotIn("Timeline:", msg)
+        self.assertEqual(self.sub_tracks(self.lua.globals().MOCK.timeline), [])
 
     def test_second_run_replaces_own_markers_and_keeps_manual_ones(self):
         self.mock.song.AddMarker(self.mock.song, 300, "Green", "manual", "", 1, "")
@@ -182,3 +390,38 @@ class ResolveScriptTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipIf(luajit21 is None, "lupa not installed")
+class ProbeScriptTests(unittest.TestCase):
+    def test_probe_timeline_runs_and_cleans_up(self):
+        lua = luajit21.LuaRuntime(unpack_returned_tuples=True)
+        out = []
+        lua.globals().print = lambda *a: out.append(" ".join(str(x) for x in a))
+        lua.globals().PY_READ = lambda p: Path(p).read_text(encoding="utf-8")
+        lua.execute(MOCK)
+        tmp = tempfile.mkdtemp()
+        lua.globals().PROBE_TMP = tmp
+        lua.execute("""
+            MOCK.timeline = MOCK.new_timeline(25, 90000)
+            local tl = MOCK.timeline
+            function tl:GetStartTimecode() return "01:00:00:00" end
+            local it = MOCK.timeline_item(MOCK.song, 90250, 25, 75)
+            function it:GetEnd() return self.start + self.duration end
+            function it:GetRightOffset() return 0 end
+            function it:GetName() return "Song" end
+            tl.audio[1][1] = it
+            MOCK.selected = { MOCK.song }
+            local project = resolve:GetProjectManager():GetCurrentProject()
+            resolve.GetProjectManager = function()
+              return { GetCurrentProject = function() return project end, SaveProject = function() return true end }
+            end
+            resolve.GetVersionString = function() return "mock" end
+            Resolve = function() return resolve end
+            os.getenv = function() return PROBE_TMP end
+        """)
+        lua.execute((ROOT / "resolve" / "tools" / "probe_timeline.lua").read_text(encoding="utf-8"))
+        text = "\n".join(out)
+        self.assertIn("[probe] RESULT: OK", text)
+        self.assertIn("Test track and test clip removed", text)
+        self.assertEqual(len(list(lua.globals().MOCK.timeline.subs.values())), 0)
