@@ -14,11 +14,12 @@
 - Update von GitHub: Hinweis mit Update-Button im Header, `update.bat`, `backend/updater.py`. Ersetzte Dateien kommen nach `update-backup/<alte Version>/`.
 - GitHub Actions: `release.yml` hängt `BeatThis.zip` an jedes Release eines Versions-Tags, `tests.yml` prüft Backend, Frontend und `dist/`.
 - CLI: `--export-resolve`, `--only-downbeats`.
-
 - `LICENSE` (MIT), Abschnitt „Lizenz“ und „Credits“ in der README mit Hinweis und Zitat zu CPJKU beat_this.
 - Der Frontend-Build schreibt die Lizenzen der gebündelten Pakete nach `dist/.vite/license.md`.
-
 - README neu geschrieben, mit Bildschirmfotos (`docs/images/`); `README_WINDOWS.md` ist darin aufgegangen.
+
+### Behoben
+- Updater: Eine `requirements.txt` mit CRLF-Zeilenenden galt als geändert und löste ein unnötiges `pip install` aus.
 
 ### Entfernt
 - Reste aus Google AI Studio: `metadata.json`, `.env.example` und die nicht benutzten Pakete `@google/genai`, `express`, `dotenv`, `tsx`, `motion`.
