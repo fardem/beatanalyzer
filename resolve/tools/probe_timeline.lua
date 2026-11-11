@@ -17,7 +17,9 @@
 -- clip at the timeline start, not trimmed, 9 subtitle tracks before):
 --   - New track ST10 active, AppendToTimeline placed both subtitles, difference 0 frames: RESULT OK.
 --   - GetSourceStartFrame is available (0 for this clip).
---   - Not checked yet: a clip that starts later in the timeline or is trimmed at the front (GetLeftOffset > 0).
+--   - Clip moved to frame 1080671, not trimmed: difference 0, RESULT OK.
+--   - Clip at frame 1080466, trimmed at the front: GetLeftOffset 629 = GetSourceStartFrame 629 (timeline frames),
+--     difference 0, RESULT OK. GetLeftOffset counts the front trim in timeline frames, as assumed.
 
 local function p(...)
   local parts = {}
