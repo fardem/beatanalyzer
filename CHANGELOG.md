@@ -12,6 +12,8 @@
 - `LICENSE` (MIT), Abschnitt „Lizenz“ und „Credits“ in der README mit Hinweis und Zitat zu CPJKU beat_this.
 - Der Frontend-Build schreibt die Lizenzen der gebündelten Pakete nach `dist/.vite/license.md`.
 
+- README neu geschrieben, mit Bildschirmfotos (`docs/images/`); `README_WINDOWS.md` ist darin aufgegangen.
+
 ### Entfernt
 - Reste aus Google AI Studio: `metadata.json`, `.env.example` und die nicht benutzten Pakete `@google/genai`, `express`, `dotenv`, `tsx`, `motion`.
 - EDL- und CSV-Marker-Export für DaVinci Resolve. Die EDL legte Marker auf die Timeline statt auf den Clip und passte nur bei Clip-Start 01:00:00:00 und gleicher Bildrate.
