@@ -8,6 +8,11 @@ file name equals "fileName" in the JSON.
 Markers written by this script carry the custom data MARKER_TAG; a new run removes them first,
 markers set by hand stay.
 
+Subtitles: <song>.srt (one subtitle per beat) goes next to the JSON and into the media pool bin BIN_NAME.
+With a timeline open that uses the song on an audio track, <song> (Timeline).srt with timeline times
+goes onto the subtitle track "BeatThis - <song>" under the first use of the song; a new run deletes
+that track and creates it again. resolve/tools/probe_timeline.lua checks the placement in Resolve.
+
 Install: copy to %APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility\
 Run:     Workspace -> Scripts -> BeatThis_Markers
 Log:     Workspace -> Console (lines starting with "[BeatThis]")
@@ -466,21 +471,39 @@ end
 --   Downbeat (1) | Beat 2
 --   Takt 24 - Beat 1
 --   01:02.880 - 89.6 BPM - 75%
--- A first subtitle from 0 s to the first beat keeps the timing when the SRT is placed at the clip start.
-local function build_srt(data)
-  local markers = data.markers
+-- Without opts: times from the start of the audio file, and a first subtitle from 0 s to the first
+-- beat keeps the timing when the SRT is placed at the clip start.
+-- opts.from / opts.to: only beats in this part of the song (seconds), the last subtitle ends at "to".
+-- opts.shift: seconds added to every time (position of song second 0 in the timeline).
+-- Returns the SRT text, the number of subtitles and the time of the first one (after the shift).
+local function build_srt(data, opts)
+  opts = opts or {}
+  local shift, from, to = opts.shift or 0, opts.from, opts.to
+  local markers = {}
+  for _, m in ipairs(data.markers) do
+    local t = tonumber(m.time)
+    if t and (not from or t >= from - 1e-6) and (not to or t < to) then
+      markers[#markers + 1] = m
+    end
+  end
   local cues = {}
-  local first = tonumber(markers[1].time) or 0
-  if first > 0.05 then
+  if #markers == 0 then
+    return "", 0, nil
+  end
+  local first = tonumber(markers[1].time)
+  if not opts.shift and not from and first > 0.05 then
     cues[#cues + 1] = { 0, first, string.format("BeatThis\n%s\n%s BPM - %s", tostring(data.fileName or ""),
                                                 tostring(data.globalBpm or "?"), tostring(data.timeSignature or "?")) }
   end
   for i, m in ipairs(markers) do
-    local t = tonumber(m.time) or 0
+    local t = tonumber(m.time)
     local nxt = markers[i + 1] and tonumber(markers[i + 1].time)
     if not nxt then
       local prev = markers[i - 1] and tonumber(markers[i - 1].time)
       nxt = t + (prev and math.max(0.1, t - prev) or 0.5)
+      if to and nxt > to then
+        nxt = to
+      end
     end
     local bar, beat = tonumber(m.bar) or 0, tonumber(m.beat) or 0
     local kind = m.type == "downbeat" and "Downbeat (1)" or string.format("Beat %d", beat)
@@ -491,9 +514,9 @@ local function build_srt(data)
   end
   local out = {}
   for i, c in ipairs(cues) do
-    out[#out + 1] = string.format("%d\n%s --> %s\n%s\n", i, srt_time(c[1]), srt_time(c[2]), c[3])
+    out[#out + 1] = string.format("%d\n%s --> %s\n%s\n", i, srt_time(c[1] + shift), srt_time(c[2] + shift), c[3])
   end
-  return table.concat(out, "\n")
+  return table.concat(out, "\n"), #cues, cues[1][1] + shift
 end
 M.build_srt = build_srt
 
@@ -547,6 +570,144 @@ local function import_subtitles(media_pool, path, name)
   log(string.format("Subtitles imported: %s (%d replaced)", tostring(api(item, "GetName") or name), #old))
   return item
 end
+
+-- ─── Timeline ───────────────────────────────────────────────────────────────
+-- Resolve Studio 21.1.2 (tested for the WhisperX Workbench, resolve/tools/probe_timeline.lua checks it here):
+-- AppendToTimeline puts an SRT only on the active subtitle track; on an empty track the SRT times count
+-- from the timeline start; recordFrame is ignored; AddTrack("subtitle") creates an inactive track.
+-- So the SRT for the timeline carries timeline times and goes onto a new, only active subtitle track.
+
+local function media_key(clip)
+  local id = api(clip, "GetMediaId")
+  if id and id ~= "" then
+    return "id:" .. tostring(id)
+  end
+  return "path:" .. tostring(api(clip, "GetClipProperty", "File Path") or api(clip, "GetName") or "?")
+end
+
+-- First use (smallest start) of one of the clips on an audio track: timeline item or nil.
+local function first_use(tl, clips)
+  local keys = {}
+  for _, c in ipairs(clips) do
+    keys[media_key(c)] = true
+  end
+  local best, best_start
+  local n = tonumber(api(tl, "GetTrackCount", "audio")) or 0
+  for i = 1, n do
+    for _, item in ipairs(api(tl, "GetItemListInTrack", "audio", i) or {}) do
+      local mpi = api(item, "GetMediaPoolItem")
+      local start = tonumber(api(item, "GetStart"))
+      if mpi and start and keys[media_key(mpi)] and (not best_start or start < best_start) then
+        best, best_start = item, start
+      end
+    end
+  end
+  return best
+end
+M.first_use = first_use
+
+local function subtitle_count(tl, i)
+  local items = api(tl, "GetItemListInTrack", "subtitle", i)
+  return type(items) == "table" and #items or 0   -- # not pairs(): pairs() reports 1 on an empty track
+end
+
+-- Delete the subtitle tracks with this name (from the last one, so the indexes stay valid).
+local function delete_tracks(tl, name)
+  local n = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
+  local deleted = 0
+  for i = n, 1, -1 do
+    if api(tl, "GetTrackName", "subtitle", i) == name and api(tl, "DeleteTrack", "subtitle", i) then
+      deleted = deleted + 1
+    end
+  end
+  return deleted
+end
+
+-- Only one subtitle track can be active: deactivate all others, then activate the target.
+local function activate_only(tl, target)
+  local n = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
+  for i = 1, n do
+    if i ~= target then
+      api(tl, "SetTrackEnable", "subtitle", i, false)
+    end
+  end
+  api(tl, "SetTrackEnable", "subtitle", target, true)
+  return api(tl, "GetIsTrackEnabled", "subtitle", target) == true
+end
+
+-- Subtitles under the first use of the song in the open timeline, on the track "BeatThis - <song>".
+-- Returns a line for the result message, or nil when the song is not in the timeline.
+local function place_in_timeline(media_pool, tl, data, clips, json_path, base)
+  local item = first_use(tl, clips)
+  if not item then
+    log("Timeline: the song is not on an audio track of '" .. tostring(api(tl, "GetName") or "?") .. "'")
+    return nil
+  end
+  local fps = exact_fps(parse_fps(api(tl, "GetSetting", "timelineFrameRate")) or 25)
+  local tl_start = tonumber(api(tl, "GetStartFrame")) or 0
+  local start = tonumber(api(item, "GetStart")) or tl_start
+  local left = tonumber(api(item, "GetLeftOffset")) or 0
+  local duration = tonumber(api(item, "GetDuration")) or 0
+  local from, to = left / fps, (left + duration) / fps
+  local shift = (start - tl_start - left) / fps
+  log(string.format("Timeline '%s': song at frame %d (start %d), left offset %d, duration %d, %.3f fps -> song %.3f-%.3f s, shift %.3f s",
+      tostring(api(tl, "GetName") or "?"), start, tl_start, left, duration, fps, from, to, shift))
+
+  local text, count, first = build_srt(data, { shift = shift, from = from, to = to })
+  if count == 0 then
+    return "Timeline: no beats in the part of the song that is in the timeline."
+  end
+  local dir = json_path:match("^(.*[/\\])") or ""
+  local srt_name = base .. " (Timeline).srt"
+  if not write_file(dir .. srt_name, text) then
+    return "Timeline: cannot write " .. dir .. srt_name
+  end
+  local srt_item, ierr = import_subtitles(media_pool, dir .. srt_name, srt_name)
+  if not srt_item then
+    return "Timeline: " .. tostring(ierr)
+  end
+
+  local track_name = "BeatThis - " .. base
+  local deleted = delete_tracks(tl, track_name)
+  local before = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
+  api(tl, "AddTrack", "subtitle")
+  local target = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
+  if target <= before then
+    return "Timeline: cannot add a subtitle track."
+  end
+  if not activate_only(tl, target) then
+    api(tl, "DeleteTrack", "subtitle", target)
+    return "Timeline: cannot activate the new subtitle track."
+  end
+  api(media_pool, "AppendToTimeline", { srt_item })
+  local placed = subtitle_count(tl, target)
+  if placed == 0 then
+    api(tl, "DeleteTrack", "subtitle", target)
+    return "Timeline: Resolve placed no subtitles."
+  end
+  api(tl, "SetTrackName", "subtitle", target, track_name)
+
+  local msg = string.format("Timeline: %d subtitles on track ST%d '%s'%s", placed, target, track_name,
+                            deleted > 0 and " (old track replaced)" or "")
+  if placed ~= count then
+    msg = msg .. string.format("\nTimeline: placed %d subtitles, the SRT has %d.", placed, count)
+  end
+  local actual
+  for _, it in ipairs(api(tl, "GetItemListInTrack", "subtitle", target) or {}) do
+    local st = tonumber(api(it, "GetStart"))
+    if st and (not actual or st < actual) then
+      actual = st
+    end
+  end
+  local expected = tl_start + round(first * fps)
+  log(string.format("Timeline: first subtitle at frame %s, expected %d", tostring(actual), expected))
+  if actual and math.abs(actual - expected) > 1 then
+    msg = msg .. string.format("\nTimeline: first subtitle at frame %d, expected %d (difference %d frames)."
+      .. " Please run resolve/tools/probe_timeline.lua and send the console output.", actual, expected, actual - expected)
+  end
+  return msg
+end
+M.place_in_timeline = place_in_timeline
 
 -- Apply a marker JSON file. Returns true/false and a message for the user.
 function M.apply(path)
@@ -608,6 +769,14 @@ function M.apply(path)
       msg = msg .. "\nSubtitles: " .. srt_name .. " in media pool bin '" .. BIN_NAME .. "'"
     else
       msg = msg .. "\nSubtitles: " .. tostring(ierr) .. " - import " .. srt_file .. " by hand"
+    end
+  end
+
+  local tl = api(project, "GetCurrentTimeline")
+  if tl then
+    local line = place_in_timeline(media_pool, tl, data, clips, path, (srt_name:gsub("%.srt$", "")))
+    if line then
+      msg = msg .. "\n" .. line
     end
   end
   return total > 0, msg

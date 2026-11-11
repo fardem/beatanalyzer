@@ -4,6 +4,8 @@
 
 ### Hinzugefügt
 - Resolve-Skript: legt zusätzlich eine Untertiteldatei mit dem Namen des Songs an (`<Song>.srt`, neben der Marker-JSON) und importiert sie in den Media-Pool-Ordner `BeatThis`. Ein Untertitel pro Beat, bis zum nächsten Beat, mit drei Zeilen: Typ (`Downbeat (1)` / `Beat 2`), `Takt 24 - Beat 1`, `01:02.880 - 89.6 BPM - 75%`. Der erste Untertitel läuft von 0 s bis zum ersten Beat, damit die Zeiten passen, wenn die SRT am Anfang des Clips liegt. Ein neuer Lauf ersetzt den Untertitel-Clip des letzten Laufs.
+- Resolve-Skript: Ist eine Timeline offen, in der der Song auf einer Audiospur liegt, kommen die Untertitel auf die Untertitelspur „BeatThis - <Song>“, genau unter das erste Vorkommen des Songs. Berücksichtigt werden Startposition und vorne abgeschnittener Teil des Clips; Beats außerhalb des sichtbaren Teils fallen weg. Ein neuer Lauf löscht diese Spur und legt sie neu an. Andere Untertitelspuren bleiben, werden aber deaktiviert, weil Resolve nur eine aktive Untertitelspur erlaubt. Danach prüft das Skript, ob der erste Untertitel am erwarteten Frame liegt.
+- `resolve/tools/probe_timeline.lua`: Prüfskript für Resolve. Misst Position und Trim des Clips, legt zwei Test-Untertitel an, vergleicht mit den erwarteten Frames und räumt danach auf.
 - Marker-JSON: Konfidenz pro Beat (`confidence`).
 
 ## [0.0.3] – 2026-11-11
