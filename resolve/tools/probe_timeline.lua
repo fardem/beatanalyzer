@@ -12,6 +12,12 @@
 --   3. Song second s lies at timeline frame  start + (s - left/fps) * fps  (start = GetStart of the clip).
 -- The test track and the test SRT clip are removed again; the active subtitle track is restored.
 -- The project is saved before the test.
+--
+-- Results with Resolve Studio 21.2.0.6 on Windows (timeline 29.97 fps, start 10:00:00:00 = frame 1080000,
+-- clip at the timeline start, not trimmed, 9 subtitle tracks before):
+--   - New track ST10 active, AppendToTimeline placed both subtitles, difference 0 frames: RESULT OK.
+--   - GetSourceStartFrame is available (0 for this clip).
+--   - Not checked yet: a clip that starts later in the timeline or is trimmed at the front (GetLeftOffset > 0).
 
 local function p(...)
   local parts = {}
