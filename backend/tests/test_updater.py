@@ -90,6 +90,15 @@ class UpdateTests(unittest.TestCase):
         updater.update(self.root, release=release, log=lambda *a: None, pip=lambda r: calls.append(r) or True)
         self.assertEqual(calls, [self.root])
 
+    def test_requirements_with_other_line_endings_do_not_run_pip(self):
+        (self.root / "requirements.txt").write_bytes(b"numpy\r\n")
+        release = make_zip(self.tmp / "BeatThis.zip", "0.0.2", self.new_files)
+        calls = []
+        result = updater.update(self.root, release=release, log=lambda *a: None,
+                                pip=lambda r: calls.append(r) or True)
+        self.assertFalse(result["requirements"])
+        self.assertEqual(calls, [])
+
     def test_no_update_when_current(self):
         release = make_zip(self.tmp / "BeatThis.zip", "0.0.1", self.new_files)
         result = updater.update(self.root, release=release, log=lambda *a: None)

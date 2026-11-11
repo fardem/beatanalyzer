@@ -158,8 +158,12 @@ def copy_program(src: Path, dst: Path, log=print) -> dict:
     backup = dst / BACKUP_DIR / (read_version(dst) or "old")
     if backup.exists():
         shutil.rmtree(backup)
-    changed_requirements = (src / "requirements.txt").read_bytes() != (
-        (dst / "requirements.txt").read_bytes() if (dst / "requirements.txt").is_file() else b"")
+    def requirements(folder: Path) -> bytes:
+        # CRLF and LF count as equal: an editor on Windows must not trigger a pip install
+        p = folder / "requirements.txt"
+        return p.read_bytes().replace(b"\r\n", b"\n").strip() if p.is_file() else b""
+
+    changed_requirements = requirements(src) != requirements(dst)
     copied, removed = [], []
     for rel in new:
         s, d = src / rel, dst / rel
