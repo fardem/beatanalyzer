@@ -10,15 +10,15 @@ import json
 import argparse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from analyzer import analyze_audio_file
+from analyzer import analyze_audio_file, resolve_marker_data
 
 
 def main():
     parser = argparse.ArgumentParser(description="BeatThis CLI - Beat & Downbeat Erkennung")
     parser.add_argument("audio_path", help="Pfad zur MP3-, WAV-, AAC- oder FLAC-Audiodatei")
     parser.add_argument("--export-json", help="Optionaler Pfad zum Speichern der JSON-Ergebnisse", default=None)
-    parser.add_argument("--export-davinci", help="Optionaler Pfad für DaVinci Resolve EDL Marker (.edl)", default=None)
-    parser.add_argument("--fps", help="Framerate für DaVinci Timecodes (Standard: 24)", type=float, default=24.0)
+    parser.add_argument("--export-resolve", help="Optionaler Pfad für die DaVinci Resolve Marker-JSON (BeatThis_Markers.lua)", default=None)
+    parser.add_argument("--only-downbeats", help="Resolve-Marker nur auf Downbeats", action="store_true")
     parser.add_argument("--export-audacity", help="Optionaler Pfad für Audacity Label Track (.txt)", default=None)
     parser.add_argument("--export-csv", help="Optionaler Pfad für CSV-Datei", default=None)
 
@@ -52,34 +52,11 @@ def main():
         json.dump(result, f, indent=2, ensure_ascii=False)
     print(f"[OK] JSON gespeichert: {out_json}")
 
-    # DaVinci Resolve EDL Marker Export
-    out_davinci = args.export_davinci or f"{base_name}_DaVinci_{int(args.fps)}fps.edl"
-    fps = args.fps
-
-    def sec_to_tc(sec: float, fps: float, start_hour: int = 1) -> str:
-        total_frames = max(0, int(round(sec * fps)))
-        f_per_hr = int(round(3600 * fps))
-        f_per_min = int(round(60 * fps))
-        h = int(total_frames // f_per_hr) + start_hour
-        rem1 = total_frames % f_per_hr
-        m = int(rem1 // f_per_min)
-        rem2 = rem1 % f_per_min
-        s = int(rem2 // fps)
-        f = int(round(rem2 % fps))
-        return f"{h:02d}:{m:02d}:{s:02d}:{f:02d}"
-
-    with open(out_davinci, "w", encoding="utf-8") as f:
-        f.write(f"TITLE: {os.path.basename(base_name)}_DaVinci_Markers\nFCM: NON-DROP FRAME\n\n")
-        for idx, b in enumerate(result["beats"]):
-            event_num = f"{idx + 1:03d}"
-            in_tc = sec_to_tc(b["time"], fps)
-            out_tc = sec_to_tc(b["time"] + 1.0 / fps, fps)
-            color = "ResolveColorRed" if b["isDownbeat"] else "ResolveColorCyan"
-            label = f"Takt {b['barIndex']} (Downbeat)" if b["isDownbeat"] else f"Takt {b['barIndex']}.{b['beatInBar']} ({b['instantBpm']:.0f} BPM)"
-            f.write(f"{event_num}  001      V     C        {in_tc} {out_tc} {in_tc} {out_tc}\n")
-            f.write(f" |C:{color} |M:{label} |D:1\n\n")
-
-    print(f"[OK] DaVinci Resolve EDL Marker gespeichert: {out_davinci}")
+    # DaVinci Resolve Marker-JSON (fuer resolve/BeatThis_Markers.lua)
+    out_resolve = args.export_resolve or f"{base_name}_resolve_markers.json"
+    with open(out_resolve, "w", encoding="utf-8") as f:
+        json.dump(resolve_marker_data(result, args.only_downbeats), f, indent=2, ensure_ascii=False)
+    print(f"[OK] DaVinci Resolve Marker-JSON gespeichert: {out_resolve}")
 
     if args.export_audacity:
         with open(args.export_audacity, "w", encoding="utf-8") as f:

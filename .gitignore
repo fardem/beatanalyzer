@@ -4,10 +4,12 @@ coverage/
 .DS_Store
 *.log
 .env*
-!.env.example
 
 # Python / lokale Laufzeit
 venv/
 __pycache__/
 *.pyc
 install_log.txt
+update-temp/
+update-backup/
+.beatthis-files

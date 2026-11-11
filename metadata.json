@@ -1,6 +1,0 @@
-{
-  "name": "BeatThis - AI Beat & Downbeat Audio Analyzer",
-  "description": "Analyze music audio files (MP3, WAV, AAC, FLAC) with beat & downbeat tracking based on CPJKU beat_this. Features interactive waveform, tempo curve, metronome sync, and export.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

@@ -37,6 +37,9 @@ except Exception as err:
     def analyze_audio_file(p, f):
         raise RuntimeError(f"Analyzer-Fehler: {err}")
 
+import resolve_plugin
+import updater
+
 TEMP_DIR = tempfile.mkdtemp(prefix="beatthis_")
 
 
@@ -256,36 +259,18 @@ STANDALONE_HTML = """<!DOCTYPE html>
                         <h3 style="font-size:1rem; color:#fff; display:flex; align-items:center; gap:8px;">
                             🎬 Export für DaVinci Resolve & DAWs
                         </h3>
-                        <p style="font-size:0.75rem; color:#94a3b8;">Marker direkt über den Clip oder auf die Timeline legen</p>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:8px; font-size:0.8rem;">
-                        <span style="color:#94a3b8;">Framerate:</span>
-                        <select id="selFps" style="background:#020617; color:#fff; border:1px solid #334155; padding:4px 8px; border-radius:6px;">
-                            <option value="24">24 fps (Kino)</option>
-                            <option value="25">25 fps (PAL / Europa)</option>
-                            <option value="30" selected>30 fps (Web / Video)</option>
-                            <option value="60">60 fps (High FPS)</option>
-                        </select>
+                        <p style="font-size:0.75rem; color:#94a3b8;">Marker als Clip-Marker im Media Pool</p>
                     </div>
                 </div>
 
                 <div class="export-grid">
-                    <!-- DaVinci EDL -->
+                    <!-- DaVinci Resolve marker JSON -->
                     <div class="export-box" style="border-color:#be123c;">
                         <div>
-                            <h4><span style="color:#f43f5e;">🔴</span> DaVinci Resolve EDL Marker</h4>
-                            <p>Standard CMX 3600 EDL. Rechtsklick auf Timeline in DaVinci: <em>Timelines → Importieren → Marker aus EDL</em>.</p>
+                            <h4><span style="color:#f43f5e;">🔴</span> DaVinci Resolve Marker (JSON)</h4>
+                            <p>Fuer das Skript <em>BeatThis_Markers.lua</em>: Clip im Media Pool waehlen, dann <em>Workspace → Scripts → BeatThis_Markers</em>.</p>
                         </div>
-                        <button class="btn-dl" id="btnDlEdl">DaVinci EDL Marker (.edl)</button>
-                    </div>
-
-                    <!-- DaVinci CSV -->
-                    <div class="export-box" style="border-color:#be123c;">
-                        <div>
-                            <h4><span style="color:#f43f5e;">🔴</span> DaVinci Resolve CSV Marker</h4>
-                            <p>Kompatibel mit DaVinci Resolve Marker-Import (Rechtsklick Timeline → Marker aus CSV).</p>
-                        </div>
-                        <button class="btn-dl" id="btnDlDavinciCsv">DaVinci CSV Marker (.csv)</button>
+                        <button class="btn-dl" id="btnDlResolve">Resolve Marker-JSON (.json)</button>
                     </div>
 
                     <!-- Audacity Labels -->
@@ -604,53 +589,22 @@ STANDALONE_HTML = """<!DOCTYPE html>
             osc.stop(audioContext.currentTime + 0.03);
         }
 
-        // Timecode Helper für DaVinci Resolve
-        function secToTc(seconds, fps, startHour = 1) {
-            const totalFrames = Math.max(0, Math.round(seconds * fps));
-            const framesPerHour = Math.round(3600 * fps);
-            const framesPerMin = Math.round(60 * fps);
-            const h = Math.floor(totalFrames / framesPerHour) + startHour;
-            const rem1 = totalFrames % framesPerHour;
-            const m = Math.floor(rem1 / framesPerMin);
-            const rem2 = rem1 % framesPerMin;
-            const s = Math.floor(rem2 / fps);
-            const f = Math.round(rem2 % fps);
-            return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s + ':' + (f < 10 ? '0' : '') + f;
-        }
-
         // Export Buttons
-        document.getElementById('btnDlEdl').onclick = () => {
+        document.getElementById('btnDlResolve').onclick = () => {
             if (!currentResult) return;
-            const fps = parseFloat(document.getElementById('selFps').value) || 30;
             const baseName = currentResult.metadata.fileName.replace(/\\.[^/.]+$/, "");
-            let edl = "TITLE: " + baseName + "_DaVinci_Markers\\nFCM: NON-DROP FRAME\\n\\n";
-
-            currentResult.beats.forEach((b, idx) => {
-                const num = (idx + 1).toString().padStart(3, '0');
-                const inTc = secToTc(b.time, fps, 1);
-                const outTc = secToTc(b.time + 1/fps, fps, 1);
-                const col = b.isDownbeat ? "ResolveColorRed" : "ResolveColorCyan";
-                const lbl = b.isDownbeat ? "Takt " + b.barIndex + " (Downbeat)" : "Takt " + b.barIndex + "." + b.beatInBar;
-                edl += num + "  001      V     C        " + inTc + " " + outTc + " " + inTc + " " + outTc + "\\n";
-                edl += " |C:" + col + " |M:" + lbl + " |D:1\\n\\n";
-            });
-            downloadFile(edl, baseName + "_DaVinci_" + fps + "fps.edl", "text/plain");
-        };
-
-        document.getElementById('btnDlDavinciCsv').onclick = () => {
-            if (!currentResult) return;
-            const fps = parseFloat(document.getElementById('selFps').value) || 30;
-            const baseName = currentResult.metadata.fileName.replace(/\\.[^/.]+$/, "");
-            let csv = "EDL Clip Name,Color,Source In,Source Out,Record In,Record Out,Duration,Name,Notes\\n";
-
-            currentResult.beats.forEach(b => {
-                const inTc = secToTc(b.time, fps, 1);
-                const outTc = secToTc(b.time + 1/fps, fps, 1);
-                const col = b.isDownbeat ? "Red" : "Cyan";
-                const name = b.isDownbeat ? "Takt " + b.barIndex : "Beat " + b.beatInBar;
-                csv += "Timeline," + col + "," + inTc + "," + outTc + "," + inTc + "," + outTc + ",00:00:00:01,\\"" + name + "\\",\\"" + b.instantBpm.toFixed(1) + " BPM\\"\\n";
-            });
-            downloadFile(csv, baseName + "_DaVinci_Markers.csv", "text/csv");
+            const data = {
+                format: "beatthis-resolve-markers/1",
+                fileName: currentResult.metadata.fileName,
+                duration: currentResult.metadata.duration,
+                globalBpm: currentResult.globalBpm,
+                timeSignature: currentResult.timeSignature.name,
+                markers: currentResult.beats.map(b => ({
+                    time: b.time, type: b.isDownbeat ? "downbeat" : "beat",
+                    bar: b.barIndex, beat: b.beatInBar, bpm: b.instantBpm
+                }))
+            };
+            downloadFile(JSON.stringify(data, null, 2), baseName + "_resolve_markers.json", "application/json");
         };
 
         document.getElementById('btnDlAudacity').onclick = () => {
@@ -729,6 +683,16 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(body)
             return
 
+        if path == "/api/resolve/status":
+            self.send_json(200, resolve_plugin.status())
+            return
+
+        if path == "/api/update/check":
+            info = updater.check()
+            info.pop("zip", None)
+            self.send_json(200, info)
+            return
+
         # 2. Statische Frontend-Dateien (aus dist/, falls kompiliert)
         index_file = os.path.join(DIST_DIR, "index.html")
         if os.path.isdir(DIST_DIR) and os.path.exists(index_file):
@@ -778,6 +742,10 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/analyze":
             self.handle_analyze()
+        elif parsed.path == "/api/resolve/install":
+            self.handle_resolve_install()
+        elif parsed.path == "/api/update/apply":
+            self.handle_update()
         else:
             self.send_error(404, "Endpoint nicht gefunden")
 
@@ -813,6 +781,35 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
         except Exception as e:
             traceback.print_exc()
             self.send_error_json(500, f"Fehler bei Audioanalyse: {str(e)}")
+
+    def handle_resolve_install(self):
+        try:
+            target = resolve_plugin.install()
+            print(f"[BeatThis Server] Resolve-Skript installiert: {target}")
+            self.send_json(200, resolve_plugin.status())
+        except Exception as e:
+            traceback.print_exc()
+            self.send_error_json(500, f"Installation fehlgeschlagen: {e}")
+
+    def handle_update(self):
+        try:
+            result = updater.update()
+            self.send_json(200, {"updated": result["updated"], "version": result["version"],
+                                 "message": result["message"]})
+        except updater.UpdateError as e:
+            self.send_error_json(409, str(e))
+        except Exception as e:
+            traceback.print_exc()
+            self.send_error_json(500, f"Update fehlgeschlagen: {e}")
+
+    def send_json(self, status_code, data):
+        body = json.dumps(data).encode("utf-8")
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_cors_headers()
+        self.end_headers()
+        self.wfile.write(body)
 
     def send_error_json(self, status_code, message):
         body = json.dumps({"error": message, "detail": message}).encode("utf-8")
