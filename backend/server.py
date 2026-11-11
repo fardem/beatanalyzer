@@ -40,6 +40,17 @@ except Exception as err:
 TEMP_DIR = tempfile.mkdtemp(prefix="beatthis_")
 
 
+def read_app_version():
+    try:
+        with open(os.path.join(PROJECT_ROOT, "VERSION"), encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return "unbekannt"
+
+
+APP_VERSION = read_app_version()
+
+
 def extract_uploaded_file(headers, rfile):
     """
     Nativer, robuster Multipart-Form-Data Parser ohne externe Abhängigkeiten.
@@ -706,6 +717,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
                 "beat_this_installed": BEAT_THIS_AVAILABLE,
                 "cuda_available": cuda_avail,
                 "engine": "CPJKU beat_this Transformer" if BEAT_THIS_AVAILABLE else "Librosa MIR Fallback",
+                "version": APP_VERSION,
                 "python_version": sys.version.split()[0]
             }
             body = json.dumps(response_data).encode("utf-8")
@@ -823,6 +835,7 @@ def main():
     print("      BeatThis - Lokaler Audio-Analyzer Server gestartet")
     print("======================================================================")
     print(f" URL:            http://localhost:{port}")
+    print(f" Version:        {APP_VERSION}")
     print(f" Python Version: {sys.version.split()[0]}")
     print(f" Transformer:    {'CPJKU beat_this aktiv' if BEAT_THIS_AVAILABLE else 'MIR Engine aktiv'}")
     print("======================================================================")
