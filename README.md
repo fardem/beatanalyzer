@@ -137,7 +137,8 @@ Das Skript schreibt zusätzlich `<Song>.srt` in den Ordner der JSON und importie
 ```
 Downbeat (1)
 Takt 24 - Beat 1
-01:02.880 - 89.6 BPM - 75%
+01:02.880 - 89.6 BPM
+Konfidenz 75%
 ```
 
 Die Zeiten zählen ab Anfang der Audiodatei. Ein neuer Lauf ersetzt den Untertitel-Clip im Ordner **BeatThis**.

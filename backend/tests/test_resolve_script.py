@@ -251,7 +251,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(len(cues), 6)  # intro 0 s -> first beat, then one per beat
         self.assertEqual(cues[0].split("\n")[:2], ["1", "00:00:00,000 --> 00:00:00,500"])
         self.assertEqual(cues[1].split("\n"), ["2", "00:00:00,500 --> 00:00:01,000", "Downbeat (1)",
-                                               "Takt 1 - Beat 1", "00:00.500 - 120.0 BPM - 90%"])
+                                               "Takt 1 - Beat 1", "00:00.500 - 120.0 BPM", "Konfidenz 90%"])
         self.assertEqual(cues[2].split("\n")[2:4], ["Beat 2", "Takt 1 - Beat 2"])
         self.assertEqual(cues[5].split("\n")[1], "00:00:02,500 --> 00:00:03,000")  # last: + previous interval
         self.assertEqual(self.bin_clips(), ["Müller Song.srt"])
@@ -270,7 +270,7 @@ class ResolveScriptTests(unittest.TestCase):
         del data["markers"][0]["confidence"]
         self.M.apply(self.write_json(data))
         srt = (self.tmp / "Müller Song.srt").read_text(encoding="utf-8")
-        self.assertIn("00:00.500 - 120.0 BPM - -", srt)
+        self.assertIn("00:00.500 - 120.0 BPM\nKonfidenz -\n", srt)
 
     # Timeline at 25 fps starting at 01:00:00:00 (frame 90000). The song lies at 10 s, 1 s trimmed at the
     # front, 3 s long: song seconds 1.0-4.0 are visible, song second 0 is at timeline second 9.
