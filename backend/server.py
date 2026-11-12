@@ -29,16 +29,23 @@ mimetypes.add_type("image/svg+xml", ".svg")
 mimetypes.add_type("application/json", ".json")
 
 # Lade Analyzer
+ANALYZER_ERROR = ""   # why analyzer.py could not be loaded (e.g. a broken NumPy in venv)
 try:
     from analyzer import analyze_audio_file, engine_status, BEAT_THIS_AVAILABLE
-except Exception as err:
-    print(f"[Warnung] analyzer.py konnte nicht vollständig geladen werden: {err}")
+except Exception as _err:   # the name of an except variable is deleted after the block: keep the text
+    ANALYZER_ERROR = str(_err) or type(_err).__name__
+    print("=" * 70)
+    print(f"[FEHLER] analyzer.py laesst sich nicht laden: {ANALYZER_ERROR}")
+    print("[FEHLER] Analysen sind nicht moeglich. Meist ist venv beschaedigt: alle BeatAnalyzer-Fenster")
+    print("[FEHLER] schliessen, den Ordner venv loeschen und install_and_run.bat erneut starten.")
+    print("=" * 70)
     BEAT_THIS_AVAILABLE = False
+
     def analyze_audio_file(p, f):
-        raise RuntimeError(f"Analyzer-Fehler: {err}")
+        raise RuntimeError(f"Analyzer-Fehler (analyzer.py nicht geladen): {ANALYZER_ERROR}")
 
     def engine_status():
-        return {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "not_installed"}
+        return {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "analyzer_failed"}
 
 import i18n
 import resolve_plugin
@@ -873,7 +880,12 @@ def main():
     print(f" URL:            http://localhost:{port}")
     print(f" Version:        {APP_VERSION}")
     print(f" Python Version: {sys.version.split()[0]}")
-    print(f" Transformer:    {'CPJKU beat_this aktiv' if BEAT_THIS_AVAILABLE else 'MIR Engine aktiv'}")
+    if ANALYZER_ERROR:
+        print(" Analyse:        NICHT MOEGLICH - analyzer.py nicht geladen (siehe oben)")
+    elif BEAT_THIS_AVAILABLE:
+        print(" Analyse:        CPJKU beat_this")
+    else:
+        print(" Analyse:        librosa - beat_this ist NICHT installiert (install_and_run.bat erneut starten)")
     print("======================================================================")
     print(" Server laeuft. Druecke STRG + C zum Beenden.")
     print("======================================================================")

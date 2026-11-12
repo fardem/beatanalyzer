@@ -112,6 +112,7 @@ local BA = {
       ["plugin.msg_tl_replaced"] = " (old track replaced)",
       ["plugin.msg_tl_vehicle_left"] = "Timeline: the clip '{clip}' could not be removed from the Media Pool - delete it by hand.",
       ["plugin.msg_tl_write"] = "Timeline: cannot write {path}",
+      ["plugin.reason_analyzer_failed"] = "the analyzer could not be loaded",
       ["plugin.reason_inference_failed"] = "analysis with beat_this failed",
       ["plugin.reason_model_load_failed"] = "beat_this model could not be loaded",
       ["plugin.reason_not_installed"] = "beat_this not installed",

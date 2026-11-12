@@ -20,6 +20,9 @@ echo          Beat- ^& Downbeat-Erkennung in isolierter Python-Umgebung
 echo ======================================================================
 echo  Ein ausfuehrliches Protokoll wird gespeichert in:
 echo  install_log.txt
+echo.
+echo  Bitte vorher alle laufenden BeatAnalyzer-Fenster schliessen: Ein laufender
+echo  Server sperrt Dateien in venv, und ein Update von NumPy bleibt dann halb liegen.
 echo ======================================================================
 echo.
 
@@ -94,7 +97,7 @@ echo [2/6] Richte isolierte virtuelle Umgebung (venv) ein...
 echo [2/6] Virtuelle Umgebung venv pruefen/erstellen... >> "%LOGFILE%"
 
 if not exist "venv\Scripts\activate.bat" (
-    echo Erstelle neuen Ordner "venv"... (bitte kurz warten)
+    echo Erstelle neuen Ordner "venv"... ^(bitte kurz warten^)
     echo Fuehre aus: !PY_CMD! -m venv venv >> "%LOGFILE%"
     !PY_CMD! -m venv venv >> "%LOGFILE%" 2>&1
     if !errorlevel! neq 0 (
@@ -172,12 +175,13 @@ if !errorlevel! equ 0 (
         echo   [OK] CPJKU beat_this Transformer erfolgreich installiert!
         echo   [OK] beat_this von GitHub installiert. >> "%LOGFILE%"
     ) else (
-        echo   [HINWEIS] beat_this GitHub-Paket optional. Integrierter Transformer-Modus wird aktiv.
-        echo   [HINWEIS] beat_this Pip-Install fehlgeschlagen, Fallback aktiv. >> "%LOGFILE%"
+        echo   [WARNUNG] beat_this konnte nicht installiert werden, siehe install_log.txt.
+        echo   [WARNUNG] beat_this Pip-Install fehlgeschlagen. >> "%LOGFILE%"
     )
 ) else (
-    echo   [HINWEIS] Git nicht im PATH. Integrierter Hochpraezisions-Modus (MIR/Librosa) wird genutzt.
-    echo   [HINWEIS] Git nicht installiert, nutze Fallback. >> "%LOGFILE%"
+    echo   [WARNUNG] Git nicht gefunden - beat_this kann nicht installiert werden.
+    echo   [WARNUNG] Git installieren: https://git-scm.com/download/win und danach diese Datei erneut starten.
+    echo   [WARNUNG] Git nicht installiert, beat_this fehlt. >> "%LOGFILE%"
 )
 
 :: ----------------------------------------------------------------------
@@ -187,12 +191,35 @@ echo.
 echo [5/6] Pruefe Python-Umgebung...
 echo [5/6] Teste Imports in Python... >> "%LOGFILE%"
 
-!VENV_PY! -c "import torch; import librosa; import soundfile; print('System-Check: Alle Audio- und KI-Module erfolgreich geladen! (CUDA:', torch.cuda.is_available(), ')')" >> "%LOGFILE%" 2>&1
+!VENV_PY! -c "import numpy, scipy, librosa, soundfile; print('Audio-Module OK, numpy', numpy.__version__)" >> "%LOGFILE%" 2>&1
+if !errorlevel! neq 0 (
+    color 0C
+    echo.
+    echo [FEHLER] Die Audio-Module ^(NumPy, SciPy, librosa, soundfile^) lassen sich nicht laden.
+    echo          Die Umgebung venv ist beschaedigt. So geht es weiter:
+    echo          1. Alle BeatAnalyzer-Fenster schliessen.
+    echo          2. Den Ordner "venv" im BeatAnalyzer-Ordner loeschen.
+    echo          3. install_and_run.bat erneut starten.
+    echo          Details stehen in install_log.txt.
+    echo [FEHLER] Audio-Module nicht ladbar, venv beschaedigt. >> "%LOGFILE%"
+    pause
+    exit /b 1
+)
+echo [OK] Audio-Module funktionieren.
+
+!VENV_PY! -c "import torch, beat_this.inference; print('beat_this OK, CUDA:', torch.cuda.is_available())" >> "%LOGFILE%" 2>&1
 if !errorlevel! neq 0 (
     color 0E
-    echo [HINWEIS] Ein Modultest ergab Warnungen. Siehe install_log.txt.
+    echo.
+    echo [WARNUNG] beat_this ist NICHT verfuegbar. BeatAnalyzer rechnet dann mit librosa - ungenauer,
+    echo           ohne Confidence. Haeufige Ursachen: Git fehlt, keine Internetverbindung, oder ein
+    echo           BeatAnalyzer-Server lief waehrend der Installation. Details in install_log.txt.
+    echo [WARNUNG] beat_this nicht ladbar. >> "%LOGFILE%"
+    echo.
+    echo Druecke eine Taste, um trotzdem mit librosa zu starten - oder schliesse das Fenster.
+    pause >nul
 ) else (
-    echo [OK] Alle Python-Module funktionieren einwandfrei!
+    echo [OK] beat_this ist einsatzbereit.
 )
 
 :: ----------------------------------------------------------------------

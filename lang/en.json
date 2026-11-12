@@ -88,6 +88,7 @@
     "btn_cancel": "Cancel",
     "msg_no_work_dir": "Subtitles: cannot create a working folder in {path}",
     "msg_tl_vehicle_left": "Timeline: the clip '{clip}' could not be removed from the Media Pool - delete it by hand.",
-    "engine_unknown": "Analysis program: not given in the JSON (older JSON or analysed in the browser)"
+    "engine_unknown": "Analysis program: not given in the JSON (older JSON or analysed in the browser)",
+    "reason_analyzer_failed": "the analyzer could not be loaded"
   }
 }
