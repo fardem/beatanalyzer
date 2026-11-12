@@ -30,15 +30,30 @@ mimetypes.add_type("application/json", ".json")
 
 # Lade Analyzer
 try:
-    from analyzer import analyze_audio_file, BEAT_THIS_AVAILABLE
+    from analyzer import analyze_audio_file, engine_status, BEAT_THIS_AVAILABLE
 except Exception as err:
     print(f"[Warnung] analyzer.py konnte nicht vollständig geladen werden: {err}")
     BEAT_THIS_AVAILABLE = False
     def analyze_audio_file(p, f):
         raise RuntimeError(f"Analyzer-Fehler: {err}")
 
+    def engine_status():
+        return {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "not_installed"}
+
+import i18n
 import resolve_plugin
+import settings
 import updater
+
+
+def settings_payload() -> dict:
+    """Body of GET /api/settings: chosen language, the language it means, the languages with a file."""
+    language = settings.load()["language"]
+    return {
+        "language": language,
+        "resolvedLanguage": i18n.resolve_language(language),
+        "languages": [{"code": code, "name": name} for code, name in i18n.available()],
+    }
 
 TEMP_DIR = tempfile.mkdtemp(prefix="beatthis_")
 
@@ -671,6 +686,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
                 "beat_this_installed": BEAT_THIS_AVAILABLE,
                 "cuda_available": cuda_avail,
                 "engine": "CPJKU beat_this Transformer" if BEAT_THIS_AVAILABLE else "Librosa MIR Fallback",
+                "engineInfo": engine_status(),
                 "version": APP_VERSION,
                 "python_version": sys.version.split()[0]
             }
@@ -685,6 +701,10 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
 
         if path == "/api/resolve/status":
             self.send_json(200, resolve_plugin.status())
+            return
+
+        if path == "/api/settings":
+            self.send_json(200, settings_payload())
             return
 
         if path == "/api/update/check":
@@ -746,6 +766,8 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             self.handle_resolve_install()
         elif parsed.path == "/api/update/apply":
             self.handle_update()
+        elif parsed.path == "/api/settings":
+            self.handle_settings()
         else:
             self.send_error(404, "Endpoint nicht gefunden")
 
@@ -802,6 +824,23 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             traceback.print_exc()
             self.send_error_json(500, f"Update fehlgeschlagen: {e}")
 
+    def handle_settings(self):
+        """POST {"language": "de"}: save it and bring an installed Resolve script up to date."""
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+            if not isinstance(body, dict) or "language" not in body:
+                raise ValueError('Erwartet: {"language": "auto" | "en" | "de" | "tr"}')
+            result = resolve_plugin.set_language(str(body["language"]))
+        except ValueError as e:   # json.JSONDecodeError is a ValueError
+            self.send_error_json(400, str(e))
+            return
+        except Exception as e:
+            traceback.print_exc()
+            self.send_error_json(500, f"Einstellungen nicht gespeichert: {e}")
+            return
+        self.send_json(200, {**settings_payload(), "pluginUpdated": result["pluginUpdated"]})
+
     def send_json(self, status_code, data):
         body = json.dumps(data).encode("utf-8")
         self.send_response(status_code)
@@ -838,6 +877,13 @@ def main():
     print("======================================================================")
     print(" Server laeuft. Druecke STRG + C zum Beenden.")
     print("======================================================================")
+
+    try:
+        path = resolve_plugin.status()["path"]
+        if resolve_plugin.ensure_current():
+            print(f"[Resolve] Skript an Sprache und Ordner angepasst: {path}")
+    except Exception as err:
+        print(f"[Resolve] Skript nicht abgeglichen: {err}")
 
     try:
         httpd.serve_forever()
