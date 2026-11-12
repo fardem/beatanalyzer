@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AnalysisResult } from '../types/analyzer';
 import { Gauge, Clock, Radio, Music, Zap, Disc3 } from 'lucide-react';
 
@@ -15,16 +15,47 @@ interface MetricsCardsProps {
   onChangeProtect: (value: number) => void;
 }
 
+const COMMIT_MS = 300; // the slider rests this long before the bars are computed again
+
 export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, protect, busyText, error, onToggleSmoothBars, onChangeProtect }) => {
   const canSmooth = result.activationSource === 'beat_this';
   const busy = busyText !== null;
-  // slider value while dragging; computed again only on release
-  const [slider, setSlider] = useState<number>(Math.round(protect * 100));
-  useEffect(() => setSlider(Math.round(protect * 100)), [protect, result]);
-  const commitSlider = () => {
-    if (slider !== Math.round(protect * 100)) onChangeProtect(slider / 100);
-  };
+  // slider value while moving; computed again once it rests (mouse released, no key for COMMIT_MS)
+  const applied = Math.round(protect * 100);
+  const [slider, setSlider] = useState<number>(applied);
+  const [dragging, setDragging] = useState<boolean>(false);
+  const sliderRef = useRef<HTMLInputElement>(null);
+  const refocus = useRef<boolean>(false);
   const sliderOff = !canSmooth || busy || !smoothBars;
+  useEffect(() => setSlider(applied), [applied, result]);
+  useEffect(() => {
+    if (error) setSlider(applied); // a failed recomputation: show the value the beats were computed with
+  }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // released outside the slider: the window still gets the pointerup
+    const up = () => setDragging(false);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, []);
+  useEffect(() => {
+    if (dragging || sliderOff || slider === applied) return;
+    const t = setTimeout(() => {
+      refocus.current = document.activeElement === sliderRef.current;
+      onChangeProtect(slider / 100);
+    }, COMMIT_MS);
+    return () => clearTimeout(t);
+  }, [slider, dragging, sliderOff, applied]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // disabled during the recomputation drops the focus: give it back for the arrow keys
+    if (!busy && refocus.current) {
+      refocus.current = false;
+      sliderRef.current?.focus();
+    }
+  }, [busy]);
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -118,9 +149,9 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             disabled={sliderOff}
             aria-label="Schutz klarer 1"
             className="w-full min-w-0 accent-purple-500"
+            ref={sliderRef}
             onChange={(e) => setSlider(Number(e.target.value))}
-            onPointerUp={commitSlider}
-            onKeyUp={commitSlider}
+            onPointerDown={() => setDragging(true)}
           />
           <span className="w-8 text-right tabular-nums">{slider} %</span>
         </label>

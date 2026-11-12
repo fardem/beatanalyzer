@@ -215,8 +215,9 @@ def smooth_bars(downbeat_conf: List[float], meter: int, protect: float = PROTECT
 
 
 # The last analysed file (key: SHA-256 of its content): audio and beat_this output, so that a new smoothing value
-# does not decode the file and run the model again. A failed model run is not kept.
-_LAST: Dict[str, Any] = {}
+# does not decode the file and run the model again. A failed model run is not kept. One tuple
+# (key, y, sr, model), replaced as a whole and read once per run: requests run in parallel threads.
+_LAST: Tuple = ()
 
 
 def _file_key(file_path: str) -> str:
@@ -236,11 +237,13 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
     predictor = get_predictor()
 
     protect = clamp_protect(protect)
+    global _LAST
     key = _file_key(file_path)
-    cached = _LAST if _LAST.get("key") == key else {}
+    last = _LAST
+    cached_model = last[3] if last and last[0] == key else None
     # Lade Audio sicher mit soundfile / librosa (kompatibel mit Python 3.9 bis 3.13)
-    if cached:
-        y, sr = cached["y"], cached["sr"]
+    if last and last[0] == key:
+        y, sr = last[1], last[2]
     else:
         y, sr = load_audio_safely(file_path, target_sr=44100)
     model = None
@@ -252,8 +255,8 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
     downbeat_prob: Optional[np.ndarray] = None
     info = engine_info("beat_this", device=PREDICTOR_DEVICE)
 
-    if predictor is not None and cached.get("model") is not None:
-        model = cached["model"]
+    if predictor is not None and cached_model is not None:
+        model = cached_model
         print(f"[BeatAnalyzer Backend] Ergebnis von beat_this aus dem Speicher (nur Glättung neu): {original_filename}")
         beats_sec, downbeats_sec, beat_prob, downbeat_prob = list(model[0]), list(model[1]), model[2], model[3]
     elif predictor is not None:
@@ -270,8 +273,7 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
         info = engine_info("librosa", "not_installed" if not BEAT_THIS_AVAILABLE else "model_load_failed")
         beats_sec, downbeats_sec = fallback_mir_track(y, sr)
 
-    _LAST.clear()
-    _LAST.update(key=key, y=y, sr=sr, model=model)
+    _LAST = (key, y, sr, model)
 
     # Kurven fuer die Web-App: Wahrscheinlichkeiten von beat_this, sonst die Onset-Staerke von librosa
     if beat_prob is not None:

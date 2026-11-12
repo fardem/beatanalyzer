@@ -265,6 +265,39 @@ class AnalyzerTests(unittest.TestCase):
         self.assertEqual(second["engineInfo"]["id"], "beat_this")
         self.assertEqual(calls["frames"], 2)
 
+    def test_cache_replaced_during_a_run_is_not_mixed(self):
+        # two requests at once (ThreadingHTTPServer): another file's analysis finishes in the middle of this run
+        calls = {}
+        first = self.analyze_with_fake(calls=calls)
+        analyzer = self.analyzer
+        other = os.path.join(self.tmp, "other.wav")
+        write_click_track(other, bpm=100)
+        original = analyzer.engine_info
+        state = {"done": False}
+
+        def other_request_finishes(*a, **k):
+            if not state["done"]:
+                state["done"] = True
+                real_run = analyzer.run_beat_this
+
+                def other_beats(predictor, y, sr):                 # the other song has other beats
+                    beats, downs, bp, dp = real_run(predictor, y, sr)
+                    return [b + 0.1 for b in beats], [d + 0.1 for d in downs], bp, dp
+                analyzer.run_beat_this = other_beats
+                try:
+                    analyzer.analyze_audio_file(other, "other.wav")
+                finally:
+                    analyzer.run_beat_this = real_run
+            return original(*a, **k)
+        analyzer.engine_info = other_request_finishes
+        try:
+            result = analyzer.analyze_audio_file(self.wav, "click.wav")
+        finally:
+            analyzer.engine_info = original
+        self.assertTrue(state["done"])
+        self.assertEqual(result["beats"], first["beats"])        # this file's cached data, not the other one's
+        self.assertEqual(result["metadata"]["duration"], first["metadata"]["duration"])
+
     def test_librosa_is_not_smoothed(self):
         self.assertEqual(self.analyze_without_beat_this()["barSmoothing"],
                          {"applied": False, "meter": 4, "changedBeats": 0, "reanchors": 0, "protect": 0.85})
