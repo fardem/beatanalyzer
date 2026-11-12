@@ -73,7 +73,7 @@ class AnalyzerTests(unittest.TestCase):
         self.analyzer = importlib.import_module("analyzer")
         return self.analyzer.analyze_audio_file(self.wav, "click.wav")
 
-    def analyze_with_fake(self, init_raises=None, frames_raise=None, calls=None):
+    def analyze_with_fake(self, init_raises=None, frames_raise=None, calls=None, no_downbeats=False):
         """Analyse with FakeBeatThis (50 frames/s, 600 frames): beat logit 4.0 at every beat (0.5 s, 1.0 s, ...),
         downbeat logit 2.0 one frame after every fourth beat, -4.0 everywhere else."""
         calls = {} if calls is None else calls
@@ -101,7 +101,7 @@ class AnalyzerTests(unittest.TestCase):
                 return beat, down
 
             def frames2beats(self, beat_logits, downbeat_logits):
-                return beats, beats[::4]
+                return beats, ([] if no_downbeats else beats[::4])
 
         class ExplodingFile2Beats(FakeBeatThis):
             def __call__(self, audio_path):
@@ -178,6 +178,34 @@ class AnalyzerTests(unittest.TestCase):
         ts = self.analyze_with_fake()["timeSignature"]
         self.assertEqual(ts, {"numerator": 4, "denominator": 4, "name": "4/4", "barShare": 100})
 
+
+    def test_beat_this_without_downbeats(self):
+        result = self.analyze_with_fake(no_downbeats=True)
+        self.assertEqual(result["timeSignature"], {"numerator": 4, "denominator": 4, "name": "4/4", "barShare": None})
+        self.assertTrue(result["beats"][0]["isDownbeat"])
+        self.assertEqual(result["beats"][0]["confidence"], 0.982)   # forced downbeat: beat probability
+
+    def test_librosa_has_no_bar_share(self):
+        self.assertIsNone(self.analyze_without_beat_this()["timeSignature"]["barShare"])
+
+    def test_health_does_not_start_cuda(self):
+        calls = []
+        torch_stub = types.ModuleType("torch")
+        torch_stub.cuda = types.SimpleNamespace(
+            is_available=lambda: True, is_initialized=lambda: False,
+            get_device_name=lambda i: calls.append(i) or "RTX Test")
+        sys.modules["torch"] = torch_stub
+        try:
+            fake = types.ModuleType("beat_this.inference")
+            fake.Audio2Beats = object
+            analyzer = load_analyzer_with_fake_beat_this(fake)
+            self.assertEqual(analyzer.engine_status(), {"id": "beat_this", "device": "cuda", "gpu": None,
+                                                        "fallbackReason": None})
+            self.assertEqual(calls, [])
+            torch_stub.cuda.is_initialized = lambda: True
+            self.assertEqual(analyzer.engine_status()["gpu"], "RTX Test")
+        finally:
+            sys.modules.pop("torch", None)
 
     # --- engineInfo --------------------------------------------------------------------------------
 

@@ -52,8 +52,12 @@ def get_predictor():
 
 
 def _gpu_name() -> Optional[str]:
+    """Name of the graphics card, only once CUDA runs: get_device_name() would start CUDA, which can take
+    longer than the web app waits for /api/health."""
     try:
         import torch
+        if not torch.cuda.is_initialized():
+            return None
         return str(torch.cuda.get_device_name(0))
     except Exception:
         return None
@@ -225,6 +229,8 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
 
     # Taktart: haeufigste Beat-Anzahl zwischen zwei Downbeats und ihr Anteil an allen Takten
     beats_per_bar, bar_share = meter_from_beats(beats_sec, downbeats_sec)
+    if beat_prob is None:
+        bar_share = None   # librosa puts a downbeat on every 3rd/4th beat: a share of those bars says nothing
 
     # Erzeuge strukturierte Beat-Liste mit Takt & Zählzeit
     downbeat_indices = set()
@@ -255,7 +261,8 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
             "beatInBar": beat_in_bar,
             "barIndex": current_bar,
             "isDownbeat": is_down,
-            "confidence": (beat_confidence(b_time, is_down, beat_prob, downbeat_prob)
+            # a downbeat the model did not report (first beat when there are no downbeats) gets the beat value
+            "confidence": (beat_confidence(b_time, is_down and idx in downbeat_indices, beat_prob, downbeat_prob)
                            if beat_prob is not None else None),
             "instantBpm": instant_bpm,
             "deltaMs": delta_ms

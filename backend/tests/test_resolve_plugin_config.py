@@ -72,6 +72,18 @@ class ConfigBlockTests(unittest.TestCase):
         self.assertEqual(resolve_plugin.status(env=self.env, platform="win32")["state"], "current")
         self.assertFalse(resolve_plugin.ensure_current(env=self.env, platform="win32"))
 
+    def test_hand_edits_outside_the_block_survive(self):
+        settings.save({"language": "de"})
+        target = resolve_plugin.install(env=self.env, platform="win32")
+        text = target.read_text(encoding="utf-8").replace('local DOWNBEAT_COLOR = "Red"', 'local DOWNBEAT_COLOR = "Green"')
+        target.write_text(text, encoding="utf-8")
+        self.assertEqual(resolve_plugin.status(env=self.env, platform="win32")["state"], "current")
+        self.assertFalse(resolve_plugin.ensure_current(env=self.env, platform="win32"))
+        self.assertTrue(resolve_plugin.set_language("tr", env=self.env, platform="win32")["pluginUpdated"])
+        text = target.read_text(encoding="utf-8")
+        self.assertIn('local DOWNBEAT_COLOR = "Green"', text)
+        self.assertIn('lang = "tr"', text)
+
     def test_ensure_current_does_not_install_a_missing_script(self):
         self.assertFalse(resolve_plugin.ensure_current(env=self.env, platform="win32"))
         self.assertEqual(resolve_plugin.status(env=self.env, platform="win32")["state"], "missing")

@@ -87,12 +87,28 @@ def template_config() -> str:
     return render_config(None, None, "en", {"en": i18n.texts("en")})
 
 
-def expected_script(platform: str = sys.platform) -> str:
-    """The script as install() writes it: paths, language from settings.json and all texts."""
+def expected_config(platform: str = sys.platform) -> str:
+    """The BA-CONFIG block of the installed script: paths, language from settings.json and all texts."""
     lang = i18n.resolve_language(settings.load()["language"])
-    block = render_config(PROJECT_ROOT, venv_python(PROJECT_ROOT, platform), lang,
-                          {code: i18n.texts(code) for code in i18n.LANGUAGES})
-    return apply_config(PLUGIN_SOURCE.read_text(encoding="utf-8"), block)
+    return render_config(PROJECT_ROOT, venv_python(PROJECT_ROOT, platform), lang,
+                         {code: i18n.texts(code) for code in i18n.LANGUAGES})
+
+
+def expected_script(platform: str = sys.platform) -> str:
+    """The script as install() writes it."""
+    return apply_config(PLUGIN_SOURCE.read_text(encoding="utf-8"), expected_config(platform))
+
+
+def config_block(script: Optional[str]) -> Optional[str]:
+    """The BA-CONFIG block of a script text (lines from CONFIG_BEGIN to CONFIG_END), or None."""
+    if script is None:
+        return None
+    lines = script.splitlines(keepends=True)
+    begin = next((i for i, line in enumerate(lines) if line.startswith(CONFIG_BEGIN)), None)
+    end = next((i for i, line in enumerate(lines) if line.startswith(CONFIG_END)), None)
+    if begin is None or end is None or end < begin:
+        return None
+    return "".join(lines[begin:end + 1])
 
 
 def app_version(root: Path = PROJECT_ROOT) -> str:
@@ -152,8 +168,10 @@ def status(target_dir: Optional[Path] = None, env=os.environ, platform: str = sy
         installed, state = legacy, "outdated"   # only the script of an older version under its old name
     elif installed is None:
         state = "missing"
-    elif installed != current or legacy is not None or _installed_text(target) != expected_script(platform):
-        state = "outdated"
+    elif installed != current or legacy is not None \
+            or config_block(_installed_text(target)) != expected_config(platform):
+        state = "outdated"   # other version, old script next to it, or other folder / language / texts
+
     else:
         state = "current"
     return {
@@ -181,10 +199,19 @@ def install(target_dir: Optional[Path] = None, env=os.environ, platform: str = s
 
 
 def ensure_current(target_dir: Optional[Path] = None, env=os.environ, platform: str = sys.platform) -> bool:
-    """Rewrite an installed script that is outdated (version, language, folder, texts); True if written.
-    A script that is not installed stays missing."""
-    if status(target_dir, env, platform)["state"] != "outdated":
+    """Bring an installed, outdated script up to date; True if written. A missing script stays missing.
+    Same version: only the BA-CONFIG block is rewritten, so edits elsewhere (e.g. the colours at the top) stay.
+    Other version: the script is installed anew."""
+    st = status(target_dir, env, platform)
+    if st["state"] != "outdated":
         return False
+    target = Path(st["path"])
+    text = _installed_text(target)
+    if st["installedVersion"] == st["version"] and not st["legacyInstalled"] and config_block(text) is not None:
+        tmp = target.with_name(target.name + ".tmp")
+        tmp.write_bytes(apply_config(text, expected_config(platform)).encode("utf-8"))
+        os.replace(tmp, target)
+        return True
     install(target_dir, env, platform)
     return True
 

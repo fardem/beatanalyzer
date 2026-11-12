@@ -11,6 +11,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import resolve_plugin  # noqa: E402
 import server  # noqa: E402
 import settings  # noqa: E402
 
@@ -20,6 +21,10 @@ class ServerSettingsTests(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp())
         self._settings_file = settings.SETTINGS_FILE
         settings.SETTINGS_FILE = self.tmp / "settings.json"
+        self.env = {"APPDATA": str(self.tmp / "AppData"), "ProgramFiles": str(self.tmp / "Programs")}
+        # the server writes the Resolve script with the default folder: keep it out of the real Resolve folder
+        self._scripts_dir = resolve_plugin.scripts_dir
+        resolve_plugin.scripts_dir = lambda env=None, platform=None: self.tmp / "Resolve" / "Utility"
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.BeatThisRequestHandler)
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
         self.base = f"http://127.0.0.1:{self.httpd.server_address[1]}"
@@ -28,6 +33,7 @@ class ServerSettingsTests(unittest.TestCase):
         self.httpd.shutdown()
         self.httpd.server_close()
         settings.SETTINGS_FILE = self._settings_file
+        resolve_plugin.scripts_dir = self._scripts_dir
 
     def request(self, path, body=None):
         data = json.dumps(body).encode("utf-8") if body is not None else None
@@ -53,6 +59,13 @@ class ServerSettingsTests(unittest.TestCase):
         self.assertEqual((data["language"], data["resolvedLanguage"]), ("tr", "tr"))
         self.assertIn("pluginUpdated", data)
         self.assertEqual(settings.load()["language"], "tr")
+
+    def test_post_language_touches_only_the_test_resolve_folder(self):
+        target = resolve_plugin.install(env=self.env)
+        self.assertTrue(str(target).startswith(str(self.tmp)), target)   # never the real Resolve folder
+        status, data = self.request("/api/settings", {"language": "tr"})
+        self.assertTrue(data["pluginUpdated"])
+        self.assertIn('lang = "tr"', target.read_text(encoding="utf-8"))
 
     def test_post_invalid_language(self):
         status, data = self.request("/api/settings", {"language": "xx"})

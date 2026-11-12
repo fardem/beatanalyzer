@@ -12,7 +12,8 @@
 - Resolve-Skript: Das installierte Skript enthält Sprache, BeatAnalyzer-Ordner und Texte. Der Server gleicht es beim Start und bei einem Sprachwechsel ab; *In Resolve aktualisieren* zeigt ein veraltetes Skript an.
 - Confidence pro Beat kommt jetzt von beat_this (Wahrscheinlichkeit des Modells, immer über 50 %), statt fester 95 % bzw. 88 %. Ohne beat_this steht „–“.
 - Die Kurven der Web-App zeigen bei beat_this dessen Wahrscheinlichkeiten pro Frame. Ohne beat_this ist es die Onset-Stärke, eine Downbeat-Kurve gibt es dann nicht.
-- Taktart: statt einer festen Confidence von 95 % der Anteil der Takte mit dieser Beat-Anzahl („96 % der Takte“). Der Name der Taktart ist nur noch „4/4“ (ohne „(Standard)“, „(Walzer)“).
+- Taktart: statt einer festen Confidence von 95 % der Anteil der Takte mit dieser Beat-Anzahl („96 % der Takte“), nur mit beat_this; ohne beat_this „–“. Der Name der Taktart ist nur noch „4/4“ (ohne „(Standard)“, „(Walzer)“).
+- Ein installiertes Resolve-Skript wird bei gleicher Version nur im Konfigurationsblock angepasst; eigene Änderungen, z. B. der Farben oben im Skript, bleiben erhalten.
 
 ## [0.0.5] – 2026-11-12
 

@@ -584,25 +584,10 @@ function trackBeatsAndDownbeats(
     numerator: meterBeats,
     denominator: 4,
     name: `${meterBeats}/4`,
-    barShare: barShare(beats.map((b) => b.time), downbeats.map((d) => d.time), meterBeats),
+    barShare: null, // downbeats are set every 3rd/4th beat here: a share of those bars says nothing
   };
 
   return { beats, downbeats, timeSig, swingRatio };
-}
-
-/**
- * Share of bars (beats between two downbeats) with `numerator` beats, in percent; null with fewer than
- * 2 downbeats. Same counting as meter_from_beats() in backend/analyzer.py.
- */
-export function barShare(beatTimes: number[], downbeatTimes: number[], numerator: number): number | null {
-  const counts: number[] = [];
-  for (let i = 0; i + 1 < downbeatTimes.length; i++) {
-    const d1 = downbeatTimes[i];
-    const d2 = downbeatTimes[i + 1];
-    counts.push(beatTimes.filter((t) => t >= d1 && t < d2).length);
-  }
-  if (counts.length === 0) return null;
-  return Math.round((100 * counts.filter((c) => c === numerator).length) / counts.length);
 }
 
 // Onset strength of the browser analysis; there is no downbeat curve (downbeatActivation null).

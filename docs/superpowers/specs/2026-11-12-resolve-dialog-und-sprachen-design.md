@@ -507,7 +507,7 @@ Spitzen mit einer Wahrscheinlichkeit über 0,5 (Logit > 0) innerhalb von ±70 ms
 | Confidence Downbeat | höchster Sigmoid des Downbeat-Logits im Bereich ±3 Frames um den Beat | – | – |
 | Beat-Kurve | Sigmoid der Beat-Logits, auf ca. 1000 Punkte verdichtet | Onset-Stärke, so benannt | wie heute, als Onset-Stärke benannt |
 | Downbeat-Kurve | Sigmoid der Downbeat-Logits, verdichtet | keine | keine |
-| Taktart | Anteil der Takte mit dieser Beat-Anzahl („in 96 % der Takte“) | ebenso | ebenso |
+| Taktart | Anteil der Takte mit dieser Beat-Anzahl („in 96 % der Takte“) | – | – |
 
 - Weil beat_this nur Beats über 0,5 behält, liegt die Confidence eines erkannten Beats immer zwischen 50 und
   100 %. Das steht im README und als Hinweis an der Beat-Tabelle.
@@ -515,6 +515,10 @@ Spitzen mit einer Wahrscheinlichkeit über 0,5 (Logit > 0) innerhalb von ±70 ms
   kann das schon, Test `test_missing_confidence_shows_dash`).
 - Für die Taktart gibt es keinen Modellwert. Statt der festen 95 zeigt die Web-App den Anteil der Takte, die
   die angezeigte Beat-Anzahl haben; das ist eine Zählung, keine Wahrscheinlichkeit, und wird so beschriftet.
+  Bei librosa und im Browser setzt die Analyse selbst jeden 3. oder 4. Beat als Downbeat; der Anteil wäre
+  immer 100 % und sagt nichts, deshalb steht dort „–“ (Ergebnis des Reviews von Teilprojekt 1).
+- Ein Downbeat, den das Modell nicht gemeldet hat (erster Beat, wenn es keine Downbeats gibt), bekommt die
+  Confidence des Beats.
 
 ---
 
