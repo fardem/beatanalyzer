@@ -160,6 +160,46 @@ def meter_from_beats(beats_sec: List[float], downbeats_sec: List[float]) -> Tupl
     return numerator, int(round(100 * counts.count(numerator) / len(counts)))
 
 
+REANCHOR_PENALTY = 9.0   # cost (nats) of starting the bar grid anew: about two bars of clear contrary evidence
+MIN_BAR_SHARE = 50       # below this share of regular model bars the song is left as the model sees it
+
+
+def smooth_bars(downbeat_conf: List[float], meter: int, bar_share: Optional[int]) -> Dict[str, Any]:
+    """
+    Even bar grid from beat_this: the most likely beat of the bar (1..meter) for every beat (Viterbi). Counting on
+    (1, 2, ..., meter, 1) is free; starting anew costs REANCHOR_PENALTY, so the grid only moves where the model
+    clearly hears the "1" elsewhere. downbeat_conf[i] = downbeat probability at beat i.
+    """
+    off = {"applied": False, "positions": [], "reanchors": 0}
+    n = len(downbeat_conf)
+    if bar_share is None or bar_share < MIN_BAR_SHARE or meter < 2 or n < 2 * meter:
+        return off
+    d = np.clip(np.asarray(downbeat_conf, dtype=np.float64), 1e-4, 1 - 1e-4)
+    emit = np.empty((n, meter))
+    emit[:, 0] = np.log(d)
+    emit[:, 1:] = np.log(1 - d)[:, None]
+    nxt = np.roll(np.arange(meter), -1)          # state p (0-based) counts on to nxt[p]
+    score = emit[0].copy()                       # every beat of the bar is a possible start (pickup)
+    back = np.zeros((n, meter), dtype=np.int64)
+    for i in range(1, n):
+        # best way into each state: count on from its predecessor, or jump from the best state with a penalty
+        on = np.empty(meter)
+        on[nxt] = score
+        prev_on = np.empty(meter, dtype=np.int64)
+        prev_on[nxt] = np.arange(meter)
+        best = int(np.argmax(score))
+        jump = score[best] - REANCHOR_PENALTY
+        take_jump = jump > on
+        back[i] = np.where(take_jump, best, prev_on)
+        score = np.where(take_jump, jump, on) + emit[i]
+    path = np.empty(n, dtype=np.int64)
+    path[-1] = int(np.argmax(score))
+    for i in range(n - 1, 0, -1):
+        path[i - 1] = back[i, path[i]]
+    reanchors = int(sum(1 for i in range(1, n) if path[i] != nxt[path[i - 1]]))
+    return {"applied": True, "positions": [int(p) + 1 for p in path], "reanchors": reanchors}
+
+
 def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]:
     """
     Analysiert eine Audiodatei (MP3, WAV, AAC, FLAC) und liefert strukturierte
