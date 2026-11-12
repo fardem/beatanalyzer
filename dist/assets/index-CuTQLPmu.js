@@ -1423,7 +1423,8 @@ end
 
 local TICK_MS = 50
 local WIN_MIN = { 600, 640 }   -- smaller windows wrap every line (seen in Resolve)
-local LINE_PX, CHAR_PX = 17, 7   -- height of a text line, mean width of a character (for wrapped labels)
+local LINE_PX, CHAR_PX = 17, 8   -- height of a text line, mean width of a character (for wrapped labels;
+                                 -- 7 was too small: a 600 px window wraps after about 70 characters)
 local REFRESH_TICKS = 20
 
 local COLOR_IDS = { downbeat = "ColorDownbeat", beat2 = "ColorBeat2", beat3 = "ColorBeat3", beat4 = "ColorBeat4",
@@ -1500,11 +1501,29 @@ function M.main()
     local ok, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
     return ok and type(g) == "table" and tonumber(g[3]) or geometry[3]
   end
+  -- lines of one text line wrapped at word boundaries like the label does (characters, not UTF-8 bytes)
+  local function wrapped_lines(line, per_line)
+    local n, used = 1, 0
+    for word in line:gmatch("%S+") do
+      local w = #word:gsub("[\\128-\\191]", "")
+      if used == 0 then
+        used = w
+      elseif used + 1 + w <= per_line then
+        used = used + 1 + w
+      else
+        n, used = n + 1, w
+      end
+      while used > per_line do   -- a word longer than a line is broken inside
+        n, used = n + 1, used - per_line
+      end
+    end
+    return n
+  end
   local function fit(id, text, min_lines)
     local per_line = math.max(30, math.floor((window_width() - 40) / CHAR_PX))
     local lines = 0
     for line in (tostring(text or "") .. "\\n"):gmatch("(.-)\\n") do
-      lines = lines + math.max(1, math.ceil(#line / per_line))
+      lines = lines + wrapped_lines(line, per_line)
     end
     set(id, "MinimumSize", { 0, math.max(min_lines or 1, lines) * LINE_PX + 2 })
   end
