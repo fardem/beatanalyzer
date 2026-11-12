@@ -1,17 +1,24 @@
 --[[
 BeatAnalyzer_Markers.lua - DaVinci Resolve script of BeatAnalyzer.
-Reads a marker JSON exported by BeatAnalyzer ("DaVinci Resolve" tab) and puts one marker per beat on the
-audio clip in the media pool. Media pool markers show on every use of the clip in every timeline.
+Opens a window: choose a marker JSON exported by BeatAnalyzer ("DaVinci Resolve" tab), check the target clip,
+its length and the open timeline, then put one marker per beat on the audio clip in the media pool.
+Media pool markers show on every use of the clip in every timeline. Colours per beat of the bar (downbeat,
+beat 2-4, others, or no marker) can be set in the window. "Remove BeatAnalyzer markers" takes them off again.
 
 Target clip: the clips selected in the media pool; with no selection, every media pool clip whose
-file name equals "fileName" in the JSON.
+file name equals "fileName" in the JSON. OK stays locked without a target clip.
 Markers written by this script carry the custom data MARKER_TAG; a new run removes them first,
-markers set by hand stay.
+markers set by hand stay. The work runs in steps on a timer, so the window stays responsive and locked.
 
-Subtitles: <song>.srt (one subtitle per beat) goes next to the JSON and into the media pool bin BIN_NAME.
-With a timeline open that uses the song on an audio track, <song> (Timeline).srt with timeline times
-goes onto the subtitle track "BeatAnalyzer - <song>" under the first use of the song; a new run deletes
-that track and creates it again. resolve/tools/probe_timeline.lua checks the placement in Resolve.
+Subtitles: <song>.srt (one subtitle per beat, all beats) is written into a working folder
+<BeatAnalyzer>/resolve_temp/<date-time>, imported into the media pool bin BIN_NAME and deleted again.
+With the tick box set and the song on an audio track of the timeline open at OK, <song> (Timeline).srt with
+timeline times goes onto the subtitle track "BeatAnalyzer - <song>" under the first use of the song; the
+clip of that file is deleted from the media pool afterwards (the subtitles on the track stay). A new run
+deletes that track and creates it again. resolve/tools/probe_timeline.lua checks the placement in Resolve.
+
+Texts, language and the BeatAnalyzer folder come from the BA-CONFIG block (backend/resolve_plugin.py).
+The window remembers its settings in <BeatAnalyzer>/resolve_temp/plugin.txt.
 
 Install: copy to %APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility\
 Run:     Workspace -> Scripts -> BeatAnalyzer_Markers

@@ -8,6 +8,14 @@
 - Angaben zum Analyse-Programm (`engineInfo`: beat_this oder librosa, CUDA oder CPU, Grafikkarte, Grund für den Ersatz) im Ergebnis, in der Marker-JSON und in `/api/health`.
 
 ### Geändert
+- Resolve-Skript: eigenes Fenster statt sofortigem Dateidialog. JSON wählen; das Fenster zeigt den Ziel-Clip im Media Pool mit Laufzeit, warnt bei anderem Dateinamen oder wenn die Laufzeit des Clips um 0,5 s oder mehr von der analysierten Datei abweicht, und zeigt das Analyse-Programm. Ohne Ziel-Clip bleibt OK gesperrt.
+- Resolve-Skript: Häkchen „Subtitle Track in der Timeline anlegen“ mit Erklärung, die sich nach Häkchen und offener Timeline richtet.
+- Resolve-Skript: Markerfarben pro Zählzeit (Downbeat, Beat 2, 3, 4, übrige), jeweils auch „kein Marker“. Die Subtitles enthalten immer alle Beats.
+- Resolve-Skript: Nach OK zeigt das Fenster die Schritte mit Fortschritt („240 / 512“) und bleibt gesperrt, bis alles fertig ist; das X wird so lange ignoriert. Der Subtitle Track kommt in die Timeline, die beim OK offen war.
+- Resolve-Skript: Knopf „BeatAnalyzer-Marker entfernen“ mit Nachfrage (eigene Marker, Subtitle Track, Subtitle im Ordner BeatAnalyzer; Marker von Hand bleiben).
+- Resolve-Skript: Das Fenster merkt sich Ordner der letzten JSON, Häkchen, Farben und Fenstergröße in `resolve_temp/plugin.txt`.
+- Resolve-Skript: Die SRT-Dateien entstehen in einem Arbeitsordner unter `resolve_temp/` und werden nach dem Import gelöscht, nicht mehr neben der JSON. Im Ordner BeatAnalyzer im Media Pool liegt nur noch `<Song>.srt`; `<Song> (Timeline).srt` wird nach dem Platzieren entfernt.
+- Resolve-Skript: Meldungen in der eingestellten Sprache.
 - Resolve-Skript: Marker und Subtitles erscheinen in der eingestellten Sprache, z. B. „Takt 24 – Beat 1“, „89,6 BPM“, „Confidence 75 %“. Beat, Downbeat und Confidence bleiben in allen Sprachen englisch, der Trenner ist „–“. Downbeat-Marker heißen „Takt 1“ / „Bar 1“ / „Ölçü 1“.
 - Resolve-Skript: Das installierte Skript enthält Sprache, BeatAnalyzer-Ordner und Texte. Der Server gleicht es beim Start und bei einem Sprachwechsel ab; *In Resolve aktualisieren* zeigt ein veraltetes Skript an.
 - Confidence pro Beat kommt jetzt von beat_this (Wahrscheinlichkeit des Modells, immer über 50 %), statt fester 95 % bzw. 88 %. Ohne beat_this steht „–“.
