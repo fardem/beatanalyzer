@@ -74,7 +74,7 @@ class AnalyzerTests(unittest.TestCase):
         return self.analyzer.analyze_audio_file(self.wav, "click.wav")
 
     def analyze_with_fake(self, init_raises=None, frames_raise=None, calls=None, no_downbeats=False,
-                          extra_downbeat_at=None, smooth=True):
+                          extra_downbeat_at=None, smooth=True, extra_logit=0.5):
         """Analyse with FakeBeatThis (50 frames/s, 600 frames): beat logit 4.0 at every beat (0.5 s, 1.0 s, ...),
         downbeat logit 2.0 one frame after every fourth beat, -4.0 everywhere else."""
         calls = {} if calls is None else calls
@@ -100,7 +100,7 @@ class AnalyzerTests(unittest.TestCase):
                     if i % 4 == 0:
                         down[int(round(t * 50)) + 1] = 2.0
                 if extra_downbeat_at is not None:          # doubtful extra downbeat reported by the model
-                    down[int(round(extra_downbeat_at * 50))] = 0.5
+                    down[int(round(extra_downbeat_at * 50))] = extra_logit
                 return beat, down
 
             def frames2beats(self, beat_logits, downbeat_logits):
@@ -228,6 +228,12 @@ class AnalyzerTests(unittest.TestCase):
         result = self.analyze_with_fake(extra_downbeat_at=1.5, smooth=False)
         self.assertFalse(result["barSmoothing"]["applied"])
         self.assertTrue(result["beats"][2]["isDownbeat"])            # beat at 1.5 s stays a downbeat
+
+    def test_beat_numbers_count_on_after_a_short_bar(self):
+        # a clear extra downbeat (logit 4) at 1.5 s: bars of 2 beats then 4; numbers must be 1 2 | 1 2 3 4
+        result = self.analyze_with_fake(extra_downbeat_at=1.5, extra_logit=4.0)
+        self.assertEqual([b["beatInBar"] for b in result["beats"][:6]], [1, 2, 1, 2, 1, 2])
+        self.assertTrue(result["beats"][2]["isDownbeat"])
 
     def test_librosa_is_not_smoothed(self):
         self.assertEqual(self.analyze_without_beat_this()["barSmoothing"],

@@ -162,13 +162,15 @@ def meter_from_beats(beats_sec: List[float], downbeats_sec: List[float]) -> Tupl
 
 REANCHOR_PENALTY = 9.0   # cost (nats) of starting the bar grid anew: about two bars of clear contrary evidence
 MIN_BAR_SHARE = 50       # below this share of regular model bars the song is left as the model sees it
+PROTECT_CONF = 0.85      # a downbeat the model hears this clearly stays a "1"; the grid never overrules it
 
 
 def smooth_bars(downbeat_conf: List[float], meter: int, bar_share: Optional[int]) -> Dict[str, Any]:
     """
     Even bar grid from beat_this: the most likely beat of the bar (1..meter) for every beat (Viterbi). Counting on
     (1, 2, ..., meter, 1) is free; starting anew costs REANCHOR_PENALTY, so the grid only moves where the model
-    clearly hears the "1" elsewhere. downbeat_conf[i] = downbeat probability at beat i.
+    clearly hears the "1" elsewhere; a beat with downbeat_conf >= PROTECT_CONF is always a "1".
+    downbeat_conf[i] = downbeat probability at beat i.
     """
     off = {"applied": False, "positions": [], "reanchors": 0}
     n = len(downbeat_conf)
@@ -178,6 +180,7 @@ def smooth_bars(downbeat_conf: List[float], meter: int, bar_share: Optional[int]
     emit = np.empty((n, meter))
     emit[:, 0] = np.log(d)
     emit[:, 1:] = np.log(1 - d)[:, None]
+    emit[d >= PROTECT_CONF, 1:] = -1e9           # clear model downbeats: only beat 1 of the bar is allowed
     nxt = np.roll(np.arange(meter), -1)          # state p (0-based) counts on to nxt[p]
     score = emit[0].copy()                       # every beat of the bar is a possible start (pickup)
     back = np.zeros((n, meter), dtype=np.int64)
@@ -297,6 +300,7 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
     structured_downbeats = []
     current_bar = 1
     beat_in_bar = 1
+    seen_downbeat = False
 
     for idx, b_time in enumerate(beats_sec):
         is_down = idx in downbeat_indices or (idx == 0 and len(downbeat_indices) == 0)
@@ -304,6 +308,8 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
         if is_down and idx > 0:
             current_bar += 1
             beat_in_bar = 1
+        if is_down:
+            seen_downbeat = True
 
         delta_ms = int(round((b_time - beats_sec[idx - 1]) * 1000)) if idx > 0 else 0
         instant_bpm = round(60000.0 / delta_ms, 1) if delta_ms > 150 else global_bpm
@@ -311,7 +317,8 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
         item = {
             "id": idx + 1,
             "time": round(b_time, 3),
-            "beatInBar": positions[idx] if positions else beat_in_bar,
+            # smoothed: the pickup keeps its place in the grid (3, 4 | 1), after that the count since the last "1"
+            "beatInBar": positions[idx] if positions and not seen_downbeat else beat_in_bar,
             "barIndex": current_bar,
             "isDownbeat": is_down,
             # a downbeat the model did not report (first beat when there are no downbeats) gets the beat value
@@ -324,7 +331,7 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
         if is_down:
             structured_downbeats.append(item)
 
-        beat_in_bar = (beat_in_bar % beats_per_bar) + 1
+        beat_in_bar = beat_in_bar + 1 if positions else (beat_in_bar % beats_per_bar) + 1
 
     # Wellenform-Peaks für schnelles Rendern im Canvas
     num_buckets = 2400

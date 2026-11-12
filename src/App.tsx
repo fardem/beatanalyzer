@@ -62,9 +62,13 @@ export default function App() {
     };
   }, []);
 
-  const handleFileSelected = async (file: File | Blob, name: string, smooth: boolean = true) => {
+  const handleFileSelected = async (
+    file: File | Blob,
+    name: string,
+    smooth: boolean = true,
+    requireServer: boolean = false
+  ) => {
     lastFileRef.current = { file, name };
-    setSmoothBars(smooth);
     try {
       setError(null);
       setIsAnalyzing(true);
@@ -84,10 +88,11 @@ export default function App() {
           setProgress(pct);
           setStageText(stage);
         },
-        { smoothBars: smooth }
+        { smoothBars: smooth, requireServer }
       );
 
       setResult(analysisResult);
+      setSmoothBars(smooth); // only now: a failed re-analysis leaves the box as it was
       if (playerRef.current) {
         playerRef.current.loadBuffer(audioBuffer, analysisResult.beats);
       }
@@ -191,10 +196,12 @@ export default function App() {
             <MetricsCards
               result={result}
               smoothBars={smoothBars}
+              busyText={isAnalyzing ? `${stageText} (${Math.round(progress)} %)` : null}
+              error={error}
               onToggleSmoothBars={(on) => {
-                // the same file once more, with or without an even bar grid
-                if (lastFileRef.current) {
-                  handleFileSelected(lastFileRef.current.file, lastFileRef.current.name, on);
+                // the same file once more, with or without an even bar grid; one analysis at a time
+                if (lastFileRef.current && !isAnalyzing) {
+                  handleFileSelected(lastFileRef.current.file, lastFileRef.current.name, on, true);
                 }
               }}
             />

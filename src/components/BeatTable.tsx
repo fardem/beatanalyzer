@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
 import { Search, Play, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 
@@ -18,6 +18,8 @@ export const BeatTable: React.FC<BeatTableProps> = ({
   const [filterType, setFilterType] = useState<'all' | 'downbeats'>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  // follow playback: the table pages along with the playing beat
+  const [follow, setFollow] = useState<boolean>(true);
   const pageSize = 15;
 
   const filteredBeats = result.beats.filter((b) => {
@@ -32,6 +34,23 @@ export const BeatTable: React.FC<BeatTableProps> = ({
   });
 
   const totalPages = Math.ceil(filteredBeats.length / pageSize) || 1;
+
+  // the row that is playing: the last listed beat that has started (with "Nur Downbeats": the current bar)
+  let currentIndex = -1;
+  for (let i = 0; i < filteredBeats.length && filteredBeats[i].time <= currentTime + 0.02; i++) currentIndex = i;
+  const currentId = currentIndex >= 0 ? filteredBeats[currentIndex].id : null;
+  const followPage = currentIndex >= 0 ? Math.floor(currentIndex / pageSize) + 1 : 1;
+
+  // filterType/searchTerm: their buttons reset the page to 1, following puts it back on the playing beat
+  useEffect(() => {
+    if (follow) setCurrentPage(followPage);
+  }, [follow, followPage, filterType, searchTerm]);
+
+  // paging by hand stops following, otherwise the table would jump straight back
+  const goToPage = (p: number) => {
+    setFollow(false);
+    setCurrentPage(Math.min(totalPages, Math.max(1, p)));
+  };
   const currentBeats = filteredBeats.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const formatSec = (s: number) => {
@@ -77,6 +96,19 @@ export const BeatTable: React.FC<BeatTableProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <label
+            className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none"
+            title="Blättert beim Abspielen selbst auf die Seite des laufenden Beats"
+          >
+            <input
+              type="checkbox"
+              className="accent-cyan-500"
+              checked={follow}
+              onChange={(e) => setFollow(e.target.checked)}
+            />
+            Mitlaufen
+          </label>
+
           {/* Filter toggle */}
           <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-0.5 text-xs">
             <button
@@ -140,10 +172,11 @@ export const BeatTable: React.FC<BeatTableProps> = ({
           </thead>
           <tbody className="divide-y divide-slate-800/60 font-mono">
             {currentBeats.map((b) => {
-              const isActive = Math.abs(currentTime - b.time) < 0.15;
+              const isActive = b.id === currentId;
               return (
                 <tr
                   key={b.id}
+                  data-current={isActive ? 'true' : undefined}
                   className={`transition-colors hover:bg-slate-800/50 ${
                     isActive ? 'bg-cyan-950/40 text-cyan-200' : ''
                   }`}
@@ -247,14 +280,14 @@ export const BeatTable: React.FC<BeatTableProps> = ({
           </span>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
               className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
               className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer"
             >

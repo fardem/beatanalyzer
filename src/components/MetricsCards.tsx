@@ -5,11 +5,16 @@ import { Gauge, Clock, Radio, Music, Zap, Disc3 } from 'lucide-react';
 interface MetricsCardsProps {
   result: AnalysisResult;
   smoothBars: boolean;
+  /** progress of a running re-analysis, null when idle */
+  busyText: string | null;
+  /** error of the last analysis, shown under the box */
+  error: string | null;
   onToggleSmoothBars: (on: boolean) => void;
 }
 
-export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, onToggleSmoothBars }) => {
+export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, busyText, error, onToggleSmoothBars }) => {
   const canSmooth = result.activationSource === 'beat_this';
+  const busy = busyText !== null;
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -75,18 +80,24 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             : result.timeSignature.name}
         </div>
         <label
-          className={`mt-1.5 flex items-center gap-1.5 text-[11px] ${canSmooth ? 'text-slate-300 cursor-pointer' : 'text-slate-600 cursor-not-allowed'}`}
+          className={`mt-1.5 flex items-center gap-1.5 text-[11px] ${canSmooth && !busy ? 'text-slate-300 cursor-pointer' : 'text-slate-600 cursor-not-allowed'}`}
           title={canSmooth ? 'Gleichmäßiges Taktraster; neu angesetzt nur, wo beat_this klar eine andere „1“ hört' : 'nur mit beat_this'}
         >
           <input
             type="checkbox"
             className="accent-purple-500"
             checked={canSmooth && smoothBars}
-            disabled={!canSmooth}
+            disabled={!canSmooth || busy}
             onChange={(e) => onToggleSmoothBars(e.target.checked)}
           />
           Takte glätten
         </label>
+        {busy && <div className="text-[10px] text-purple-300 mt-1 truncate" title={busyText}>{busyText}</div>}
+        {!busy && error && (
+          <div className="text-[10px] text-rose-400 mt-1 break-words" title={error}>
+            Neue Analyse fehlgeschlagen: {error}
+          </div>
+        )}
       </div>
 
       {/* 3. Takte / Bars */}
