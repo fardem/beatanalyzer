@@ -618,35 +618,6 @@ function M.marker_color(m, colors)
   return COLOR_OK[color] and color or M.DEFAULT_COLORS[slot]
 end
 
-local function mark_clip(clip, markers, fallback_fps, colors)
-  local fps = exact_fps(parse_fps(api(clip, "GetClipProperty", "FPS")) or fallback_fps)
-  local frames = tonumber(api(clip, "GetClipProperty", "Frames"))
-  local removed = remove_own_markers(clip)
-  local added, skipped = 0, 0
-  for _, m in ipairs(markers) do
-    local frame = round((tonumber(m.time) or -1) * fps)
-    local down = m.type == "downbeat"
-    local color = M.marker_color(m, colors)
-    if not color then
-      -- "no marker" chosen for this beat of the bar: neither set nor skipped
-    elseif frame < 0 or (frames and frame >= frames) then
-      skipped = skipped + 1
-    else
-      local name = down and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
-        or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
-      local note = T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) })
-      if api(clip, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
-        added = added + 1
-      else
-        skipped = skipped + 1
-      end
-    end
-  end
-  log(string.format("%s: %d markers added, %d skipped, %d old removed (%.3f fps)",
-      tostring(api(clip, "GetName") or "?"), added, skipped, removed, fps))
-  return added, skipped, removed
-end
-M.mark_clip = mark_clip
 
 -- ─── Subtitles ──────────────────────────────────────────────────────────────
 
@@ -915,86 +886,191 @@ end
 M.place_in_timeline = place_in_timeline
 
 -- Apply a marker JSON file. Returns true/false and a message for the user.
-function M.apply(path, opts)
+-- ─── Run in steps ────────────────────────────────────────────────────────────
+-- M.start() reads and checks everything and fixes project, clips and timeline; job:step() then does a small
+-- part (at most CHUNK markers), so the window stays responsive. M.apply() runs all steps at once.
+
+M.CHUNK = 20
+
+local Job = {}
+Job.__index = Job
+
+function M.start(path, opts)
   opts = opts or {}
   local text = read_file(path)
   if not text then
-    return false, T("plugin.msg_cannot_read", { path = tostring(path) })
+    return nil, T("plugin.msg_cannot_read", { path = tostring(path) })
   end
   local okj, data = pcall(json_decode, text)
   if not okj then
-    return false, tostring(data)
+    return nil, tostring(data)
   end
   local markers, err = validate(data)
   if not markers then
-    return false, err
+    return nil, err
   end
-
   local pm = api(resolve, "GetProjectManager")
   local project = pm and api(pm, "GetCurrentProject") or nil
   if not project then
-    return false, T("plugin.msg_no_project")
+    return nil, T("plugin.msg_no_project")
   end
   local media_pool = api(project, "GetMediaPool")
   local file_name = tostring(data.fileName or "")
   local clips, how = target_clips(media_pool, file_name)
   if #clips == 0 then
-    return false, T("plugin.msg_no_clip", { file = file_name })
+    return nil, T("plugin.msg_no_clip", { file = file_name })
   end
   log(string.format("%d clip(s) by %s, %d markers in %s", #clips, how, #markers, path))
 
-  local fallback_fps = parse_fps(api(project, "GetSetting", "timelineFrameRate")) or 25
-  local total, skipped_total = 0, 0
-  local names = {}
-  for _, clip in ipairs(clips) do
-    local added, skipped = mark_clip(clip, markers, fallback_fps, opts.colors)
-    total, skipped_total = total + added, skipped_total + skipped
-    names[#names + 1] = tostring(api(clip, "GetName") or "?")
+  local job = setmetatable({
+    path = path, opts = opts, data = data, markers = markers, project = project, media_pool = media_pool,
+    file_name = file_name, clips = clips, how = how, phase = "markers", marked = 0, total = 0,
+    clip_index = 1, marker_index = 1, added = 0, skipped = 0, names = {},
+    fallback_fps = parse_fps(api(project, "GetSetting", "timelineFrameRate")) or 25,
+  }, Job)
+  for _, m in ipairs(markers) do
+    if M.marker_color(m, opts.colors) then
+      job.total = job.total + 1
+    end
   end
+  job.total = job.total * #clips
+  local _, srt_name = srt_path("", file_name, path)
+  job.srt_name = srt_name
+  job.base = (srt_name:gsub("%.srt$", ""))
+  job.track_name = TRACK_PREFIX .. job.base
+  if opts.timeline == false then
+    job.timeline = nil
+  elseif opts.timeline ~= nil then
+    job.timeline = opts.timeline
+  else
+    job.timeline = api(project, "GetCurrentTimeline")
+  end
+  job.timeline_name = job.timeline and tostring(api(job.timeline, "GetName") or "?") or nil
+  job.step = function() return Job.step(job) end   -- works as job:step() and as job.step() (tests)
+  return job, nil
+end
 
-  local msg = T("plugin.msg_markers", { n = total, clips = #clips, names = table.concat(names, ", ") })
-  if skipped_total > 0 then
-    msg = msg .. "\n" .. T("plugin.msg_skipped", { n = skipped_total })
-  end
-  if how == "selection" and file_name ~= "" then
-    for _, clip in ipairs(clips) do
-      if tostring(api(clip, "GetClipProperty", "File Name") or "") ~= file_name then
-        msg = msg .. "\n" .. T("plugin.msg_other_file", { file = file_name })
-        break
+-- Up to CHUNK markers; the first step on a clip removes the markers of the last run.
+function Job:mark_some()
+  local budget = M.CHUNK
+  while budget > 0 and self.clip_index <= #self.clips do
+    local clip = self.clips[self.clip_index]
+    if self.marker_index == 1 then
+      self.cur = {
+        fps = exact_fps(parse_fps(api(clip, "GetClipProperty", "FPS")) or self.fallback_fps),
+        frames = tonumber(api(clip, "GetClipProperty", "Frames")),
+        removed = remove_own_markers(clip), added = 0, skipped = 0,
+      }
+    end
+    local c = self.cur
+    while budget > 0 and self.marker_index <= #self.markers do
+      local m = self.markers[self.marker_index]
+      self.marker_index = self.marker_index + 1
+      local color = M.marker_color(m, self.opts.colors)
+      if color then
+        budget = budget - 1
+        self.marked = self.marked + 1
+        local frame = round((tonumber(m.time) or -1) * c.fps)
+        if frame < 0 or (c.frames and frame >= c.frames) then
+          c.skipped = c.skipped + 1
+        else
+          local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
+            or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
+          local note = T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) })
+          if api(clip, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
+            c.added = c.added + 1
+          else
+            c.skipped = c.skipped + 1
+          end
+        end
       end
     end
+    if self.marker_index > #self.markers then
+      log(string.format("%s: %d markers added, %d skipped, %d old removed (%.3f fps)",
+          tostring(api(clip, "GetName") or "?"), c.added, c.skipped, c.removed, c.fps))
+      self.added, self.skipped = self.added + c.added, self.skipped + c.skipped
+      self.names[#self.names + 1] = tostring(api(clip, "GetName") or "?")
+      self.clip_index, self.marker_index = self.clip_index + 1, 1
+    end
   end
+  if self.clip_index > #self.clips then
+    local msg = T("plugin.msg_markers", { n = self.added, clips = #self.clips, names = table.concat(self.names, ", ") })
+    if self.skipped > 0 then
+      msg = msg .. "\n" .. T("plugin.msg_skipped", { n = self.skipped })
+    end
+    if self.how == "selection" and self.file_name ~= "" then
+      for _, clip in ipairs(self.clips) do
+        if tostring(api(clip, "GetClipProperty", "File Name") or "") ~= self.file_name then
+          msg = msg .. "\n" .. T("plugin.msg_other_file", { file = self.file_name })
+          break
+        end
+      end
+    end
+    self.msg = msg
+    self.phase = "subtitles"
+  end
+end
 
-  -- Subtitles: written into a working folder, imported, then file and folder are deleted. A file whose import
-  -- failed stays, so it can be imported by hand.
-  local dir = opts.work_dir or M.work_dir()
-  local keep = false
-  local srt_file, srt_name = srt_path(dir or "", file_name, path)
-  if not dir or not write_file(srt_file, build_srt(data)) then
-    msg = msg .. "\n" .. T("plugin.msg_srt_write", { path = srt_file })
+-- Subtitles: written into a working folder, imported, then file and folder are deleted. A file whose import
+-- failed stays, so it can be imported by hand.
+function Job:subtitles()
+  self.dir = self.opts.work_dir or M.work_dir()
+  self.keep = false
+  local srt_file = srt_path(self.dir or "", self.file_name, self.path)
+  if not self.dir or not write_file(srt_file, build_srt(self.data)) then
+    self.msg = self.msg .. "\n" .. T("plugin.msg_srt_write", { path = srt_file })
   else
-    local item, ierr = import_subtitles(media_pool, srt_file, srt_name)
+    local item, ierr = import_subtitles(self.media_pool, srt_file, self.srt_name)
     if item then
-      msg = msg .. "\n" .. T("plugin.msg_srt_ok", { srt = srt_name, bin = BIN_NAME })
+      self.msg = self.msg .. "\n" .. T("plugin.msg_srt_ok", { srt = self.srt_name, bin = BIN_NAME })
       remove_file(srt_file)
     else
-      msg = msg .. "\n" .. T("plugin.msg_srt_import", { why = tostring(ierr), path = srt_file })
-      keep = true
+      self.msg = self.msg .. "\n" .. T("plugin.msg_srt_import", { why = tostring(ierr), path = srt_file })
+      self.keep = true
     end
   end
+  self.phase = "timeline"
+end
 
-  local tl = api(project, "GetCurrentTimeline")
-  if tl and dir then
-    local line, kept = place_in_timeline(media_pool, tl, data, clips, dir, (srt_name:gsub("%.srt$", "")))
+-- The subtitle track goes into the timeline that was open at the start, even if another one is open now.
+function Job:timeline_step()
+  local tl = self.timeline
+  if tl and self.dir then
+    api(self.project, "SetCurrentTimeline", tl)
+    local line, kept = place_in_timeline(self.media_pool, tl, self.data, self.clips, self.dir, self.base)
     if line then
-      msg = msg .. "\n" .. line
+      self.msg = self.msg .. "\n" .. line
     end
-    keep = keep or kept == true
+    self.keep = self.keep or kept == true
   end
-  if dir and not keep then
-    remove_dir(dir)
+  if self.dir and not self.keep then
+    remove_dir(self.dir)
   end
-  return total > 0, msg
+  self.ok = self.added > 0
+  self.phase = "done"
+end
+
+-- One step; true when the job is done.
+function Job:step()
+  if self.phase == "markers" then
+    self:mark_some()
+  elseif self.phase == "subtitles" then
+    self:subtitles()
+  elseif self.phase == "timeline" then
+    self:timeline_step()
+  end
+  return self.phase == "done"
+end
+
+-- Apply a marker JSON file in one go. Returns true/false and a message for the user.
+function M.apply(path, opts)
+  local job, err = M.start(path, opts)
+  if not job then
+    return false, err
+  end
+  while not job:step() do
+  end
+  return job.ok, job.msg
 end
 
 -- ─── Dialogs ─────────────────────────────────────────────────────────────────

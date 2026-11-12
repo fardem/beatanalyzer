@@ -171,6 +171,7 @@ local project = {
   GetMediaPool = function() return pool end,
   GetSetting = function(_, k) if k == "timelineFrameRate" then return "25" end end,
   GetCurrentTimeline = function() return MOCK.timeline end,
+  SetCurrentTimeline = function(_, tl) MOCK.timeline = tl return true end,
 }
 resolve = { GetProjectManager = function() return { GetCurrentProject = function() return project end } end }
 BEATTHIS_NO_RUN = true
@@ -376,6 +377,56 @@ class ResolveScriptTests(unittest.TestCase):
                          ["Blue", "Cyan", "Green", "Yellow", "Red", "Pink", "Purple", "Fuchsia", "Rose", "Lavender",
                           "Sky", "Mint", "Lemon", "Sand", "Cocoa", "Cream"])
         self.assertEqual(self.M.NO_MARKER, "none")
+
+    def run_job(self, job):
+        steps = 0
+        while not job.step():
+            steps += 1
+            self.assertLess(steps, 1000)
+        return steps
+
+    def test_job_runs_in_chunks(self):
+        data = resolve_marker_data(sample_result(n_beats=50, interval=0.2))   # 10 s, fits the 20 s clip
+        job, err = self.M.start(self.write_json(data), None)
+        self.assertIsNotNone(job, err)
+        self.assertEqual((job.phase, job.total, job.marked), ("markers", 50, 0))
+        self.assertFalse(job.step())
+        self.assertEqual(job.marked, 20)
+        self.assertFalse(job.step())
+        self.assertEqual(job.marked, 40)
+        self.run_job(job)
+        self.assertEqual(job.phase, "done")
+        self.assertTrue(job.ok)
+        self.assertTrue(job.msg.startswith("50 markers on 1 clip(s): Song"), job.msg)
+        self.assertEqual(len(self.markers(self.mock.song)), 50)
+        self.assertEqual(job.srt_name, "Müller Song.srt")
+
+    def test_job_total_leaves_out_no_marker(self):
+        colors = self.lua.table_from({"downbeat": "Red", "beat2": "none", "beat3": "none", "beat4": "none", "other": "none"})
+        job, _ = self.M.start(self.write_json(resolve_marker_data(sample_result())), self.lua.table_from({"colors": colors}))
+        self.assertEqual(job.total, 2)
+
+    def test_start_error(self):
+        data = resolve_marker_data(sample_result())
+        data["fileName"] = "fehlt.wav"
+        job, err = self.M.start(self.write_json(data), None)
+        self.assertIsNone(job)
+        self.assertIn("fehlt.wav", err)
+
+    def test_timeline_is_fixed_at_start(self):
+        tl = self.setup_timeline()
+        job, _ = self.M.start(self.write_json(resolve_marker_data(sample_result())), None)
+        self.assertEqual((job.timeline_name, job.track_name), ("Timeline 1", "BeatAnalyzer - Müller Song"))
+        self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 0)")   # the user opens another timeline
+        self.run_job(job)
+        self.assertEqual(len(self.sub_tracks(tl)), 1)                  # track in the timeline of the start
+
+    def test_no_timeline_when_switched_off(self):
+        tl = self.setup_timeline()
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())), self.lua.table_from({"timeline": False}))
+        self.assertTrue(ok, msg)
+        self.assertEqual(self.sub_tracks(tl), [])
+        self.assertNotIn("Timeline:", msg)
 
     def test_second_run_replaces_subtitle_clip(self):
         path = self.write_json(resolve_marker_data(sample_result()))
