@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.1] – in Arbeit
+## [0.1.1] – 2026-11-12
 
 ### Hinzugefügt
 - Takte glätten bei Analysen mit beat_this: beat_this setzt jeden Downbeat einzeln, an unsicheren Stellen (Intro, Break, Build-up) entstanden so Takte mit 2 oder 3 Beats. BeatAnalyzer legt jetzt ein gleichmäßiges Taktraster darüber und setzt es nur dort neu an, wo das Modell über etwa zwei Takte klar eine andere „1“ hört. Die Beats selbst bleiben unverändert, die Confidence bleibt der Wert des Modells – ein vom Raster ergänzter Downbeat zeigt also eine niedrige Confidence. Nicht geglättet wird, wenn weniger als die Hälfte der Takte des Modells regelmäßig ist.
@@ -10,6 +10,9 @@
 - Einen Downbeat, den das Modell sehr sicher hört (ab 85 %), überstimmt das Raster nie – auch nicht am Songanfang.
 - Nach einem Neuansatz zählen die Zählzeiten ab der neuen „1“ weiter (ein Takt aus zwei Beats heißt „1 2“, nicht „1 4“); nur der Auftakt vor der ersten „1“ behält seinen Platz im Raster (z. B. „3 4“).
 - Web-App: Während der neuen Analyse ist das Häkchen gesperrt und zeigt den Fortschritt; schlägt sie fehl, bleibt das bisherige Ergebnis stehen, das Häkchen springt zurück und der Fehler steht an der Kachel (kein stilles Ausweichen auf die Browser-Analyse).
+
+### Behoben
+- Resolve-Dialog: Lange Hinweise (z. B. „Kein Clip gefunden …“ mit langem Dateinamen) wurden oben und unten abgeschnitten. Der Dialog schätzt die nötigen Zeilen jetzt mit Wortumbruch und etwas breiteren Zeichen.
 
 ## [0.1.0] – 2026-11-12
 

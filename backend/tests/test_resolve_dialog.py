@@ -343,6 +343,23 @@ class DialogTests(unittest.TestCase):
         self.run_dialog(scenario)
         self.assertTrue(any("Window: requested" in line for line in self.out), self.out)   # size in the Console
 
+    def test_long_clip_message_gets_the_lines_it_needs(self):
+        # seen in Resolve (600 px window): "no clip" with a long file name wraps to 3 lines, 2 were reserved
+        data = resolve_marker_data(trs.sample_result())
+        data["fileName"] = "10. Waiting For Tonight (Hex's Momentous Radio Mix).mp3"
+        Path(self.json_path).write_text(json.dumps(data), encoding="utf-8")
+        self.lua.execute("MOCK.selected = {}; MOCK.pool_clips = {}")
+
+        def scenario():
+            self.ui["items"]["BeatAnalyzerWin"].Geometry = self.lua.table_from([0, 0, 600, 640])
+            self.pick_json()
+            text = self.item("ClipInfo").Text
+            self.assertIn("Waiting For Tonight", text)
+            self.assertGreater(len(text), 140, text)
+            self.assertGreaterEqual(self.item("ClipInfo").MinimumSize[2], 3 * 17, text)
+            self.close()
+        self.run_dialog(scenario)
+
     def test_settings_saved_on_close(self):
         def scenario():
             self.check("Colors", True)

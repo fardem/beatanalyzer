@@ -7,7 +7,7 @@ stays in the repository: it starts BeatAnalyzer_Markers.lua from the same folder
 and newer installs BeatAnalyzer_Markers.lua and removes this file from Resolve.
 ]]
 
-local VERSION = "0.1.0"   -- same as the file VERSION, so older updaters replace the installed script
+local VERSION = "0.1.1"   -- same as the file VERSION, so older updaters replace the installed script
 
 local source = debug and debug.getinfo and debug.getinfo(1, "S").source or ""
 local dir = source:match("^@(.*[/\\])") or ""
