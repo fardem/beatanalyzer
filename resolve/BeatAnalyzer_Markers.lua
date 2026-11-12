@@ -1274,6 +1274,65 @@ function M.apply(path, opts)
   return job.ok, job.msg
 end
 
+-- ─── Settings of the window ──────────────────────────────────────────────────
+-- <BeatAnalyzer>/resolve_temp/plugin.txt, lines key=value. Without a known BeatAnalyzer folder nothing is kept.
+
+local COLOR_SLOTS = { "downbeat", "beat2", "beat3", "beat4", "other" }
+
+function M.settings_path()
+  return BA.home and (BA.home .. SEP .. "resolve_temp" .. SEP .. "plugin.txt") or nil
+end
+
+function M.load_settings()
+  local s = { json_dir = "", timeline = true, colors_open = false, colors = {}, geometry = nil }
+  for _, slot in ipairs(COLOR_SLOTS) do
+    s.colors[slot] = M.DEFAULT_COLORS[slot]
+  end
+  local path = M.settings_path()
+  local text = path and read_file(path)
+  for line in tostring(text or ""):gmatch("[^\r\n]+") do
+    local key, value = line:match("^([%w_]+)=(.*)$")
+    if key == "json_dir" then
+      s.json_dir = value
+    elseif key == "timeline" or key == "colors_open" then
+      if value == "1" or value == "0" then
+        s[key] = value == "1"
+      end
+    elseif key == "geometry" then
+      local x, y, w, h = value:match("^(-?%d+),(-?%d+),(%d+),(%d+)$")
+      if x then
+        s.geometry = { tonumber(x), tonumber(y), tonumber(w), tonumber(h) }
+      end
+    elseif key and key:match("^color_") then
+      local slot = key:sub(7)
+      if s.colors[slot] and (COLOR_OK[value] or value == M.NO_MARKER) then
+        s.colors[slot] = value
+      end
+    end
+  end
+  return s
+end
+
+function M.save_settings(s)
+  local path = M.settings_path()
+  if not path then
+    return false
+  end
+  make_dir(BA.home .. SEP .. "resolve_temp")
+  local lines = { "# BeatAnalyzer - settings of the Resolve window",
+                  "json_dir=" .. tostring(s.json_dir or ""):gsub("[\r\n]", ""),
+                  "timeline=" .. (s.timeline and "1" or "0"),
+                  "colors_open=" .. (s.colors_open and "1" or "0") }
+  for _, slot in ipairs(COLOR_SLOTS) do
+    lines[#lines + 1] = "color_" .. slot .. "=" .. tostring((s.colors or {})[slot] or M.DEFAULT_COLORS[slot])
+  end
+  local g = s.geometry
+  if type(g) == "table" and tonumber(g[1]) and tonumber(g[4]) then
+    lines[#lines + 1] = string.format("geometry=%d,%d,%d,%d", g[1], g[2], g[3], g[4])
+  end
+  return write_file(path, table.concat(lines, "\n") .. "\n")
+end
+
 -- ─── Dialogs ─────────────────────────────────────────────────────────────────
 
 local function choose_json()

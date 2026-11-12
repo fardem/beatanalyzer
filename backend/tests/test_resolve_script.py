@@ -542,6 +542,33 @@ class ResolveScriptTests(unittest.TestCase):
         r = self.M.removal(self.lua.table_from([self.mock.song]), None)
         self.assertTrue(r.text.startswith("Aus „Müller Song“ entfernen: 8 BeatAnalyzer-Marker, 0 Subtitle Track(s)"))
 
+    def test_settings_round_trip(self):
+        s = self.M.load_settings()
+        self.assertEqual((s.timeline, s.colors_open, s.colors.downbeat, s.json_dir), (True, False, "Red", ""))
+        self.assertIsNone(s.geometry)
+        s.json_dir = str(self.tmp / "Ördner")
+        s.timeline = False
+        s.colors.beat3 = "none"
+        s.geometry = self.lua.table_from([10, 20, 600, 500])
+        self.assertTrue(self.M.save_settings(s))
+        s2 = self.M.load_settings()
+        self.assertEqual((s2.json_dir, s2.timeline, s2.colors.beat3, s2.colors.beat2), (str(self.tmp / "Ördner"), False, "none", "Cyan"))
+        self.assertEqual(list(s2.geometry.values()), [10, 20, 600, 500])
+        self.assertEqual(self.M.settings_path(), str(self.tmp / "resolve_temp" / "plugin.txt"))
+
+    def test_broken_settings_give_defaults(self):
+        (self.tmp / "resolve_temp").mkdir()
+        (self.tmp / "resolve_temp" / "plugin.txt").write_text(
+            "kaputt\ncolor_downbeat=Purpur\ntimeline=vielleicht\ngeometry=1,2\n", encoding="utf-8")
+        s = self.M.load_settings()
+        self.assertEqual((s.colors.downbeat, s.timeline), ("Red", True))
+        self.assertIsNone(s.geometry)
+
+    def test_no_settings_without_home(self):
+        self.load_lang("en", home=None)
+        self.assertIsNone(self.M.settings_path())
+        self.assertFalse(self.M.save_settings(self.M.load_settings()))
+
     def test_second_run_replaces_subtitle_clip(self):
         path = self.write_json(resolve_marker_data(sample_result()))
         self.M.apply(path)
