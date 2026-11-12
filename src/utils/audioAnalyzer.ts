@@ -11,7 +11,8 @@ export async function analyzeAudioFile(
   file: File | Blob,
   fileName: string = 'audio.mp3',
   onProgress?: (progress: number, stage: string) => void,
-  options: { smoothBars?: boolean } = {}
+  // requireServer: no silent fallback to the browser analysis (re-analysis of a server result)
+  options: { smoothBars?: boolean; requireServer?: boolean } = {}
 ): Promise<{ result: AnalysisResult; audioBuffer: AudioBuffer }> {
   onProgress?.(5, 'Lade Audiodatei in Speicher...');
   const arrayBuffer = await file.arrayBuffer();
@@ -57,9 +58,15 @@ export async function analyzeAudioFile(
           ...data,
           waveformPeaks: peaks.length > 0 ? peaks : waveformPeaks,
         };
+      } else if (options.requireServer) {
+        const body = await apiResp.json().catch(() => null);
+        throw new Error(body?.error || `Server-Fehler ${apiResp.status}`);
       }
+    } else if (options.requireServer) {
+      throw new Error('Der lokale Server antwortet nicht.');
     }
-  } catch {
+  } catch (err) {
+    if (options.requireServer) throw err;
     // Kein lokales Backend aktiv -> Web Audio MIR Engine übernimmt nahtlos
   }
 

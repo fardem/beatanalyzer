@@ -51,5 +51,21 @@ class SmoothBarsTests(unittest.TestCase):
         self.assertEqual(analyzer.smooth_bars([1.0, 0.0, 0.0, 0.0] * 3, 4, 100)["positions"], [1, 2, 3, 4] * 3)
 
 
+    def test_clear_downbeats_at_the_start_stay(self):
+        # half bar inserted in bar 2: the song's first clear "1"s must not become a pickup
+        r = analyzer.smooth_bars(probs("D...D.D...D...D...D..."), 4, 80)
+        ones = [i for i, p in enumerate(r["positions"]) if p == 1]
+        self.assertEqual(ones[:3], [0, 4, 6])
+
+    def test_isolated_clear_downbeat_stays(self):
+        r = analyzer.smooth_bars(probs("D...D...D.D...D...D..."), 4, 80)
+        self.assertIn(10, [i for i, p in enumerate(r["positions"]) if p == 1])
+
+    def test_realistic_near_zero_between_downbeats(self):
+        conf = [0.97 if i % 4 == 0 else 0.001 for i in range(32)]
+        conf[12] = 0.002                                    # model missed one downbeat
+        self.assertEqual(analyzer.smooth_bars(conf, 4, 85)["positions"], [1, 2, 3, 4] * 8)
+
+
 if __name__ == "__main__":
     unittest.main()

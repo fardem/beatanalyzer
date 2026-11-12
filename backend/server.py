@@ -41,7 +41,7 @@ except Exception as _err:   # the name of an except variable is deleted after th
     print("=" * 70)
     BEAT_THIS_AVAILABLE = False
 
-    def analyze_audio_file(p, f):
+    def analyze_audio_file(p, f, smooth=True):
         raise RuntimeError(f"Analyzer-Fehler (analyzer.py nicht geladen): {ANALYZER_ERROR}")
 
     def engine_status():
