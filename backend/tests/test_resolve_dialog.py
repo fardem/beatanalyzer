@@ -325,6 +325,24 @@ class DialogTests(unittest.TestCase):
             self.close()
         self.run_dialog(scenario)
 
+    def test_long_warnings_get_the_height_they_need(self):
+        # seen in Resolve: two warnings of two lines each were cut to two lines
+        data = resolve_marker_data(trs.sample_result())
+        data["fileName"] = "10. Waiting For Tonight (Hex's Momentous Radio Mix).mp3"
+        data["duration"] = 292.0
+        Path(self.json_path).write_text(json.dumps(data), encoding="utf-8")
+        self.lua.execute("MOCK.selected = { MOCK.song }")
+
+        def scenario():
+            self.ui["items"]["BeatAnalyzerWin"].Geometry = self.lua.table_from([0, 0, 432, 600])   # narrow window
+            self.pick_json()
+            self.assertEqual(len(self.item("Warnings").Text.split("\n")), 2)
+            self.assertGreaterEqual(self.item("Warnings").MinimumSize[2], 4 * 17)
+            self.assertGreaterEqual(self.item("Explain").MinimumSize[2], 2 * 17)
+            self.close()
+        self.run_dialog(scenario)
+        self.assertTrue(any("Window: requested" in line for line in self.out), self.out)   # size in the Console
+
     def test_settings_saved_on_close(self):
         def scenario():
             self.check("Colors", True)

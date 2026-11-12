@@ -1423,6 +1423,7 @@ end
 
 local TICK_MS = 50
 local WIN_MIN = { 600, 640 }   -- smaller windows wrap every line (seen in Resolve)
+local LINE_PX, CHAR_PX = 17, 7   -- height of a text line, mean width of a character (for wrapped labels)
 local REFRESH_TICKS = 20
 
 local COLOR_IDS = { downbeat = "ColorDownbeat", beat2 = "ColorBeat2", beat3 = "ColorBeat3", beat4 = "ColorBeat4",
@@ -1494,6 +1495,31 @@ function M.main()
     return ok and v or nil
   end
 
+  -- Resolve does not grow a wrapped label with its text: reserve the lines it needs at the current width.
+  local function window_width()
+    local ok, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
+    return ok and type(g) == "table" and tonumber(g[3]) or geometry[3]
+  end
+  local function fit(id, text, min_lines)
+    local per_line = math.max(30, math.floor((window_width() - 40) / CHAR_PX))
+    local lines = 0
+    for line in (tostring(text or "") .. "\\n"):gmatch("(.-)\\n") do
+      lines = lines + math.max(1, math.ceil(#line / per_line))
+    end
+    set(id, "MinimumSize", { 0, math.max(min_lines or 1, lines) * LINE_PX + 2 })
+  end
+  -- The UIManager lays a window out for another size than it draws (WhisperX Workbench): lay out now
+  -- and once more on the next tick.
+  local function relayout()
+    pcall(function() win:RecalcLayout() end)
+    S.relayout = true
+  end
+  local function status(text)
+    set("Status", "Text", text)
+    fit("Status", text, 6)
+    relayout()
+  end
+
   for slot, id in pairs(COLOR_IDS) do
     for _, c in ipairs(M.MARKER_COLORS) do
       pcall(function() itm[id]:AddItem(c) end)
@@ -1552,12 +1578,17 @@ function M.main()
         warnings[#warnings + 1] = "⚠ " .. w
       end
       set("Warnings", "Text", table.concat(warnings, "\\n"))
+      fit("Warnings", table.concat(warnings, "\\n"))
       set("Warnings", "Hidden", #warnings == 0)
       set("Engine", "Text", S.info.engine or "")
       set("Engine", "Hidden", not S.info.engine)
-      pcall(function() win:RecalcLayout() end)
+      fit("JsonPath", get("JsonPath", "Text"), 2)
+      fit("ClipInfo", get("ClipInfo", "Text"))
       S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
-      set("Explain", "Text", M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song))
+      local explain = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
+      set("Explain", "Text", explain)
+      fit("Explain", explain, 2)
+      relayout()
     end
     set("OK", "Enabled", S.info ~= nil and S.info.ok == true)
     set("Remove", "Enabled", #remove_clips() > 0)
@@ -1598,7 +1629,7 @@ function M.main()
 
   local function finish()
     S.state = "result"
-    set("Status", "Text", S.job.msg or "")   -- the analysis program stays visible in its own line above
+    status(S.job.msg or "")   -- the analysis program stays visible in its own line above
     set("Close", "Text", T("plugin.btn_ok"))
     set("Close", "Enabled", true)
     set("OK", "Hidden", true)
@@ -1612,6 +1643,10 @@ function M.main()
 
   local function tick()
     S.ticks = S.ticks + 1
+    if S.relayout then   -- second layout pass, see relayout()
+      S.relayout = false
+      pcall(function() win:RecalcLayout() end)
+    end
     if S.state == "work" then
       local ok, done = pcall(S.job.step)
       if not ok then
@@ -1622,7 +1657,7 @@ function M.main()
       if done then
         finish()
       else
-        set("Status", "Text", work_text())
+        status(work_text())
       end
     elseif S.state == "select" and S.ticks % REFRESH_TICKS == 0 then
       refresh()
@@ -1674,13 +1709,13 @@ function M.main()
     local tl = get("Timeline", "Checked") and current_timeline() or false
     local job, err = M.start(S.json, { colors = read_colors(), timeline = tl })
     if not job then
-      set("Status", "Text", tostring(err))
+      status(tostring(err))
       return
     end
     S.job, S.state = job, "work"
     S.track_step = tl and S.tinfo and S.tinfo.state == "present"
     lock(true)
-    set("Status", "Text", work_text())
+    status(work_text())
   end
   win.On.Remove.Clicked = function()
     if S.state ~= "select" then
@@ -1692,7 +1727,7 @@ function M.main()
     end
     S.remove_clips, S.remove_tl = clips, current_timeline()
     local r = M.removal(clips, S.remove_tl)
-    set("Status", "Text", r.text)
+    status(r.text)
     if r.markers + r.tracks + r.srt_clips > 0 then
       S.state = "confirm"
       set("RemoveYes", "Hidden", false)
@@ -1704,7 +1739,7 @@ function M.main()
       return
     end
     local done = M.remove(S.remove_clips, S.remove_tl)
-    set("Status", "Text", done.text)
+    status(done.text)
     set("RemoveYes", "Hidden", true)
     S.state = "select"
     refresh()
@@ -1713,7 +1748,7 @@ function M.main()
     if S.state == "confirm" then   -- the button closes the question, not the window
       S.state = "select"
       set("RemoveYes", "Hidden", true)
-      set("Status", "Text", "")
+      status("")
       return
     end
     close()
@@ -1740,6 +1775,9 @@ function M.main()
   refresh()
   timer:Start()
   win:Show()
+  local okg, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
+  log(string.format("Window: requested %dx%d, actual %s", geometry[3], geometry[4],
+      okg and type(g) == "table" and (tostring(g[3]) .. "x" .. tostring(g[4])) or "?"))
   disp:RunLoop()
   timer:Stop()
   win:Hide()
