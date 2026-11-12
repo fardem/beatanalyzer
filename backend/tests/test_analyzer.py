@@ -91,7 +91,8 @@ class AnalyzerTests(unittest.TestCase):
                 return "spect"
 
             def spect2frames(self, spect):
-                if frames_raise:
+                calls["frames"] = calls.get("frames", 0) + 1
+                if frames_raise and not calls.get("stop_raising"):
                     raise frames_raise
                 beat = np.full(600, -4.0)
                 down = np.full(600, -4.0)
@@ -235,9 +236,38 @@ class AnalyzerTests(unittest.TestCase):
         self.assertEqual([b["beatInBar"] for b in result["beats"][:6]], [1, 2, 1, 2, 1, 2])
         self.assertTrue(result["beats"][2]["isDownbeat"])
 
+    # --- second run on the same file: only the smoothing is computed again ----------------------------
+
+    def test_second_run_on_same_file_skips_the_model(self):
+        calls = {}
+        first = self.analyze_with_fake(calls=calls, extra_downbeat_at=1.5, extra_logit=4.0)
+        loose = self.analyzer.analyze_audio_file(self.wav, "click.wav", protect=1.0)
+        again = self.analyzer.analyze_audio_file(self.wav, "click.wav", protect=0.85)
+        self.assertEqual(calls["frames"], 1)                                  # beat_this ran once
+        self.assertEqual(first["barSmoothing"]["protect"], 0.85)
+        self.assertEqual(loose["barSmoothing"]["protect"], 1.0)
+        self.assertNotEqual([b["isDownbeat"] for b in loose["beats"]], [b["isDownbeat"] for b in first["beats"]])
+        self.assertEqual(again["beats"], first["beats"])                      # same value, same result
+
+    def test_other_file_content_runs_the_model_again(self):
+        calls = {}
+        self.analyze_with_fake(calls=calls)
+        write_click_track(self.wav, bpm=100)                                  # same name, other content
+        self.analyzer.analyze_audio_file(self.wav, "click.wav")
+        self.assertEqual(calls["frames"], 2)
+
+    def test_failed_model_run_is_not_cached(self):
+        calls = {}
+        first = self.analyze_with_fake(calls=calls, frames_raise=RuntimeError("boom"))
+        self.assertEqual(first["engineInfo"]["id"], "librosa")
+        calls["stop_raising"] = True
+        second = self.analyzer.analyze_audio_file(self.wav, "click.wav")
+        self.assertEqual(second["engineInfo"]["id"], "beat_this")
+        self.assertEqual(calls["frames"], 2)
+
     def test_librosa_is_not_smoothed(self):
         self.assertEqual(self.analyze_without_beat_this()["barSmoothing"],
-                         {"applied": False, "meter": 4, "changedBeats": 0, "reanchors": 0})
+                         {"applied": False, "meter": 4, "changedBeats": 0, "reanchors": 0, "protect": 0.85})
 
     # --- engineInfo --------------------------------------------------------------------------------
 

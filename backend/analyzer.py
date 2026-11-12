@@ -4,6 +4,7 @@ Führt Beat & Downbeat Tracking mit PyTorch / beat_this oder Librosa-Fallback du
 """
 
 import math
+import hashlib
 import os
 import sys
 import tempfile
@@ -213,15 +214,36 @@ def smooth_bars(downbeat_conf: List[float], meter: int, protect: float = PROTECT
     return {"applied": True, "positions": [int(p) + 1 for p in path], "reanchors": reanchors}
 
 
-def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = True) -> Dict[str, Any]:
+# The last analysed file (key: SHA-256 of its content): audio and beat_this output, so that a new smoothing value
+# does not decode the file and run the model again. A failed model run is not kept.
+_LAST: Dict[str, Any] = {}
+
+
+def _file_key(file_path: str) -> str:
+    h = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = True,
+                       protect: float = PROTECT_CONF) -> Dict[str, Any]:
     """
     Analysiert eine Audiodatei (MP3, WAV, AAC, FLAC) und liefert strukturierte
     Beats, Downbeats, Tempo, Taktart und BAF/DAF-Aktivierungskurven.
     """
     predictor = get_predictor()
 
+    protect = clamp_protect(protect)
+    key = _file_key(file_path)
+    cached = _LAST if _LAST.get("key") == key else {}
     # Lade Audio sicher mit soundfile / librosa (kompatibel mit Python 3.9 bis 3.13)
-    y, sr = load_audio_safely(file_path, target_sr=44100)
+    if cached:
+        y, sr = cached["y"], cached["sr"]
+    else:
+        y, sr = load_audio_safely(file_path, target_sr=44100)
+    model = None
     duration = float(len(y) / sr)
 
     beats_sec: List[float] = []
@@ -230,10 +252,15 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
     downbeat_prob: Optional[np.ndarray] = None
     info = engine_info("beat_this", device=PREDICTOR_DEVICE)
 
-    if predictor is not None:
+    if predictor is not None and cached.get("model") is not None:
+        model = cached["model"]
+        print(f"[BeatAnalyzer Backend] Ergebnis von beat_this aus dem Speicher (nur Glättung neu): {original_filename}")
+        beats_sec, downbeats_sec, beat_prob, downbeat_prob = list(model[0]), list(model[1]), model[2], model[3]
+    elif predictor is not None:
         try:
             print(f"[BeatAnalyzer Backend] Starte CPJKU Transformer Inferenz für: {original_filename}")
             beats_sec, downbeats_sec, beat_prob, downbeat_prob = run_beat_this(predictor, y, sr)
+            model = (list(beats_sec), list(downbeats_sec), beat_prob, downbeat_prob)
         except Exception as e:
             beat_prob = downbeat_prob = None
             print(f"[BeatAnalyzer Backend] Fehler bei Transformer-Inferenz, wechsle auf Fallback: {e}")
@@ -242,6 +269,9 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
     else:
         info = engine_info("librosa", "not_installed" if not BEAT_THIS_AVAILABLE else "model_load_failed")
         beats_sec, downbeats_sec = fallback_mir_track(y, sr)
+
+    _LAST.clear()
+    _LAST.update(key=key, y=y, sr=sr, model=model)
 
     # Kurven fuer die Web-App: Wahrscheinlichkeiten von beat_this, sonst die Onset-Staerke von librosa
     if beat_prob is not None:
@@ -294,11 +324,11 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
             downbeat_indices.add(closest_idx)
 
     # Takte glaetten (nur beat_this): gleichmaessiges Raster, Neuansatz nur bei klarer Evidenz des Modells
-    smoothing = {"applied": False, "meter": beats_per_bar, "changedBeats": 0, "reanchors": 0}
+    smoothing = {"applied": False, "meter": beats_per_bar, "changedBeats": 0, "reanchors": 0, "protect": protect}
     positions = None
     if beat_prob is not None and smooth and len(downbeat_indices) >= 2:   # fewer: no bar the model heard
         conf = [beat_confidence(t, True, beat_prob, downbeat_prob) for t in beats_sec]
-        smoothed = smooth_bars(conf, beats_per_bar)
+        smoothed = smooth_bars(conf, beats_per_bar, protect)
         if smoothed["applied"]:
             positions = smoothed["positions"]
             new_down = {i for i, pos in enumerate(positions) if pos == 1}
