@@ -14,3 +14,4 @@ Für DaVinci Resolve Studio 21.2. Vorher in BeatAnalyzer *Exportieren → DaVinc
 | 8 | Markerfarben anpassen: Beat 2 auf „kein Marker“, Song im 3/4-Takt | Downbeats und Beat 3 haben Marker, Beat 2 nicht; Subtitles enthalten alle Beats | |
 | 9 | *BeatAnalyzer-Marker entfernen* | Nachfrage mit Anzahl; nach *Entfernen* sind eigene Marker, Subtitle Track und Subtitle weg, Marker von Hand bleiben | |
 | 10 | Resolve neu starten, Skript öffnen | Häkchen, Farben, Fenstergröße und Ordner der letzten JSON sind gemerkt | |
+| 11 | BeatAnalyzer in einem Ordner mit Umlauten (oder Song mit Umlauten), zwei Läufe hintereinander | Nach jedem Lauf ist `resolve_temp` ohne Arbeitsordner und ohne SRT-Dateien | |

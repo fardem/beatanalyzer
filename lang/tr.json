@@ -86,6 +86,8 @@
     "wait": "Lütfen bekleyin – pencere ancak iş bitince kapanır.",
     "btn_close": "Kapat",
     "btn_ok": "Tamam",
-    "btn_cancel": "İptal"
+    "btn_cancel": "İptal",
+    "msg_no_work_dir": "Subtitle: {path} içinde çalışma klasörü oluşturulamıyor",
+    "msg_tl_vehicle_left": "Timeline: '{clip}' clip'i Media Pool'dan kaldırılamadı – lütfen elle silin."
   }
 }

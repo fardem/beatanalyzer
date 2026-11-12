@@ -255,6 +255,30 @@ class DialogTests(unittest.TestCase):
             self.close()
         self.run_dialog(scenario)
 
+    def test_remove_without_json_uses_only_the_selection(self):
+        # a media pool item without a file name (e.g. a timeline) must not become a target
+        self.lua.execute('local t = MOCK.clip("Timeline 1", "", "25", "0"); table.insert(MOCK.root.clips, t)')
+
+        def scenario():
+            self.tick(20)
+            self.assertFalse(self.item("Remove").Enabled)
+            self.mock.selected = self.lua.table_from([self.mock.song])
+            self.tick(20)
+            self.assertTrue(self.item("Remove").Enabled)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_window_closed_during_work_ends_at_the_end(self):
+        def scenario():
+            self.pick_json()
+            self.click("OK")
+            self.close()                                         # Resolve may close the window anyway
+            self.assertFalse(self.exited())
+            self.tick(10)
+            self.assertTrue(self.exited())                       # the loop ends when the work is done
+        self.run_dialog(scenario)
+        self.assertEqual(len(self.markers(self.mock.song)), 8)
+
     def test_settings_saved_on_close(self):
         def scenario():
             self.check("Colors", True)

@@ -85,6 +85,8 @@
     "wait": "Bitte warten – das Fenster schließt sich erst am Ende.",
     "btn_close": "Schließen",
     "btn_ok": "OK",
-    "btn_cancel": "Abbrechen"
+    "btn_cancel": "Abbrechen",
+    "msg_no_work_dir": "Subtitle: Im Ordner {path} lässt sich kein Arbeitsordner anlegen",
+    "msg_tl_vehicle_left": "Timeline: Der Clip „{clip}“ ließ sich nicht aus dem Media Pool entfernen – bitte von Hand löschen."
   }
 }

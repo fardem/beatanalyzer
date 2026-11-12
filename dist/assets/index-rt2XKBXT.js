@@ -92,6 +92,7 @@ local BA = {
       ["plugin.msg_no_clip"] = "No clip found. Select the audio clip in the media pool, or import '{file}' into the media pool.",
       ["plugin.msg_no_markers"] = "The JSON contains no markers.",
       ["plugin.msg_no_project"] = "No project is open.",
+      ["plugin.msg_no_work_dir"] = "Subtitles: cannot create a working folder in {path}",
       ["plugin.msg_not_imported"] = "Resolve did not import {path}",
       ["plugin.msg_not_json"] = "The file is not a BeatAnalyzer marker JSON.",
       ["plugin.msg_other_file"] = "Note: the selected clip is not '{file}' from the JSON.",
@@ -108,6 +109,7 @@ local BA = {
       ["plugin.msg_tl_offset"] = "Timeline: first subtitle at frame {actual}, expected {expected} (difference {diff} frames). Please run resolve/tools/probe_timeline.lua and send the console output.",
       ["plugin.msg_tl_ok"] = "Timeline: {n} subtitles on track ST{track} '{name}'{replaced}",
       ["plugin.msg_tl_replaced"] = " (old track replaced)",
+      ["plugin.msg_tl_vehicle_left"] = "Timeline: the clip '{clip}' could not be removed from the Media Pool - delete it by hand.",
       ["plugin.msg_tl_write"] = "Timeline: cannot write {path}",
       ["plugin.reason_inference_failed"] = "analysis with beat_this failed",
       ["plugin.reason_model_load_failed"] = "beat_this model could not be loaded",
@@ -410,15 +412,16 @@ local function wide(s)
   ffi.C.MultiByteToWideChar(65001, 0, s, -1, buf, n)
   return buf
 end
-local function wide_open(path, mode)
+-- ffi and msvcrt, loaded once (Windows only); false if not available.
+local function load_msvcrt()
   if not IS_WIN then
-    return nil
+    return false
   end
   if ffi_lib == nil then
     local okr, ffi = pcall(require, "ffi")
     if not okr or not ffi then
       ffi_lib = false
-      return nil
+      return false
     end
     pcall(ffi.cdef, [[
       int MultiByteToWideChar(unsigned int cp, unsigned long flags, const char* s, int n, wchar_t* out, int outn);
@@ -427,11 +430,17 @@ local function wide_open(path, mode)
       size_t fwrite(const void* buf, size_t size, size_t n, void* f);
       int fclose(void* f);
       int _wremove(const wchar_t* name);
+      int _wrmdir(const wchar_t* name);
+      int _wmkdir(const wchar_t* name);
     ]])
     local okl, lib = pcall(ffi.load, "msvcrt")
     ffi_lib, msvcrt = ffi, okl and lib or nil
   end
-  if not ffi_lib or not msvcrt then
+  return ffi_lib and msvcrt and true or false
+end
+
+local function wide_open(path, mode)
+  if not load_msvcrt() then
     return nil
   end
   local f = msvcrt._wfopen(wide(path), wide(mode))
@@ -505,52 +514,57 @@ M.write_file = write_file
 
 local SEP = IS_WIN and "\\\\" or "/"
 
--- Delete a file. On Windows a path with non-ASCII characters goes through _wremove (os.remove cannot).
+-- Delete a file. On Windows through _wremove (Unicode paths; os.remove cannot open non-ASCII paths).
 local function remove_file(path)
-  if IS_WIN and path:find("[\\128-\\255]") then
-    local ok, done = pcall(function()
-      wide_open(path, "rb")   -- loads ffi and msvcrt; a missing file is fine
-      return msvcrt and msvcrt._wremove(wide(path)) == 0
-    end)
-    return ok and done == true
+  if IS_WIN and load_msvcrt() then
+    local ok, r = pcall(function() return msvcrt._wremove(wide(path)) end)
+    return ok and r == 0
   end
   return G_os ~= nil and G_os.remove(path) == true
 end
 M.remove_file = remove_file
 
+-- Delete an empty folder. On Windows through _wrmdir (remove() of the CRT cannot delete folders).
 local function remove_dir(path)
-  local bmd = rawget(_G, "bmd")
-  if bmd and type(bmd.removedir) == "function" then
-    local ok, done = pcall(bmd.removedir, path)
-    if ok and done then
-      return true
-    end
+  local done = false
+  if IS_WIN and load_msvcrt() then
+    local ok, r = pcall(function() return msvcrt._wrmdir(wide(path)) end)
+    done = ok and r == 0
+  else
+    done = G_os ~= nil and G_os.remove(path) == true   -- POSIX: removes an empty folder
   end
-  return G_os ~= nil and G_os.remove(path) == true   -- POSIX: removes an empty folder
+  if not done then
+    log("Cannot remove the folder", path)
+  end
+  return done
 end
 M.remove_dir = remove_dir
 
+-- Create one folder. On Windows through _wmkdir (Unicode paths, no console window); else mkdir -p.
+-- True only if the folder was created; an existing folder gives false.
 local function make_dir(path)
-  local bmd = rawget(_G, "bmd")
-  if bmd and type(bmd.createdir) == "function" then
-    local ok, done = pcall(bmd.createdir, path)
-    if ok and done then
-      return true
-    end
+  if IS_WIN and load_msvcrt() then
+    local ok, r = pcall(function() return msvcrt._wmkdir(wide(path)) end)
+    return ok and r == 0
   end
   if not (G_os and type(G_os.execute) == "function") then
     return false
   end
-  local cmd = IS_WIN and ('mkdir "' .. path .. '" 2>nul') or ("mkdir -p '" .. path:gsub("'", "'\\\\''") .. "'")
-  local r = G_os.execute(cmd)
+  local r = G_os.execute("mkdir '" .. path:gsub("'", "'\\\\''") .. "' 2>/dev/null")
   return r == 0 or r == true
 end
+
+local function work_base()
+  return BA.home and (BA.home .. SEP .. "resolve_temp")
+    or (G_os and (G_os.getenv("TEMP") or G_os.getenv("TMP"))) or "/tmp"
+end
+M.work_base = work_base
 
 -- New working folder for the SRT files: <BeatAnalyzer>/resolve_temp/<date-time>-<random>, without a known
 -- BeatAnalyzer folder in the temp folder of the system. nil if it cannot be created.
 function M.work_dir()
-  local base = BA.home and (BA.home .. SEP .. "resolve_temp")
-    or (G_os and (G_os.getenv("TEMP") or G_os.getenv("TMP"))) or "/tmp"
+  local base = work_base()
+  make_dir(base)   -- usually there already
   local path = base .. SEP .. G_os.date("%Y%m%d-%H%M%S") .. "-" .. string.format("%04d", math.random(0, 9999))
   if not make_dir(path) then
     log("Cannot create the working folder", path)
@@ -609,7 +623,8 @@ local function clip_list(folder, out)
 end
 
 -- Clips selected in the media pool; without a selection the clips with the file name from the JSON.
-local function target_clips(media_pool, file_name)
+-- Clips selected in the media pool (entries without clip methods are ignored).
+local function selected_clips(media_pool)
   local selected, ignored = {}, {}
   for key, clip in pairs(api(media_pool, "GetSelectedClips") or {}) do
     if is_clip(clip) then
@@ -621,6 +636,12 @@ local function target_clips(media_pool, file_name)
   if #ignored > 0 then
     log("Selection: ignored entries that are not clips:", table.concat(ignored, ", "))
   end
+  return selected
+end
+M.selected_clips = selected_clips
+
+local function target_clips(media_pool, file_name)
+  local selected = selected_clips(media_pool)
   if #selected > 0 then
     return selected, "selection"
   end
@@ -894,9 +915,14 @@ local function place_in_timeline(media_pool, tl, data, clips, dir, base)
     return T("plugin.msg_srt_import", { why = tostring(ierr), path = srt_file }), true
   end
   -- The subtitles on the track belong to the project: the clip and the file are only the way there.
-  local function drop_vehicle()
-    api(media_pool, "DeleteClips", { srt_item })
+  -- Called on every path after the import; a clip that cannot be deleted stays and is named in the result.
+  local function drop_vehicle(msg)
+    local deleted_clip = api(media_pool, "DeleteClips", { srt_item })
     remove_file(srt_file)
+    if not deleted_clip then
+      msg = msg .. "\\n" .. T("plugin.msg_tl_vehicle_left", { clip = srt_name })
+    end
+    return msg
   end
 
   local track_name = TRACK_PREFIX .. base
@@ -905,18 +931,17 @@ local function place_in_timeline(media_pool, tl, data, clips, dir, base)
   api(tl, "AddTrack", "subtitle")
   local target = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
   if target <= before then
-    return T("plugin.msg_tl_add")
+    return drop_vehicle(T("plugin.msg_tl_add"))
   end
   if not activate_only(tl, target) then
     api(tl, "DeleteTrack", "subtitle", target)
-    return T("plugin.msg_tl_activate")
+    return drop_vehicle(T("plugin.msg_tl_activate"))
   end
   api(media_pool, "AppendToTimeline", { srt_item })
   local placed = subtitle_count(tl, target)
-  drop_vehicle()
   if placed == 0 then
     api(tl, "DeleteTrack", "subtitle", target)
-    return T("plugin.msg_tl_none_placed")
+    return drop_vehicle(T("plugin.msg_tl_none_placed"))
   end
   api(tl, "SetTrackName", "subtitle", target, track_name)
 
@@ -937,7 +962,7 @@ local function place_in_timeline(media_pool, tl, data, clips, dir, base)
   if actual and math.abs(actual - expected) > 1 then
     msg = msg .. "\\n" .. T("plugin.msg_tl_offset", { actual = actual, expected = expected, diff = actual - expected })
   end
-  return msg
+  return drop_vehicle(msg)
 end
 M.place_in_timeline = place_in_timeline
 
@@ -1014,9 +1039,14 @@ end
 
 M.LENGTH_TOLERANCE = 0.5   -- seconds between the length in the JSON and the clip before a warning
 
--- 222.4 -> "3:42"
-function M.fmt_length(seconds)
-  local total = round(tonumber(seconds) or 0)
+-- 222.4 -> "3:42"; with tenths: "3:42.4"
+function M.fmt_length(seconds, tenths)
+  local x = tonumber(seconds) or 0
+  if tenths then
+    local t = round(x * 10) / 10
+    return string.format("%d:%04.1f", math.floor(t / 60), t - 60 * math.floor(t / 60))
+  end
+  local total = round(x)
   return string.format("%d:%02d", math.floor(total / 60), total % 60)
 end
 
@@ -1102,8 +1132,9 @@ function M.prepare(path)
   end
   local json_seconds = tonumber(data.duration)
   if seconds and json_seconds and math.abs(seconds - json_seconds) >= M.LENGTH_TOLERANCE then
-    info.warnings[#info.warnings + 1] = T("plugin.warn_length", { clip = M.fmt_length(seconds),
-                                                                   json = M.fmt_length(json_seconds) })
+    local tenths = M.fmt_length(seconds) == M.fmt_length(json_seconds)   -- never "(0:20) ... (0:20)"
+    info.warnings[#info.warnings + 1] = T("plugin.warn_length", { clip = M.fmt_length(seconds, tenths),
+                                                                   json = M.fmt_length(json_seconds, tenths) })
   end
   info.ok = true
   return info
@@ -1254,7 +1285,9 @@ function Job:subtitles()
   self.dir = self.opts.work_dir or M.work_dir()
   self.keep = false
   local srt_file = srt_path(self.dir or "", self.file_name, self.path)
-  if not self.dir or not write_file(srt_file, build_srt(self.data)) then
+  if not self.dir then
+    self.msg = self.msg .. "\\n" .. T("plugin.msg_no_work_dir", { path = work_base() })
+  elseif not write_file(srt_file, build_srt(self.data)) then
     self.msg = self.msg .. "\\n" .. T("plugin.msg_srt_write", { path = srt_file })
   else
     local item, ierr = import_subtitles(self.media_pool, srt_file, self.srt_name)
@@ -1480,14 +1513,13 @@ function M.main()
     return p and api(p, "GetCurrentTimeline") or nil
   end
 
-  -- Clips for "Remove": the target of the JSON, without a JSON the selection in the media pool.
+  -- Clips for "Remove": the target of the JSON, without a JSON only the selection in the media pool.
   local function remove_clips()
     if S.info and S.info.ok then
       return S.info.clips
     end
     local p = project()
-    local clips = p and target_clips(api(p, "GetMediaPool"), "") or {}
-    return clips
+    return p and selected_clips(api(p, "GetMediaPool")) or {}
   end
 
   local function refresh()
@@ -1542,6 +1574,8 @@ function M.main()
     return table.concat(lines, "\\n")
   end
 
+  local save   -- defined below, used by finish()
+
   local function finish()
     S.state = "result"
     local text = S.job.msg or ""
@@ -1554,6 +1588,10 @@ function M.main()
     set("OK", "Hidden", true)
     set("Remove", "Hidden", true)
     log(S.job.msg)
+    if S.close_requested then   -- Resolve closed the window during the work: end now that it is done
+      save()
+      disp:ExitLoop()
+    end
   end
 
   local function tick()
@@ -1575,7 +1613,7 @@ function M.main()
     end
   end
 
-  local function save()
+  save = function()
     settings.timeline = get("Timeline", "Checked") and true or false
     settings.colors_open = get("Colors", "Checked") and true or false
     settings.colors = read_colors()
@@ -1589,6 +1627,7 @@ function M.main()
   local function close()
     if S.state == "work" then
       log("Close ignored: the work is not finished yet.")
+      S.close_requested = true   -- if Resolve closes the window anyway, the loop ends after the work
       pcall(function() win:Show() end)
       return
     end

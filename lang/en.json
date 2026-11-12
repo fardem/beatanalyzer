@@ -85,6 +85,8 @@
     "wait": "Please wait – the window closes only at the end.",
     "btn_close": "Close",
     "btn_ok": "OK",
-    "btn_cancel": "Cancel"
+    "btn_cancel": "Cancel",
+    "msg_no_work_dir": "Subtitles: cannot create a working folder in {path}",
+    "msg_tl_vehicle_left": "Timeline: the clip '{clip}' could not be removed from the Media Pool - delete it by hand."
   }
 }

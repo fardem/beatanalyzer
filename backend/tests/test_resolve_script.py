@@ -99,6 +99,9 @@ local pool = {
     return out
   end,
   DeleteClips = function(_, list)
+    for _, c in ipairs(list) do
+      if MOCK.fail_delete and MOCK.fail_delete[c.name] then return false end
+    end
     local gone = {}
     for _, c in ipairs(list) do gone[c] = true end
     local function purge(f)
@@ -139,7 +142,7 @@ local function new_timeline(fps, start_frame)
     local out = {} for k, v in ipairs(list or {}) do out[k] = v end return out
   end
   function tl:AddTrack(kind)
-    if kind ~= "subtitle" then return false end
+    if kind ~= "subtitle" or MOCK.fail_add_track then return false end
     self.subs[#self.subs + 1] = { name = "Subtitle " .. (#self.subs + 1), enabled = false, items = {} }
     return true
   end
@@ -568,6 +571,48 @@ class ResolveScriptTests(unittest.TestCase):
         self.load_lang("en", home=None)
         self.assertIsNone(self.M.settings_path())
         self.assertFalse(self.M.save_settings(self.M.load_settings()))
+
+    def lua_function_source(self, name):
+        start = SCRIPT.index("local function " + name + "(")
+        return SCRIPT[start:SCRIPT.index("\nend\n", start)]
+
+    def test_windows_file_functions_use_the_wide_api(self):
+        # Windows cannot be run here: pin that the Unicode-safe CRT calls are used and no file stays open
+        remove = self.lua_function_source("remove_file")
+        self.assertIn("_wremove", remove)
+        self.assertNotIn("wide_open(", remove)
+        self.assertIn("_wrmdir", self.lua_function_source("remove_dir"))
+        self.assertIn("_wmkdir", self.lua_function_source("make_dir"))
+
+    def test_working_folder_that_cannot_be_created(self):
+        blocker = self.tmp / "kein Ordner"
+        blocker.write_text("x", encoding="utf-8")            # BA.home is a file: no folder below it
+        self.load_lang("en", home=blocker)
+        msg = self.run_apply()
+        self.assertIn("working folder", msg)
+        self.assertIn(str(blocker), msg)
+        self.assertNotIn("cannot write " + "/Müller", msg)
+
+    def test_vehicle_clip_removed_when_track_cannot_be_added(self):
+        self.setup_timeline()
+        self.mock.fail_add_track = True
+        msg = self.run_apply()
+        self.assertIn("cannot add a subtitle track", msg)
+        self.assertEqual(self.bin_clips(), ["Müller Song.srt"])
+
+    def test_hint_when_vehicle_clip_cannot_be_deleted(self):
+        self.setup_timeline()
+        self.mock.fail_delete = self.lua.table_from({"Müller Song (Timeline).srt": True})
+        msg = self.run_apply()
+        self.assertIn("Müller Song (Timeline).srt", msg)
+        self.assertIn("by hand", msg)
+
+    def test_length_warning_never_shows_the_same_value_twice(self):
+        data = resolve_marker_data(sample_result())
+        data["duration"] = 19.5                                  # clip 20.0 s: both round to 0:20
+        info = self.M.prepare(self.write_json(data))
+        self.assertEqual(list(info.warnings.values()),
+                         ["The clip's duration (0:20.0) differs from the analysed file (0:19.5)."])
 
     def test_second_run_replaces_subtitle_clip(self):
         path = self.write_json(resolve_marker_data(sample_result()))
