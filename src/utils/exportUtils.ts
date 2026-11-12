@@ -39,7 +39,7 @@ export function generateBeatThisJson(result: AnalysisResult): string {
       time_signature: result.timeSignature.name,
       numerator: result.timeSignature.numerator,
       denominator: result.timeSignature.denominator,
-      confidence_percent: result.timeSignature.confidence,
+      bar_share_percent: result.timeSignature.barShare,
     },
     counts: {
       total_beats: result.totalBeats,
@@ -72,7 +72,7 @@ export function generateCsv(result: AnalysisResult): string {
     b.isDownbeat ? 1 : 0,
     b.instantBpm.toFixed(1),
     b.deltaMs,
-    b.confidence.toFixed(2),
+    b.confidence === null ? '' : b.confidence.toFixed(2),
   ]);
 
   return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
@@ -179,6 +179,7 @@ export function generateResolveMarkerJson(
       bpm: b.instantBpm,
       confidence: b.confidence,
     })),
+    ...(result.engineInfo ? { engine: result.engineInfo } : {}),
   };
   return JSON.stringify(data, null, 2);
 }

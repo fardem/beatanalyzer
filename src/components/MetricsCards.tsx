@@ -63,7 +63,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result }) => {
             {result.timeSignature.numerator}/{result.timeSignature.denominator}
           </span>
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/60">
-            {result.timeSignature.confidence}% Konf.
+            {result.timeSignature.barShare === null ? '–' : `${result.timeSignature.barShare} % der Takte`}
           </span>
         </div>
         <div className="text-[11px] text-slate-400 mt-1 truncate">

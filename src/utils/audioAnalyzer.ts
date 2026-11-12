@@ -103,7 +103,7 @@ export async function analyzeAudioFile(
   const tempoStability = Math.max(0, Math.min(100, Math.round(100 - (stdDev / (averageBpm || 1)) * 100)));
 
   // Sample down activation curve for fast rendering (around 800 - 1200 points)
-  const activationCurve = downsampleActivationCurve(baf, daf, frameRate, 1000);
+  const activationCurve = downsampleActivationCurve(baf, frameRate, 1000);
 
   const fileFormat = detectFormat(fileName, file.type);
   const metadata: AudioMetadata = {
@@ -135,6 +135,7 @@ export async function analyzeAudioFile(
     totalBeats,
     totalBars,
     activationCurve,
+    activationSource: 'onset',
     waveformPeaks,
     waveformDuration: duration,
   };
@@ -407,7 +408,7 @@ function trackBeatsAndDownbeats(
 ): {
   beats: BeatItem[];
   downbeats: BeatItem[];
-  timeSig: { numerator: number; denominator: number; name: string; confidence: number };
+  timeSig: { numerator: number; denominator: number; name: string; barShare: number | null };
   swingRatio: number;
 } {
   const beatPeriodFrames = (60 * frameRate) / estimatedBpm;
@@ -492,18 +493,8 @@ function trackBeatsAndDownbeats(
   score4 /= count;
   score2 /= count;
 
-  let timeSig = { numerator: 4, denominator: 4, name: '4/4', confidence: 92 };
-
   // Detect 3/4 waltz if score3 is noticeably stronger than score4
-  if (score3 > score4 * 1.15) {
-    const conf = Math.min(98, Math.round((score3 / (score3 + score4)) * 100));
-    timeSig = { numerator: 3, denominator: 4, name: '3/4 (Waltz)', confidence: conf };
-  } else {
-    const conf = Math.min(99, Math.round((score4 / (score3 + score4 + 0.001)) * 100));
-    timeSig = { numerator: 4, denominator: 4, name: '4/4 (Common Time)', confidence: Math.max(75, conf) };
-  }
-
-  const meterBeats = timeSig.numerator;
+  const meterBeats = score3 > score4 * 1.15 ? 3 : 4;
 
   // Find the optimal downbeat phase (offset 0, 1, ..., meterBeats - 1)
   let bestPhase = 0;
@@ -553,15 +544,13 @@ function trackBeatsAndDownbeats(
       currentBar++;
     }
 
-    const beatConf = Math.min(1.0, Math.max(0.4, (baf[f] || 0.5) * 0.8 + 0.2));
-
     const beatItem: BeatItem = {
       id: i + 1,
       time,
       beatInBar: beatIndexInBar,
       barIndex: currentBar,
       isDownbeat,
-      confidence: Math.round(beatConf * 100) / 100,
+      confidence: null, // only beat_this gives a confidence
       instantBpm,
       deltaMs,
     };
@@ -591,12 +580,34 @@ function trackBeatsAndDownbeats(
       ? swingDeviations.reduce((a, b) => a + b, 0) / swingDeviations.length
       : 50.0;
 
+  const timeSig = {
+    numerator: meterBeats,
+    denominator: 4,
+    name: `${meterBeats}/4`,
+    barShare: barShare(beats.map((b) => b.time), downbeats.map((d) => d.time), meterBeats),
+  };
+
   return { beats, downbeats, timeSig, swingRatio };
 }
 
+/**
+ * Share of bars (beats between two downbeats) with `numerator` beats, in percent; null with fewer than
+ * 2 downbeats. Same counting as meter_from_beats() in backend/analyzer.py.
+ */
+export function barShare(beatTimes: number[], downbeatTimes: number[], numerator: number): number | null {
+  const counts: number[] = [];
+  for (let i = 0; i + 1 < downbeatTimes.length; i++) {
+    const d1 = downbeatTimes[i];
+    const d2 = downbeatTimes[i + 1];
+    counts.push(beatTimes.filter((t) => t >= d1 && t < d2).length);
+  }
+  if (counts.length === 0) return null;
+  return Math.round((100 * counts.filter((c) => c === numerator).length) / counts.length);
+}
+
+// Onset strength of the browser analysis; there is no downbeat curve (downbeatActivation null).
 function downsampleActivationCurve(
   baf: Float32Array,
-  daf: Float32Array,
   frameRate: number,
   targetPoints: number
 ): ActivationPoint[] {
@@ -608,7 +619,7 @@ function downsampleActivationCurve(
     points.push({
       time,
       beatActivation: Math.round(baf[i] * 100) / 100,
-      downbeatActivation: Math.round(daf[i] * 100) / 100,
+      downbeatActivation: null,
     });
   }
 

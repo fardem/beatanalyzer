@@ -4,7 +4,7 @@ export interface BeatItem {
   beatInBar: number; // 1, 2, 3, 4 (1 = downbeat)
   barIndex: number; // 1, 2, 3...
   isDownbeat: boolean;
-  confidence: number; // 0.0 to 1.0
+  confidence: number | null; // 0.0 to 1.0 from beat_this; null without beat_this
   instantBpm: number;
   deltaMs: number; // interval from previous beat in ms
 }
@@ -12,7 +12,7 @@ export interface BeatItem {
 export interface ActivationPoint {
   time: number;
   beatActivation: number; // 0.0 to 1.0
-  downbeatActivation: number; // 0.0 to 1.0
+  downbeatActivation: number | null; // 0.0 to 1.0; null when there is no downbeat curve
 }
 
 export interface AudioMetadata {
@@ -24,8 +24,17 @@ export interface AudioMetadata {
   format: string;
 }
 
+export interface EngineInfo {
+  id: 'beat_this' | 'librosa';
+  device: 'cuda' | 'cpu' | null;
+  gpu: string | null;
+  fallbackReason: 'not_installed' | 'model_load_failed' | 'inference_failed' | null;
+}
+
 export interface AnalysisResult {
   engine?: string;
+  engineInfo?: EngineInfo;
+  activationSource?: 'beat_this' | 'onset'; // beat_this probabilities or librosa/browser onset strength
   metadata: AudioMetadata;
   beats: BeatItem[];
   downbeats: BeatItem[];
@@ -39,7 +48,7 @@ export interface AnalysisResult {
     numerator: number;
     denominator: number;
     name: string;
-    confidence: number; // 0-100%
+    barShare: number | null; // share of bars with this beat count in percent; null with fewer than 2 downbeats
   };
   swingRatio: number; // 50% = straight, ~66% = triplet swing
   totalBeats: number;
