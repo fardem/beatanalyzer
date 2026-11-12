@@ -66,6 +66,25 @@
     "remove_confirm": "Aus „{song}“ entfernen: {markers} BeatAnalyzer-Marker, {tracks} Subtitle Track(s) in der offenen Timeline, {srt} Subtitle-Clip(s) im Ordner BeatAnalyzer? Von Hand gesetzte Marker bleiben.",
     "remove_done": "Entfernt: {markers} Marker, {tracks} Subtitle Track(s), {srt} Subtitle-Clip(s).",
     "remove_nothing": "Nichts von BeatAnalyzer an „{song}“ gefunden.",
-    "btn_remove_yes": "Entfernen"
+    "btn_remove_yes": "Entfernen",
+    "title": "BeatAnalyzer {version}",
+    "json_none": "Keine JSON gewählt.",
+    "btn_choose": "Auswählen …",
+    "choose_title": "BeatAnalyzer – Marker-JSON wählen",
+    "check_timeline": "Subtitle Track in der Timeline anlegen",
+    "check_colors": "Markerfarben anpassen",
+    "color_downbeat": "Downbeat",
+    "color_beat": "Beat {n}",
+    "color_other": "übrige",
+    "color_none": "kein Marker",
+    "work_title": "Was jetzt passiert:",
+    "step_markers": "Marker auf den Clip „{clip}“ im Media Pool",
+    "step_markers_hint": "Resolve setzt jeden Marker einzeln, das dauert etwas.",
+    "step_bin": "Ordner BeatAnalyzer im Media Pool, Subtitle „{srt}“",
+    "step_track": "Subtitle Track „{track}“ in „{timeline}“",
+    "wait": "Bitte warten – das Fenster schließt sich erst am Ende.",
+    "btn_close": "Schließen",
+    "btn_ok": "OK",
+    "btn_cancel": "Abbrechen"
   }
 }

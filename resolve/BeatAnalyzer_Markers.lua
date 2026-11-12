@@ -48,14 +48,26 @@ local BA = {
       ["output.meter_suffix.4"] = "",
       ["output.meter_suffix.8"] = "",
       ["output.time_bpm"] = "{clock} – {bpm} BPM",
+      ["plugin.btn_cancel"] = "Cancel",
+      ["plugin.btn_choose"] = "Choose …",
+      ["plugin.btn_close"] = "Close",
+      ["plugin.btn_ok"] = "OK",
       ["plugin.btn_remove"] = "Remove BeatAnalyzer markers",
       ["plugin.btn_remove_yes"] = "Remove",
+      ["plugin.check_colors"] = "Adjust marker colours",
+      ["plugin.check_timeline"] = "Create a Subtitle Track in the Timeline",
+      ["plugin.choose_title"] = "BeatAnalyzer – choose marker JSON",
       ["plugin.clip_found"] = "{names} in the Media Pool · {length}",
+      ["plugin.color_beat"] = "Beat {n}",
+      ["plugin.color_downbeat"] = "Downbeat",
+      ["plugin.color_none"] = "no marker",
+      ["plugin.color_other"] = "other",
       ["plugin.engine"] = "Analysed with {engine}",
       ["plugin.explain_absent"] = "The song is not in the Timeline '{timeline}'. Only the Subtitle in the Media Pool is created.",
       ["plugin.explain_no_timeline"] = "No Timeline is open. Only the Subtitle in the Media Pool is created.",
       ["plugin.explain_off"] = "The Timeline stays unchanged. The Subtitle with all beats lies in the folder BeatAnalyzer in the Media Pool and can be dragged from there into any Timeline.",
       ["plugin.explain_present"] = "In the Timeline '{timeline}' the song lies on A{track} from {tc}. Below it the Subtitle Track '{track_name}' is created and made active. Resolve allows only one active Subtitle Track; the others stay but are switched off.",
+      ["plugin.json_none"] = "No JSON chosen.",
       ["plugin.msg_bad_format"] = "Unknown format '{format}', expected '{expected}'. Export the file in BeatAnalyzer under Export -> DaVinci Resolve.",
       ["plugin.msg_bin_missing"] = "media pool bin '{bin}' not available",
       ["plugin.msg_cannot_read"] = "Cannot read the file: {path}",
@@ -86,8 +98,15 @@ local BA = {
       ["plugin.remove_confirm"] = "Remove from '{song}': {markers} BeatAnalyzer markers, {tracks} Subtitle Track(s) in the open Timeline, {srt} Subtitle clip(s) in the folder BeatAnalyzer? Markers set by hand stay.",
       ["plugin.remove_done"] = "Removed: {markers} markers, {tracks} Subtitle Track(s), {srt} Subtitle clip(s).",
       ["plugin.remove_nothing"] = "Nothing from BeatAnalyzer found on '{song}'.",
+      ["plugin.step_bin"] = "Folder BeatAnalyzer in the Media Pool, Subtitle '{srt}'",
+      ["plugin.step_markers"] = "Markers on the clip '{clip}' in the Media Pool",
+      ["plugin.step_markers_hint"] = "Resolve sets every marker on its own, this takes a while.",
+      ["plugin.step_track"] = "Subtitle Track '{track}' in '{timeline}'",
+      ["plugin.title"] = "BeatAnalyzer {version}",
+      ["plugin.wait"] = "Please wait – the window closes only at the end.",
       ["plugin.warn_length"] = "The clip's duration ({clip}) differs from the analysed file ({json}).",
       ["plugin.warn_other_file"] = "The selected clip is not '{file}' from the JSON.",
+      ["plugin.work_title"] = "What happens now:",
     },
   },
 }
@@ -1335,58 +1354,324 @@ end
 
 -- ─── Dialogs ─────────────────────────────────────────────────────────────────
 
-local function choose_json()
-  if not fu then
-    return nil
-  end
-  local okf, fn = pcall(function() return fu.RequestFile end)
-  if not okf or type(fn) ~= "function" then
-    return nil
-  end
-  local ok, p = pcall(fn, fu, "", "", { FReqB_Saving = false, FReqB_SeqGather = false,
-                                        FReqS_Filter = "BeatAnalyzer JSON (*.json)|*.json",
-                                        FReqS_Title = "BeatAnalyzer - choose marker JSON" })
-  if not ok or not p or p == "" then
-    return nil
-  end
-  local okm, mapped = pcall(function() return fu:MapPath(p) end)
-  return okm and mapped and mapped ~= "" and mapped or p
-end
+-- One window with the states "select" (before OK), "confirm" (remove asks), "work" (locked, a timer does the
+-- job in steps) and "result". A timer every 50 ms: in "select" the clip and the timeline are checked again
+-- about once a second, in "work" one job step runs per tick.
 
-local function show(title, text)
-  local bmd = rawget(_G, "bmd")
-  if not (fu and fu.UIManager and bmd and bmd.UIDispatcher) then
-    return
+local TICK_MS = 50
+local REFRESH_TICKS = 20
+
+local COLOR_IDS = { downbeat = "ColorDownbeat", beat2 = "ColorBeat2", beat3 = "ColorBeat3", beat4 = "ColorBeat4",
+                    other = "ColorOther" }
+
+local function color_index(color)
+  for i, c in ipairs(M.MARKER_COLORS) do
+    if c == color then
+      return i - 1
+    end
   end
-  local ok = pcall(function()
-    local ui = fu.UIManager
-    local disp = bmd.UIDispatcher(ui)
-    local win = disp:AddWindow({ ID = "BeatAnalyzerResult", WindowTitle = title, Geometry = { 300, 300, 520, 170 } },
-      ui:VGroup({
-        ui:Label({ ID = "Text", Text = text, WordWrap = true }),
-        ui:HGroup({ Weight = 0, ui:HGap(0, 1), ui:Button({ ID = "OK", Text = "OK" }) }),
-      }))
-    function win.On.OK.Clicked() disp:ExitLoop() end
-    function win.On.BeatAnalyzerResult.Close() disp:ExitLoop() end
-    win:Show()
-    disp:RunLoop()
-    win:Hide()
-  end)
-  if not ok then
-    log("Result window not available")
-  end
+  return #M.MARKER_COLORS   -- the last entry: no marker
 end
 
 function M.main()
   log("BeatAnalyzer_Markers " .. VERSION)
-  local path = choose_json()
-  if not path then
-    log("No file chosen.")
+  local bmd = rawget(_G, "bmd")
+  if not (fu and fu.UIManager and bmd and bmd.UIDispatcher) then
+    log("No window available.")
     return
   end
-  local ok, msg = M.apply(path)
-  log(msg)
-  show(ok and "BeatAnalyzer - markers set" or "BeatAnalyzer - error", msg)
+  local ui = fu.UIManager
+  local disp = bmd.UIDispatcher(ui)
+  local settings = M.load_settings()
+  local S = { state = "select", ticks = 0 }
+
+  local function color_row(slot, label)
+    return ui:HGroup({ Weight = 0,
+      ui:Label({ ID = COLOR_IDS[slot] .. "Label", Text = label, Weight = 0, MinimumSize = { 80, 0 } }),
+      ui:ComboBox({ ID = COLOR_IDS[slot], Weight = 1 }) })
+  end
+
+  local win = disp:AddWindow({ ID = "BeatAnalyzerWin", WindowTitle = T("plugin.title", { version = VERSION }),
+                               Geometry = settings.geometry or { 300, 200, 640, 560 } },
+    ui:VGroup({ Spacing = 6,
+      ui:HGroup({ Weight = 0,
+        ui:Label({ ID = "JsonLabel", Text = "JSON:", Weight = 0 }),
+        ui:Label({ ID = "JsonPath", Text = T("plugin.json_none"), WordWrap = true, Weight = 1 }),
+        ui:Button({ ID = "Choose", Text = T("plugin.btn_choose"), Weight = 0 }) }),
+      ui:Label({ ID = "ClipInfo", Text = "", WordWrap = true, Weight = 0 }),
+      ui:Label({ ID = "Warnings", Text = "", WordWrap = true, Weight = 0 }),
+      ui:Label({ ID = "Engine", Text = "", WordWrap = true, Weight = 0 }),
+      ui:CheckBox({ ID = "Timeline", Text = T("plugin.check_timeline"), Checked = settings.timeline, Weight = 0 }),
+      ui:Label({ ID = "Explain", Text = "", WordWrap = true, Weight = 0 }),
+      ui:CheckBox({ ID = "Colors", Text = T("plugin.check_colors"), Checked = settings.colors_open, Weight = 0 }),
+      ui:HGroup({ Weight = 0,
+        color_row("downbeat", T("plugin.color_downbeat")),
+        color_row("beat2", T("plugin.color_beat", { n = 2 })),
+        color_row("beat3", T("plugin.color_beat", { n = 3 })) }),
+      ui:HGroup({ Weight = 0,
+        color_row("beat4", T("plugin.color_beat", { n = 4 })),
+        color_row("other", T("plugin.color_other")) }),
+      ui:Label({ ID = "Status", Text = "", WordWrap = true, Weight = 1 }),
+      ui:HGroup({ Weight = 0,
+        ui:Button({ ID = "Remove", Text = T("plugin.btn_remove"), Weight = 0 }),
+        ui:Button({ ID = "RemoveYes", Text = T("plugin.btn_remove_yes"), Weight = 0, Hidden = true }),
+        ui:HGap(0, 1),
+        ui:Button({ ID = "Close", Text = T("plugin.btn_close"), Weight = 0 }),
+        ui:Button({ ID = "OK", Text = T("plugin.btn_ok"), Weight = 0, Enabled = false }) }) }))
+  local itm = win:GetItems()
+
+  local function set(id, prop, value)
+    pcall(function() itm[id][prop] = value end)
+  end
+  local function get(id, prop)
+    local ok, v = pcall(function() return itm[id][prop] end)
+    return ok and v or nil
+  end
+
+  for slot, id in pairs(COLOR_IDS) do
+    for _, c in ipairs(M.MARKER_COLORS) do
+      pcall(function() itm[id]:AddItem(c) end)
+    end
+    pcall(function() itm[id]:AddItem(T("plugin.color_none")) end)
+    set(id, "CurrentIndex", color_index(settings.colors[slot]))
+  end
+
+  local function read_colors()
+    local colors = {}
+    for slot, id in pairs(COLOR_IDS) do
+      local i = tonumber(get(id, "CurrentIndex")) or 0
+      colors[slot] = M.MARKER_COLORS[i + 1] or M.NO_MARKER
+    end
+    return colors
+  end
+
+  local function colors_visibility()
+    local hidden = not get("Colors", "Checked")
+    for _, id in pairs(COLOR_IDS) do
+      set(id, "Hidden", hidden)
+      set(id .. "Label", "Hidden", hidden)
+    end
+    pcall(function() win:RecalcLayout() end)
+  end
+
+  local function project()
+    local pm = api(resolve, "GetProjectManager")
+    return pm and api(pm, "GetCurrentProject") or nil
+  end
+  local function current_timeline()
+    local p = project()
+    return p and api(p, "GetCurrentTimeline") or nil
+  end
+
+  -- Clips for "Remove": the target of the JSON, without a JSON the selection in the media pool.
+  local function remove_clips()
+    if S.info and S.info.ok then
+      return S.info.clips
+    end
+    local p = project()
+    local clips = p and target_clips(api(p, "GetMediaPool"), "") or {}
+    return clips
+  end
+
+  local function refresh()
+    if S.state ~= "select" then
+      return
+    end
+    if S.json then
+      S.info = M.prepare(S.json)
+      set("JsonPath", "Text", S.json)
+      set("ClipInfo", "Text", S.info.ok and S.info.clip_text or (S.info.error or ""))
+      local warnings = {}
+      for _, w in ipairs(S.info.warnings or {}) do
+        warnings[#warnings + 1] = "⚠ " .. w
+      end
+      set("Warnings", "Text", table.concat(warnings, "\n"))
+      set("Engine", "Text", S.info.engine or "")
+      S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
+      set("Explain", "Text", M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song))
+    end
+    set("OK", "Enabled", S.info ~= nil and S.info.ok == true)
+    set("Remove", "Enabled", #remove_clips() > 0)
+  end
+
+  local function lock(locked)
+    for _, id in ipairs({ "Choose", "Timeline", "Colors", "Remove", "OK", "Close" }) do
+      set(id, "Enabled", not locked)
+    end
+    for _, id in pairs(COLOR_IDS) do
+      set(id, "Enabled", not locked)
+    end
+  end
+
+  local function work_text()
+    local job = S.job
+    local order = { markers = 1, subtitles = 2, timeline = 3, done = 4 }
+    local now = order[job.phase] or 4
+    local function mark(n)
+      return n < now and "✓" or (n == now and "…" or "  ")
+    end
+    local lines = { T("plugin.work_title") }
+    local clip = tostring(api(job.clips[1], "GetName") or "?")
+    lines[#lines + 1] = string.format("%s 1. %s   %d / %d", mark(1), T("plugin.step_markers", { clip = clip }),
+                                      job.marked, job.total)
+    lines[#lines + 1] = "     " .. T("plugin.step_markers_hint")
+    lines[#lines + 1] = string.format("%s 2. %s", mark(2), T("plugin.step_bin", { srt = job.srt_name }))
+    if S.track_step then
+      lines[#lines + 1] = string.format("%s 3. %s", mark(3), T("plugin.step_track", { track = job.track_name,
+                                                                                    timeline = job.timeline_name }))
+    end
+    lines[#lines + 1] = ""
+    lines[#lines + 1] = T("plugin.wait")
+    return table.concat(lines, "\n")
+  end
+
+  local function finish()
+    S.state = "result"
+    local text = S.job.msg or ""
+    if S.info and S.info.engine then
+      text = text .. "\n" .. S.info.engine
+    end
+    set("Status", "Text", text)
+    set("Close", "Text", T("plugin.btn_ok"))
+    set("Close", "Enabled", true)
+    set("OK", "Hidden", true)
+    set("Remove", "Hidden", true)
+    log(S.job.msg)
+  end
+
+  local function tick()
+    S.ticks = S.ticks + 1
+    if S.state == "work" then
+      local ok, done = pcall(S.job.step)
+      if not ok then
+        log("Error:", done)
+        S.job.msg = (S.job.msg or "") .. "\n" .. tostring(done)
+        done = true
+      end
+      if done then
+        finish()
+      else
+        set("Status", "Text", work_text())
+      end
+    elseif S.state == "select" and S.ticks % REFRESH_TICKS == 0 then
+      refresh()
+    end
+  end
+
+  local function save()
+    settings.timeline = get("Timeline", "Checked") and true or false
+    settings.colors_open = get("Colors", "Checked") and true or false
+    settings.colors = read_colors()
+    local okg, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
+    if okg and type(g) == "table" and tonumber(g[1]) and tonumber(g[4]) then
+      settings.geometry = { g[1], g[2], g[3], g[4] }
+    end
+    M.save_settings(settings)
+  end
+
+  local function close()
+    if S.state == "work" then
+      log("Close ignored: the work is not finished yet.")
+      pcall(function() win:Show() end)
+      return
+    end
+    save()
+    disp:ExitLoop()
+  end
+
+  win.On.Choose.Clicked = function()
+    local okf, path = pcall(function()
+      return fu:RequestFile(settings.json_dir or "", "", { FReqB_Saving = false, FReqB_SeqGather = false,
+                                                         FReqS_Filter = "BeatAnalyzer JSON (*.json)|*.json",
+                                                         FReqS_Title = T("plugin.choose_title") })
+    end)
+    if not okf or not path or path == "" then
+      return
+    end
+    local okm, mapped = pcall(function() return fu:MapPath(path) end)
+    S.json = okm and mapped and mapped ~= "" and mapped or path
+    settings.json_dir = S.json:match("^(.*)[/\\][^/\\]*$") or ""
+    refresh()
+  end
+  win.On.Timeline.Clicked = function() refresh() end
+  win.On.Colors.Clicked = function() colors_visibility() end
+  win.On.OK.Clicked = function()
+    if S.state ~= "select" or not (S.info and S.info.ok) then
+      return
+    end
+    local tl = get("Timeline", "Checked") and current_timeline() or false
+    local job, err = M.start(S.json, { colors = read_colors(), timeline = tl })
+    if not job then
+      set("Status", "Text", tostring(err))
+      return
+    end
+    S.job, S.state = job, "work"
+    S.track_step = tl and S.tinfo and S.tinfo.state == "present"
+    lock(true)
+    set("Status", "Text", work_text())
+  end
+  win.On.Remove.Clicked = function()
+    if S.state ~= "select" then
+      return
+    end
+    local clips = remove_clips()
+    if #clips == 0 then
+      return
+    end
+    S.remove_clips, S.remove_tl = clips, current_timeline()
+    local r = M.removal(clips, S.remove_tl)
+    set("Status", "Text", r.text)
+    if r.markers + r.tracks + r.srt_clips > 0 then
+      S.state = "confirm"
+      set("RemoveYes", "Hidden", false)
+      pcall(function() win:RecalcLayout() end)
+    end
+  end
+  win.On.RemoveYes.Clicked = function()
+    if S.state ~= "confirm" then
+      return
+    end
+    local done = M.remove(S.remove_clips, S.remove_tl)
+    set("Status", "Text", done.text)
+    set("RemoveYes", "Hidden", true)
+    S.state = "select"
+    refresh()
+  end
+  win.On.Close.Clicked = function()
+    if S.state == "confirm" then   -- the button closes the question, not the window
+      S.state = "select"
+      set("RemoveYes", "Hidden", true)
+      set("Status", "Text", "")
+      return
+    end
+    close()
+  end
+  win.On.BeatAnalyzerWin.Close = function() close() end
+
+  -- Both ways of receiving timer events are registered (as in the WhisperX Workbench); the same event
+  -- object is handled once.
+  local timer = ui:Timer({ ID = "BATimer", Interval = TICK_MS, SingleShot = false })
+  local last_event
+  local function on_timer(ev)
+    if ev ~= nil and ev == last_event then
+      return
+    end
+    last_event = ev
+    if ev == nil or ev.who == nil or ev.who == "BATimer" then
+      tick()
+    end
+  end
+  disp.On.Timeout = on_timer
+  pcall(function() disp.On.BATimer.Timeout = on_timer end)
+
+  colors_visibility()
+  refresh()
+  timer:Start()
+  win:Show()
+  disp:RunLoop()
+  timer:Stop()
+  win:Hide()
+  log("Window closed")
 end
 
 if rawget(_G, "BEATTHIS_NO_RUN") then

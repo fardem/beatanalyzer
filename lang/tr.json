@@ -67,6 +67,25 @@
     "remove_confirm": "'{song}' içinden kaldırılsın mı: {markers} BeatAnalyzer marker'ı, açık Timeline'da {tracks} Subtitle Track, BeatAnalyzer klasöründe {srt} Subtitle clip'i? Elle eklenen marker'lar kalır.",
     "remove_done": "Kaldırıldı: {markers} marker, {tracks} Subtitle Track, {srt} Subtitle clip'i.",
     "remove_nothing": "'{song}' üzerinde BeatAnalyzer'a ait bir şey bulunamadı.",
-    "btn_remove_yes": "Kaldır"
+    "btn_remove_yes": "Kaldır",
+    "title": "BeatAnalyzer {version}",
+    "json_none": "JSON seçilmedi.",
+    "btn_choose": "Seç …",
+    "choose_title": "BeatAnalyzer – marker JSON'unu seçin",
+    "check_timeline": "Timeline'da Subtitle Track oluştur",
+    "check_colors": "Marker renklerini ayarla",
+    "color_downbeat": "Downbeat",
+    "color_beat": "Beat {n}",
+    "color_other": "diğer",
+    "color_none": "marker yok",
+    "work_title": "Şimdi ne oluyor:",
+    "step_markers": "Media Pool'daki '{clip}' clip'ine marker'lar",
+    "step_markers_hint": "Resolve her marker'ı tek tek ekler, bu biraz sürer.",
+    "step_bin": "Media Pool'da BeatAnalyzer klasörü, Subtitle '{srt}'",
+    "step_track": "'{timeline}' içinde '{track}' Subtitle Track'i",
+    "wait": "Lütfen bekleyin – pencere ancak iş bitince kapanır.",
+    "btn_close": "Kapat",
+    "btn_ok": "Tamam",
+    "btn_cancel": "İptal"
   }
 }

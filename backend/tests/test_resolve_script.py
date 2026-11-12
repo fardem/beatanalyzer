@@ -776,5 +776,5 @@ class RenameTransitionTests(unittest.TestCase):
         text = "\n".join(self.out)
         version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
         self.assertIn(f"[BeatAnalyzer] BeatAnalyzer_Markers {version}", text)
-        self.assertIn("No file chosen.", text)          # main() ran; no file dialog without Resolve
+        self.assertIn("No window available.", text)     # main() ran; no window without Resolve
         self.assertNotIn("Not found or not started", text)
