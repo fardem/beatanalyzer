@@ -11,6 +11,9 @@
 - Nach einem Neuansatz zählen die Zählzeiten ab der neuen „1“ weiter (ein Takt aus zwei Beats heißt „1 2“, nicht „1 4“); nur der Auftakt vor der ersten „1“ behält seinen Platz im Raster (z. B. „3 4“).
 - Web-App: Während der neuen Analyse ist das Häkchen gesperrt und zeigt den Fortschritt; schlägt sie fehl, bleibt das bisherige Ergebnis stehen, das Häkchen springt zurück und der Fehler steht an der Kachel (kein stilles Ausweichen auf die Browser-Analyse).
 
+### Behoben
+- Resolve-Dialog: Lange Hinweise (z. B. „Kein Clip gefunden …“ mit langem Dateinamen) wurden oben und unten abgeschnitten. Der Dialog schätzt die nötigen Zeilen jetzt mit Wortumbruch und etwas breiteren Zeichen.
+
 ## [0.1.0] – 2026-11-12
 
 ### Hinzugefügt
