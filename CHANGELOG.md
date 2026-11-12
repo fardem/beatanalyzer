@@ -13,6 +13,7 @@
 
 ### Behoben
 - Resolve-Dialog: Lange Hinweise (z. B. „Kein Clip gefunden …“ mit langem Dateinamen) wurden oben und unten abgeschnitten. Der Dialog schätzt die nötigen Zeilen jetzt mit Wortumbruch und etwas breiteren Zeichen.
+- Resolve-Dialog: Die Zeile „Analyse-Programm: in der JSON nicht angegeben …“ bekommt jetzt die Höhe, die sie braucht (war auf eine Zeile beschränkt und abgeschnitten).
 
 ## [0.1.0] – 2026-11-12
 
