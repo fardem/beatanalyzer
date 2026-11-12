@@ -14,6 +14,10 @@ from typing import Dict, Any, List, Optional, Tuple
 
 BEAT_THIS_AVAILABLE = False
 predictor_instance = None
+MODEL_LOAD_FAILED = False        # the last attempt to load the beat_this model failed
+PREDICTOR_DEVICE = None          # "cuda" or "cpu" of the loaded model
+
+ENGINE_LABELS = {"beat_this": "CPJKU beat_this Transformer", "librosa": "Librosa MIR (Fallback)"}
 
 try:
     # Versuche offiziellen CPJKU beat_this Import
@@ -28,7 +32,7 @@ except Exception as e:
 
 
 def get_predictor():
-    global predictor_instance
+    global predictor_instance, MODEL_LOAD_FAILED, PREDICTOR_DEVICE
     if not BEAT_THIS_AVAILABLE:
         return None
     if predictor_instance is None:
@@ -38,11 +42,47 @@ def get_predictor():
             print(f"[BeatAnalyzer Backend] Initialisiere CPJKU Audio2Beats auf Device: {device}...")
             # 'final0' ist das offizielle Standard-Checkpoint-Modell von CPJKU
             predictor_instance = Audio2Beats(checkpoint_path="final0", device=device)
+            MODEL_LOAD_FAILED, PREDICTOR_DEVICE = False, device
             print("[BeatAnalyzer Backend] Modell bereit für Inferenz.")
         except Exception as err:
             print(f"[BeatAnalyzer Backend] Fehler beim Laden des Modells: {err}")
             predictor_instance = None
+            MODEL_LOAD_FAILED = True
     return predictor_instance
+
+
+def _gpu_name() -> Optional[str]:
+    try:
+        import torch
+        return str(torch.cuda.get_device_name(0))
+    except Exception:
+        return None
+
+
+def engine_info(engine_id: str, fallback_reason: Optional[str] = None, device: Optional[str] = None) -> Dict[str, Any]:
+    """What computed (or would compute) the beats: engine, device, graphics card and why librosa took over."""
+    return {
+        "id": engine_id,
+        "device": device,
+        "gpu": _gpu_name() if device == "cuda" else None,
+        "fallbackReason": fallback_reason,
+    }
+
+
+def engine_status() -> Dict[str, Any]:
+    """What the next analysis would use, without loading the model."""
+    if not BEAT_THIS_AVAILABLE:
+        return engine_info("librosa", "not_installed")
+    if MODEL_LOAD_FAILED:
+        return engine_info("librosa", "model_load_failed")
+    if PREDICTOR_DEVICE:
+        return engine_info("beat_this", device=PREDICTOR_DEVICE)
+    try:
+        import torch
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:
+        device = "cpu"
+    return engine_info("beat_this", device=device)
 
 
 def load_audio_safely(file_path: str, target_sr: int = 44100):
@@ -131,7 +171,7 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
     downbeats_sec: List[float] = []
     beat_prob: Optional[np.ndarray] = None
     downbeat_prob: Optional[np.ndarray] = None
-    engine_used = "CPJKU beat_this Transformer"
+    info = engine_info("beat_this", device=PREDICTOR_DEVICE)
 
     if predictor is not None:
         try:
@@ -140,10 +180,10 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
         except Exception as e:
             beat_prob = downbeat_prob = None
             print(f"[BeatAnalyzer Backend] Fehler bei Transformer-Inferenz, wechsle auf Fallback: {e}")
-            engine_used = "High-Performance Librosa MIR (Fallback)"
+            info = engine_info("librosa", "inference_failed")
             beats_sec, downbeats_sec = fallback_mir_track(y, sr)
     else:
-        engine_used = "High-Performance Librosa MIR"
+        info = engine_info("librosa", "not_installed" if not BEAT_THIS_AVAILABLE else "model_load_failed")
         beats_sec, downbeats_sec = fallback_mir_track(y, sr)
 
     # Kurven fuer die Web-App: Wahrscheinlichkeiten von beat_this, sonst die Onset-Staerke von librosa
@@ -243,7 +283,8 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
     file_format = original_filename.split(".")[-1].upper() if "." in original_filename else "AUDIO"
 
     return {
-        "engine": engine_used,
+        "engine": ENGINE_LABELS[info["id"]],
+        "engineInfo": info,
         "metadata": {
             "fileName": original_filename,
             "fileSize": os.path.getsize(file_path),
@@ -313,7 +354,7 @@ def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) ->
     Zeiten in Sekunden ab Anfang der Audiodatei.
     """
     beats = [b for b in result["beats"] if b["isDownbeat"]] if only_downbeats else result["beats"]
-    return {
+    data = {
         "format": RESOLVE_MARKER_FORMAT,
         "fileName": result["metadata"]["fileName"],
         "duration": result["metadata"]["duration"],
@@ -331,3 +372,6 @@ def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) ->
             for b in beats
         ],
     }
+    if result.get("engineInfo"):
+        data["engine"] = result["engineInfo"]
+    return data

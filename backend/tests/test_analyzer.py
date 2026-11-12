@@ -179,5 +179,36 @@ class AnalyzerTests(unittest.TestCase):
         self.assertEqual(ts, {"numerator": 4, "denominator": 4, "name": "4/4", "barShare": 100})
 
 
+    # --- engineInfo --------------------------------------------------------------------------------
+
+    def test_engine_info_without_beat_this(self):
+        result = self.analyze_without_beat_this()
+        self.assertEqual(result["engineInfo"],
+                         {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "not_installed"})
+        self.assertEqual(self.analyzer.engine_status()["fallbackReason"], "not_installed")
+
+    def test_engine_info_beat_this_on_cpu(self):
+        result = self.analyze_with_fake()      # torch-Stub: cuda.is_available() -> False
+        self.assertEqual(result["engineInfo"], {"id": "beat_this", "device": "cpu", "gpu": None, "fallbackReason": None})
+        self.assertEqual(result["engine"], "CPJKU beat_this Transformer")
+
+    def test_model_load_failed(self):
+        result = self.analyze_with_fake(init_raises=RuntimeError("kein Modell"))
+        self.assertEqual(result["engineInfo"]["fallbackReason"], "model_load_failed")
+        self.assertEqual(result["engineInfo"]["id"], "librosa")
+        self.assertEqual(self.analyzer.engine_status()["fallbackReason"], "model_load_failed")
+
+    def test_inference_failed(self):
+        result = self.analyze_with_fake(frames_raise=RuntimeError("CUDA out of memory"))
+        self.assertEqual(result["engineInfo"]["fallbackReason"], "inference_failed")
+        self.assertEqual(result["engine"], "Librosa MIR (Fallback)")
+
+    def test_marker_json_carries_engine(self):
+        result = self.analyze_with_fake()
+        self.assertEqual(self.analyzer.resolve_marker_data(result)["engine"], result["engineInfo"])
+        del result["engineInfo"]
+        self.assertNotIn("engine", self.analyzer.resolve_marker_data(result))
+
+
 if __name__ == "__main__":
     unittest.main()
