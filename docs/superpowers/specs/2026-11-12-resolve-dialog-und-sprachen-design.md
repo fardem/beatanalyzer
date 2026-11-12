@@ -372,6 +372,15 @@ Der Python-Prozess beendet sich nach `done.txt` selbst. Ein Server wird nicht ge
   zu Python aus dem Konfigurationsblock.
 - Nach 10 Minuten ohne `done.txt` bricht das Skript ab.
 
+### 7.3 Vorgemerkt (Wunsch des Nutzers, 2026-11-12)
+
+- **Marker auch auf dem Clip in der Timeline.** Heute setzt das Skript die Marker nur auf den Clip im Media Pool.
+  Ein Clip, der schon vorher in der Timeline lag, zeigt sie nicht; der Nutzer muss ihn neu aus dem Media Pool
+  ziehen. Gewünscht: Liegt der Song in der aktuellen Timeline, bekommen auch diese Timeline-Clips die Marker.
+  Ob und wie das geht, wird beim Bauen von Teilprojekt 3 in Resolve geprüft (die Scripting-API von Resolve
+  kennt `TimelineItem:AddMarker`; Zeitpunkt relativ zum Anfang des Timeline-Clips, also mit Versatz durch einen
+  getrimmten Anfang). Dabei gilt wie bisher: nur Marker des letzten Laufs ersetzen, Marker von Hand bleiben.
+
 ---
 
 ## 8. Angaben zum Analyse-Programm

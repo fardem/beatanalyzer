@@ -1,20 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnalysisResult } from '../types/analyzer';
 import { Gauge, Clock, Radio, Music, Zap, Disc3 } from 'lucide-react';
 
 interface MetricsCardsProps {
   result: AnalysisResult;
   smoothBars: boolean;
+  /** "Schutz klarer 1": a downbeat beat_this hears at least this sure stays a "1" (0.5 ... 1) */
+  protect: number;
   /** progress of a running re-analysis, null when idle */
   busyText: string | null;
   /** error of the last analysis, shown under the box */
   error: string | null;
   onToggleSmoothBars: (on: boolean) => void;
+  onChangeProtect: (value: number) => void;
 }
 
-export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, busyText, error, onToggleSmoothBars }) => {
+export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, protect, busyText, error, onToggleSmoothBars, onChangeProtect }) => {
   const canSmooth = result.activationSource === 'beat_this';
   const busy = busyText !== null;
+  // slider value while dragging; computed again only on release
+  const [slider, setSlider] = useState<number>(Math.round(protect * 100));
+  useEffect(() => setSlider(Math.round(protect * 100)), [protect, result]);
+  const commitSlider = () => {
+    if (slider !== Math.round(protect * 100)) onChangeProtect(slider / 100);
+  };
+  const sliderOff = !canSmooth || busy || !smoothBars;
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -75,9 +85,11 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
           </span>
         </div>
         <div className="text-[11px] text-slate-400 mt-1 truncate">
-          {result.barSmoothing?.applied
-            ? `${result.barSmoothing.changedBeats} Beats neu eingeteilt`
-            : result.timeSignature.name}
+          {!canSmooth
+            ? result.timeSignature.name
+            : result.barSmoothing?.applied
+            ? `${result.barSmoothing.changedBeats} Beats neu eingeteilt · ${result.barSmoothing.reanchors} Neuansätze`
+            : 'nicht geglättet'}
         </div>
         <label
           className={`mt-1.5 flex items-center gap-1.5 text-[11px] ${canSmooth && !busy ? 'text-slate-300 cursor-pointer' : 'text-slate-600 cursor-not-allowed'}`}
@@ -91,6 +103,26 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             onChange={(e) => onToggleSmoothBars(e.target.checked)}
           />
           Takte glätten
+        </label>
+        <label
+          className={`mt-1 flex items-center gap-1.5 text-[11px] ${sliderOff ? 'text-slate-600' : 'text-slate-300'}`}
+          title="Eine „1“, die beat_this mindestens so sicher hört, bleibt eine „1“. 100 % = kein Schutz, das Raster entscheidet allein."
+        >
+          <span className="shrink-0">Schutz klarer 1</span>
+          <input
+            type="range"
+            min={50}
+            max={100}
+            step={1}
+            value={slider}
+            disabled={sliderOff}
+            aria-label="Schutz klarer 1"
+            className="w-full min-w-0 accent-purple-500"
+            onChange={(e) => setSlider(Number(e.target.value))}
+            onPointerUp={commitSlider}
+            onKeyUp={commitSlider}
+          />
+          <span className="w-8 text-right tabular-nums">{slider} %</span>
         </label>
         {busy && <div className="text-[10px] text-purple-300 mt-1 truncate" title={busyText}>{busyText}</div>}
         {!busy && error && (

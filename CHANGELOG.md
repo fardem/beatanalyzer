@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.3] – 2026-11-12
+
+### Hinzugefügt
+- Web-App: Regler „Schutz klarer 1“ (50–100 %, Standard 85 %) an der Kachel Taktart. Eine „1“, die beat_this mindestens so sicher hört, bleibt eine „1“; bei 100 % entscheidet das Raster allein. Neu gerechnet wird beim Loslassen, ohne dass beat_this noch einmal läuft: Der Server merkt sich Audio und Modell-Ergebnis der zuletzt analysierten Datei, die Web-App das dekodierte Audio.
+- Die Kachel zeigt immer, was passiert ist: „n Beats neu eingeteilt · k Neuansätze“ oder „nicht geglättet“.
+- Server `POST /api/analyze?protect=0.9`, Kommandozeile `--protect 0.9`, Ergebnisfeld `barSmoothing.protect`.
+
+### Geändert
+- Ist „Takte glätten“ an, wird immer geglättet. Die Grenze „mindestens 50 % regelmäßige Takte“ entfällt (bei „Küçük Sevgilim“ wurde deshalb gar nicht geglättet). Nicht geglättet wird nur, wenn beat_this weniger als zwei Downbeats liefert.
+
 ## [0.1.2] – 2026-11-12
 
 ### Behoben

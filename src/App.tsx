@@ -20,6 +20,8 @@ export default function App() {
   const [stageText, setStageText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [smoothBars, setSmoothBars] = useState<boolean>(true);
+  const [protect, setProtect] = useState<number>(0.85); // "Schutz klarer 1" of the last successful analysis
+  const lastAudioRef = useRef<AudioBuffer | null>(null);
   const lastFileRef = useRef<{ file: File | Blob; name: string } | null>(null);
 
   // Playback state
@@ -62,12 +64,15 @@ export default function App() {
     };
   }, []);
 
+  // reanalysis: the same file once more with other smoothing settings (server only, decoded audio reused)
   const handleFileSelected = async (
     file: File | Blob,
     name: string,
-    smooth: boolean = true,
-    requireServer: boolean = false
+    opts: { smooth?: boolean; protect?: number; reanalysis?: boolean } = {}
   ) => {
+    const smooth = opts.smooth ?? true;
+    const protectValue = opts.protect ?? 0.85;
+    if (!opts.reanalysis) lastAudioRef.current = null;
     lastFileRef.current = { file, name };
     try {
       setError(null);
@@ -88,11 +93,18 @@ export default function App() {
           setProgress(pct);
           setStageText(stage);
         },
-        { smoothBars: smooth, requireServer }
+        {
+          smoothBars: smooth,
+          requireServer: opts.reanalysis ?? false,
+          protect: protectValue,
+          audioBuffer: opts.reanalysis ? lastAudioRef.current ?? undefined : undefined,
+        }
       );
 
+      lastAudioRef.current = audioBuffer;
       setResult(analysisResult);
-      setSmoothBars(smooth); // only now: a failed re-analysis leaves the box as it was
+      setSmoothBars(smooth); // only now: a failed re-analysis leaves box and slider as they were
+      setProtect(protectValue);
       if (playerRef.current) {
         playerRef.current.loadBuffer(audioBuffer, analysisResult.beats);
       }
@@ -196,12 +208,22 @@ export default function App() {
             <MetricsCards
               result={result}
               smoothBars={smoothBars}
+              protect={protect}
               busyText={isAnalyzing ? `${stageText} (${Math.round(progress)} %)` : null}
               error={error}
               onToggleSmoothBars={(on) => {
                 // the same file once more, with or without an even bar grid; one analysis at a time
                 if (lastFileRef.current && !isAnalyzing) {
-                  handleFileSelected(lastFileRef.current.file, lastFileRef.current.name, on, true);
+                  handleFileSelected(lastFileRef.current.file, lastFileRef.current.name, {
+                    smooth: on, protect, reanalysis: true,
+                  });
+                }
+              }}
+              onChangeProtect={(value) => {
+                if (lastFileRef.current && !isAnalyzing) {
+                  handleFileSelected(lastFileRef.current.file, lastFileRef.current.name, {
+                    smooth: smoothBars, protect: value, reanalysis: true,
+                  });
                 }
               }}
             />
