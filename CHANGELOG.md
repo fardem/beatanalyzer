@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unveröffentlicht]
+## [0.1.0] – in Arbeit
 
 ### Hinzugefügt
 - Sprachdateien `lang/en.json`, `lang/de.json`, `lang/tr.json` (Englisch, Deutsch, Türkisch). Die türkischen Texte sind noch zu prüfen.

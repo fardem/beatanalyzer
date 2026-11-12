@@ -515,6 +515,7 @@ class RenameTransitionTests(unittest.TestCase):
         self.lua.globals().STUB = str(self.tmp / "BeatThis_Markers.lua")
         self.lua.execute("dofile(STUB)")
         text = "\n".join(self.out)
-        self.assertIn("[BeatAnalyzer] BeatAnalyzer_Markers 0.0.5", text)
+        version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        self.assertIn(f"[BeatAnalyzer] BeatAnalyzer_Markers {version}", text)
         self.assertIn("No file chosen.", text)          # main() ran; no file dialog without Resolve
         self.assertNotIn("Not found or not started", text)
