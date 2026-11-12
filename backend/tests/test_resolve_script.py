@@ -21,6 +21,8 @@ except ImportError:  # pragma: no cover
     luajit21 = None
 
 from analyzer import resolve_marker_data  # noqa: E402
+import i18n  # noqa: E402
+import resolve_plugin  # noqa: E402
 
 SCRIPT = (ROOT / "resolve" / "BeatAnalyzer_Markers.lua").read_text(encoding="utf-8")
 
@@ -188,14 +190,38 @@ def sample_result(n_beats=8, interval=0.5):
 @unittest.skipIf(luajit21 is None, "lupa not installed")
 class ResolveScriptTests(unittest.TestCase):
     def setUp(self):
+        self.load_script(SCRIPT)
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def load_script(self, script):
         self.lua = luajit21.LuaRuntime(unpack_returned_tuples=True)
         self.out = []
         self.lua.globals().print = lambda *a: self.out.append(" ".join(str(x) for x in a))
         self.lua.globals().PY_READ = lambda p: Path(p).read_text(encoding="utf-8")
         self.lua.execute(MOCK)
-        self.M = self.lua.execute(SCRIPT)
+        self.M = self.lua.execute(script)
         self.mock = self.lua.globals().MOCK
-        self.tmp = Path(tempfile.mkdtemp())
+
+    def load_lang(self, code):
+        """The script as the installer writes it for this language (texts of all languages)."""
+        block = resolve_plugin.render_config(None, None, code, {c: i18n.texts(c) for c in i18n.LANGUAGES})
+        self.load_script(resolve_plugin.apply_config(SCRIPT, block))
+
+    def run_apply(self, json_overrides=None):
+        data = resolve_marker_data(sample_result())
+        data.update(json_overrides or {})
+        ok, msg = self.M.apply(self.write_json(data))
+        self.assertTrue(ok, msg)
+        return msg
+
+    def srt_cues(self):
+        return (self.tmp / "Müller Song.srt").read_text(encoding="utf-8").strip().split("\n\n")
+
+    def intro_cue(self):
+        return self.srt_cues()[0].split("\n")[2:]
+
+    def first_beat_cue(self):
+        return self.srt_cues()[1].split("\n")[2:]
 
     def write_json(self, data, name="Müller Song_resolve_markers.json"):
         path = self.tmp / name
@@ -251,12 +277,39 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(len(cues), 6)  # intro 0 s -> first beat, then one per beat
         self.assertEqual(cues[0].split("\n")[:2], ["1", "00:00:00,000 --> 00:00:00,500"])
         self.assertEqual(cues[1].split("\n"), ["2", "00:00:00,500 --> 00:00:01,000", "Downbeat (1)",
-                                               "Takt 1 - Beat 1", "00:00.500 - 120.0 BPM", "Konfidenz 90%"])
-        self.assertEqual(cues[2].split("\n")[2:4], ["Beat 2", "Takt 1 - Beat 2"])
+                                               "Bar 1 – Beat 1", "00:00.500 – 120.0 BPM", "Confidence 90%"])
+        self.assertEqual(cues[2].split("\n")[2:4], ["Beat 2", "Bar 1 – Beat 2"])
         self.assertEqual(cues[5].split("\n")[1], "00:00:02,500 --> 00:00:03,000")  # last: + previous interval
         self.assertEqual(self.bin_clips(), ["Müller Song.srt"])
         self.assertIn("Subtitles: Müller Song.srt in media pool bin 'BeatAnalyzer'", msg)
         self.assertTrue(self.lua.eval("MOCK.pool:GetCurrentFolder() == MOCK.root"))
+
+    def test_english_intro(self):
+        self.run_apply()
+        self.assertEqual(self.intro_cue(), ["BeatAnalyzer", "Müller Song.wav", "120.0 BPM – 4/4"])
+
+    def test_german_output(self):
+        self.load_lang("de")
+        self.run_apply()
+        marks = self.markers(self.mock.song)
+        self.assertEqual(marks[13]["name"], "Takt 1")
+        self.assertEqual(marks[13]["note"], "0,500 s | 120,0 BPM")
+        self.assertEqual(marks[25]["name"], "1.2")
+        self.assertEqual(self.first_beat_cue(), ["Downbeat (1)", "Takt 1 – Beat 1", "00:00.500 – 120,0 BPM",
+                                                 "Confidence 90 %"])
+
+    def test_turkish_output_with_old_json(self):
+        self.load_lang("tr")
+        self.run_apply(json_overrides={"timeSignature": "4/4 (Standard)"})   # format of 0.0.5
+        self.assertEqual(self.markers(self.mock.song)[13]["name"], "Ölçü 1")
+        self.assertEqual(self.intro_cue(), ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4'lük"])
+        self.assertEqual(self.first_beat_cue()[3], "Confidence %90")
+
+    def test_meter_suffixes(self):
+        self.load_lang("tr")
+        for text, expected in [("6/8", "6/8'lik"), ("9/16", "9/16'lık"), ("2/2", "2/2'lik"), ("3/4", "3/4'lük"),
+                               ("5/32", "5/32"), ("abc", "abc")]:
+            self.assertEqual(self.M.fmt_meter(text), expected)
 
     def test_second_run_replaces_subtitle_clip(self):
         path = self.write_json(resolve_marker_data(sample_result()))
@@ -270,7 +323,7 @@ class ResolveScriptTests(unittest.TestCase):
         del data["markers"][0]["confidence"]
         self.M.apply(self.write_json(data))
         srt = (self.tmp / "Müller Song.srt").read_text(encoding="utf-8")
-        self.assertIn("00:00.500 - 120.0 BPM\nKonfidenz -\n", srt)
+        self.assertIn("00:00.500 – 120.0 BPM\nConfidence –\n", srt)
 
     # Timeline at 25 fps starting at 01:00:00:00 (frame 90000). The song lies at 10 s, 1 s trimmed at the
     # front, 3 s long: song seconds 1.0-4.0 are visible, song second 0 is at timeline second 9.
@@ -302,9 +355,9 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertIn("Timeline: 6 subtitles on track ST1 'BeatAnalyzer - Müller Song'", msg)
         self.assertNotIn("difference", msg)
         srt = (self.tmp / "Müller Song (Timeline).srt").read_text(encoding="utf-8")
-        self.assertTrue(srt.startswith("1\n00:00:10,000 --> 00:00:10,500\nBeat 2\nTakt 1 - Beat 2"), srt[:80])
+        self.assertTrue(srt.startswith("1\n00:00:10,000 --> 00:00:10,500\nBeat 2\nBar 1 – Beat 2"), srt[:80])
         self.assertIn("00:00:12,500 --> 00:00:13,000", srt)  # last subtitle ends at the clip end
-        self.assertIn("00:01.000 - 120.0 BPM", srt)          # line 3 keeps the song time
+        self.assertIn("00:01.000 – 120.0 BPM", srt)          # line 3 keeps the song time
         self.assertEqual(sorted(self.bin_clips()), ["Müller Song (Timeline).srt", "Müller Song.srt"])
 
     def test_timeline_second_run_replaces_track_and_keeps_other_tracks(self):

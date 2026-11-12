@@ -88,6 +88,59 @@ local function round(x)
   return math.floor(x + 0.5)
 end
 
+-- ─── Texts ───────────────────────────────────────────────────────────────────
+-- Texts come from the BA-CONFIG block (lang/<code>.json, written by the installer); English is the fallback.
+
+local function lookup(key)
+  local texts = BA.texts or {}
+  local value = (texts[BA.lang] or {})[key]
+  if value == nil then
+    value = (texts.en or {})[key]
+  end
+  return value
+end
+
+-- Text for the key with {name} placeholders filled from vars; unknown placeholders stay as they are.
+local function T(key, vars)
+  local text = lookup(key) or key
+  if vars then
+    text = text:gsub("{([%w_]+)}", function(name)
+      local v = vars[name]
+      return v ~= nil and tostring(v) or nil
+    end)
+  end
+  return text
+end
+M.T = T
+
+-- Number with the decimal sign of the language: fmt_num(89.6, 1) -> "89,6" in German.
+local function fmt_num(x, decimals)
+  local text = string.format("%." .. decimals .. "f", tonumber(x) or 0)
+  return (text:gsub("%.", lookup("_meta.decimal") or "."))
+end
+M.fmt_num = fmt_num
+
+-- Percent in the format of the language ("75 %", "75%", "%75"); nil -> "–".
+local function fmt_pct(fraction)
+  local f = tonumber(fraction)
+  if not f then
+    return "–"
+  end
+  return T("_meta.percent", { v = round(f * 100) })
+end
+M.fmt_pct = fmt_pct
+
+-- Time signature from "4/4" or "4/4 (Standard)" (marker JSON up to 0.0.5) in the format of the language:
+-- Turkish "4/4'lük", "6/8'lik". Text without a time signature stays unchanged.
+local function fmt_meter(text)
+  local num, den = tostring(text or ""):match("^%s*(%d+)/(%d+)")
+  if not num then
+    return tostring(text or "")
+  end
+  return T("output.meter", { num = num, den = den, suffix = lookup("output.meter_suffix." .. den) or "" })
+end
+M.fmt_meter = fmt_meter
+
 local resolve = rawget(_G, "resolve")
 if resolve == nil and type(rawget(_G, "Resolve")) == "function" then
   resolve = Resolve()
@@ -469,9 +522,9 @@ local function mark_clip(clip, markers, fallback_fps)
     if frame < 0 or (frames and frame >= frames) then
       skipped = skipped + 1
     else
-      local name = down and string.format("Bar %d", tonumber(m.bar) or 0)
+      local name = down and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
         or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
-      local note = string.format("%.3f s | %.1f BPM", tonumber(m.time) or 0, tonumber(m.bpm) or 0)
+      local note = T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) })
       if api(clip, "AddMarker", frame, down and DOWNBEAT_COLOR or BEAT_COLOR, name, note, 1, MARKER_TAG) then
         added = added + 1
       else
@@ -498,11 +551,12 @@ local function clock(sec)
   return string.format("%02d:%02d.%03d", math.floor(ms / 60000), math.floor(ms / 1000) % 60, ms % 1000)
 end
 
--- SRT with one subtitle per marker, shown until the next one. Four lines per subtitle:
+-- SRT with one subtitle per marker, shown until the next one. Four lines per subtitle, in the language of
+-- BA.lang (English here):
 --   Downbeat (1) | Beat 2
---   Takt 24 - Beat 1
---   01:02.880 - 89.6 BPM
---   Konfidenz 75%
+--   Bar 24 – Beat 1
+--   01:02.880 – 89.6 BPM
+--   Confidence 75%
 -- Without opts: times from the start of the audio file, and a first subtitle from 0 s to the first
 -- beat keeps the timing when the SRT is placed at the clip start.
 -- opts.from / opts.to: only beats in this part of the song (seconds), the last subtitle ends at "to".
@@ -524,8 +578,9 @@ local function build_srt(data, opts)
   end
   local first = tonumber(markers[1].time)
   if not opts.shift and not from and first > 0.05 then
-    cues[#cues + 1] = { 0, first, string.format("BeatAnalyzer\n%s\n%s BPM - %s", tostring(data.fileName or ""),
-                                                tostring(data.globalBpm or "?"), tostring(data.timeSignature or "?")) }
+    cues[#cues + 1] = { 0, first, T("output.intro", { file = tostring(data.fileName or ""),
+                                                       bpm = tonumber(data.globalBpm) and fmt_num(data.globalBpm, 1) or "?",
+                                                       meter = fmt_meter(data.timeSignature or "?") }) }
   end
   for i, m in ipairs(markers) do
     local t = tonumber(m.time)
@@ -538,11 +593,14 @@ local function build_srt(data, opts)
       end
     end
     local bar, beat = tonumber(m.bar) or 0, tonumber(m.beat) or 0
-    local kind = m.type == "downbeat" and "Downbeat (1)" or string.format("Beat %d", beat)
-    local conf = tonumber(m.confidence)
-    local line3 = string.format("%s - %.1f BPM", clock(t), tonumber(m.bpm) or 0)
-    local line4 = "Konfidenz " .. (conf and string.format("%d%%", round(conf * 100)) or "-")
-    cues[#cues + 1] = { t, nxt, string.format("%s\nTakt %d - Beat %d\n%s\n%s", kind, bar, beat, line3, line4) }
+    local kind = m.type == "downbeat" and T("output.kind_downbeat") or T("output.kind_beat", { beat = beat })
+    local lines = {
+      kind,
+      T("output.bar_beat", { bar = bar, beat = beat }),
+      T("output.time_bpm", { clock = clock(t), bpm = fmt_num(m.bpm, 1) }),
+      T("output.confidence", { value = fmt_pct(m.confidence) }),
+    }
+    cues[#cues + 1] = { t, nxt, table.concat(lines, "\n") }
   end
   local out = {}
   for i, c in ipairs(cues) do
