@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unveröffentlicht]
+
+### Hinzugefügt
+- Sprachdateien `lang/en.json`, `lang/de.json`, `lang/tr.json` (Englisch, Deutsch, Türkisch). Die türkischen Texte sind noch zu prüfen.
+- Einstellungsdatei `settings.json` im BeatAnalyzer-Ordner mit der Sprache (Vorgabe „wie das System“, sonst Englisch). Der Server liest und schreibt sie über `/api/settings`.
+- Angaben zum Analyse-Programm (`engineInfo`: beat_this oder librosa, CUDA oder CPU, Grafikkarte, Grund für den Ersatz) im Ergebnis, in der Marker-JSON und in `/api/health`.
+
+### Geändert
+- Resolve-Skript: Marker und Subtitles erscheinen in der eingestellten Sprache, z. B. „Takt 24 – Beat 1“, „89,6 BPM“, „Confidence 75 %“. Beat, Downbeat und Confidence bleiben in allen Sprachen englisch, der Trenner ist „–“. Downbeat-Marker heißen „Takt 1“ / „Bar 1“ / „Ölçü 1“.
+- Resolve-Skript: Das installierte Skript enthält Sprache, BeatAnalyzer-Ordner und Texte. Der Server gleicht es beim Start und bei einem Sprachwechsel ab; *In Resolve aktualisieren* zeigt ein veraltetes Skript an.
+- Confidence pro Beat kommt jetzt von beat_this (Wahrscheinlichkeit des Modells, immer über 50 %), statt fester 95 % bzw. 88 %. Ohne beat_this steht „–“.
+- Die Kurven der Web-App zeigen bei beat_this dessen Wahrscheinlichkeiten pro Frame. Ohne beat_this ist es die Onset-Stärke, eine Downbeat-Kurve gibt es dann nicht.
+- Taktart: statt einer festen Confidence von 95 % der Anteil der Takte mit dieser Beat-Anzahl („96 % der Takte“). Der Name der Taktart ist nur noch „4/4“ (ohne „(Standard)“, „(Walzer)“).
+
 ## [0.0.5] – 2026-11-12
 
 ### Geändert
