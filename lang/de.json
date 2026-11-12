@@ -1,0 +1,15 @@
+{
+  "_meta": { "name": "Deutsch", "decimal": ",", "percent": "{v} %", "html_lang": "de" },
+  "output": {
+    "marker_downbeat": "Takt {bar}",
+    "marker_note": "{time} s | {bpm} BPM",
+    "kind_downbeat": "Downbeat (1)",
+    "kind_beat": "Beat {beat}",
+    "bar_beat": "Takt {bar} – Beat {beat}",
+    "time_bpm": "{clock} – {bpm} BPM",
+    "confidence": "Confidence {value}",
+    "intro": ["BeatAnalyzer", "{file}", "{bpm} BPM – {meter}"],
+    "meter": "{num}/{den}{suffix}",
+    "meter_suffix": { "2": "", "4": "", "8": "", "16": "" }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "name": "Türkçe", "decimal": ",", "percent": "%{v}", "html_lang": "tr",
+    "review": "Türkische Texte: vom Nutzer noch zu prüfen"
+  },
+  "output": {
+    "marker_downbeat": "Ölçü {bar}",
+    "marker_note": "{time} s | {bpm} BPM",
+    "kind_downbeat": "Downbeat (1)",
+    "kind_beat": "Beat {beat}",
+    "bar_beat": "Ölçü {bar} – Beat {beat}",
+    "time_bpm": "{clock} – {bpm} BPM",
+    "confidence": "Confidence {value}",
+    "intro": ["BeatAnalyzer", "{file}", "{bpm} BPM – {meter}"],
+    "meter": "{num}/{den}{suffix}",
+    "meter_suffix": { "2": "'lik", "4": "'lük", "8": "'lik", "16": "'lık" }
+  }
+}
