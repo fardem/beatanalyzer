@@ -62,6 +62,11 @@
     "explain_present": "'{timeline}' Timeline'ında şarkı A{track} üzerinde {tc} itibarıyla duruyor. Altına '{track_name}' Subtitle Track'i oluşturulur ve etkin yapılır. Resolve yalnızca bir etkin Subtitle Track'e izin verir; diğerleri kalır ama devre dışı bırakılır.",
     "explain_absent": "Şarkı '{timeline}' Timeline'ında değil. Yalnızca Media Pool'daki Subtitle oluşturulur.",
     "explain_no_timeline": "Açık Timeline yok. Yalnızca Media Pool'daki Subtitle oluşturulur.",
-    "explain_off": "Timeline değişmez. Tüm beat'leri içeren Subtitle, Media Pool'daki BeatAnalyzer klasöründedir ve oradan istenen Timeline'a sürüklenebilir."
+    "explain_off": "Timeline değişmez. Tüm beat'leri içeren Subtitle, Media Pool'daki BeatAnalyzer klasöründedir ve oradan istenen Timeline'a sürüklenebilir.",
+    "btn_remove": "BeatAnalyzer marker'larını kaldır",
+    "remove_confirm": "'{song}' içinden kaldırılsın mı: {markers} BeatAnalyzer marker'ı, açık Timeline'da {tracks} Subtitle Track, BeatAnalyzer klasöründe {srt} Subtitle clip'i? Elle eklenen marker'lar kalır.",
+    "remove_done": "Kaldırıldı: {markers} marker, {tracks} Subtitle Track, {srt} Subtitle clip'i.",
+    "remove_nothing": "'{song}' üzerinde BeatAnalyzer'a ait bir şey bulunamadı.",
+    "btn_remove_yes": "Kaldır"
   }
 }

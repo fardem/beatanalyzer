@@ -61,6 +61,11 @@
     "explain_present": "In der Timeline „{timeline}“ liegt der Song auf A{track} ab {tc}. Darunter entsteht der Subtitle Track „{track_name}“ und wird aktiv. Resolve erlaubt nur einen aktiven Subtitle Track; die anderen bleiben, werden aber deaktiviert.",
     "explain_absent": "Der Song liegt nicht in der Timeline „{timeline}“. Es entsteht nur der Subtitle im Media Pool.",
     "explain_no_timeline": "Keine Timeline offen. Es entsteht nur der Subtitle im Media Pool.",
-    "explain_off": "Die Timeline bleibt unverändert. Der Subtitle mit allen Beats liegt im Ordner BeatAnalyzer im Media Pool und kann von dort in jede Timeline gezogen werden."
+    "explain_off": "Die Timeline bleibt unverändert. Der Subtitle mit allen Beats liegt im Ordner BeatAnalyzer im Media Pool und kann von dort in jede Timeline gezogen werden.",
+    "btn_remove": "BeatAnalyzer-Marker entfernen",
+    "remove_confirm": "Aus „{song}“ entfernen: {markers} BeatAnalyzer-Marker, {tracks} Subtitle Track(s) in der offenen Timeline, {srt} Subtitle-Clip(s) im Ordner BeatAnalyzer? Von Hand gesetzte Marker bleiben.",
+    "remove_done": "Entfernt: {markers} Marker, {tracks} Subtitle Track(s), {srt} Subtitle-Clip(s).",
+    "remove_nothing": "Nichts von BeatAnalyzer an „{song}“ gefunden.",
+    "btn_remove_yes": "Entfernen"
   }
 }

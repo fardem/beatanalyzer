@@ -42,6 +42,13 @@ local function clip(name, file, fps, frames)
     self.markers[frame] = { color = color, name = name, note = note, duration = duration, custom = custom }
     return true
   end
+  function c:GetMarkers()
+    local out = {}
+    for f, m in pairs(self.markers) do
+      out[f] = { color = m.color, name = m.name, note = m.note, duration = m.duration, customData = m.custom }
+    end
+    return out
+  end
   function c:DeleteMarkerByCustomData(custom)
     for f, m in pairs(self.markers) do
       if m.custom == custom then self.markers[f] = nil; return true end
@@ -506,6 +513,34 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(self.M.fmt_length(59.6), "1:00")
         self.assertEqual(self.M.timecode(90250, 25), "01:00:10:00")
         self.assertEqual(self.M.timecode(86413, 23.976), "01:00:00:13")
+
+    def test_removal_counts_then_removes(self):
+        tl = self.setup_timeline()
+        self.run_apply()
+        self.mock.song.markers[400] = self.lua.table_from({"color": "Blue", "name": "Hand", "custom": ""})
+        clips = self.lua.table_from([self.mock.song])
+        r = self.M.removal(clips, tl)
+        self.assertEqual((r.markers, r.tracks, r.srt_clips, r.song), (8, 1, 1, "Müller Song"))
+        self.assertEqual(len(self.markers(self.mock.song)), 9)        # nothing removed yet
+        done = self.M.remove(clips, tl)
+        self.assertEqual((done.markers, done.tracks, done.srt_clips), (8, 1, 1))
+        self.assertEqual(sorted(self.markers(self.mock.song)), [400])  # the hand marker stays
+        self.assertEqual(self.sub_tracks(tl), [])
+        self.assertEqual(self.bin_clips(), [])
+        self.assertTrue(done.text.startswith("Removed: 8 markers, 1 Subtitle Track(s), 1 Subtitle clip(s)."))
+
+    def test_removal_with_nothing_there(self):
+        self.load_lang("de")
+        r = self.M.removal(self.lua.table_from([self.mock.song]), None)
+        self.assertEqual((r.markers, r.tracks, r.srt_clips), (0, 0, 0))
+        self.assertEqual(r.text, "Nichts von BeatAnalyzer an „Müller Song“ gefunden.")
+        self.assertIsNone(self.bin_clips())                           # counting does not create the folder
+
+    def test_removal_text_asks(self):
+        self.load_lang("de")
+        self.run_apply()
+        r = self.M.removal(self.lua.table_from([self.mock.song]), None)
+        self.assertTrue(r.text.startswith("Aus „Müller Song“ entfernen: 8 BeatAnalyzer-Marker, 0 Subtitle Track(s)"))
 
     def test_second_run_replaces_subtitle_clip(self):
         path = self.write_json(resolve_marker_data(sample_result()))

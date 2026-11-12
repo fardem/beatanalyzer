@@ -48,6 +48,8 @@ local BA = {
       ["output.meter_suffix.4"] = "",
       ["output.meter_suffix.8"] = "",
       ["output.time_bpm"] = "{clock} – {bpm} BPM",
+      ["plugin.btn_remove"] = "Remove BeatAnalyzer markers",
+      ["plugin.btn_remove_yes"] = "Remove",
       ["plugin.clip_found"] = "{names} in the Media Pool · {length}",
       ["plugin.engine"] = "Analysed with {engine}",
       ["plugin.explain_absent"] = "The song is not in the Timeline '{timeline}'. Only the Subtitle in the Media Pool is created.",
@@ -81,6 +83,9 @@ local BA = {
       ["plugin.reason_inference_failed"] = "analysis with beat_this failed",
       ["plugin.reason_model_load_failed"] = "beat_this model could not be loaded",
       ["plugin.reason_not_installed"] = "beat_this not installed",
+      ["plugin.remove_confirm"] = "Remove from '{song}': {markers} BeatAnalyzer markers, {tracks} Subtitle Track(s) in the open Timeline, {srt} Subtitle clip(s) in the folder BeatAnalyzer? Markers set by hand stay.",
+      ["plugin.remove_done"] = "Removed: {markers} markers, {tracks} Subtitle Track(s), {srt} Subtitle clip(s).",
+      ["plugin.remove_nothing"] = "Nothing from BeatAnalyzer found on '{song}'.",
       ["plugin.warn_length"] = "The clip's duration ({clip}) differs from the analysed file ({json}).",
       ["plugin.warn_other_file"] = "The selected clip is not '{file}' from the JSON.",
     },
@@ -714,12 +719,16 @@ local function srt_path(dir, file_name, json_path)
 end
 M.srt_path = srt_path
 
-local function find_bin(media_pool)
+-- The bin BIN_NAME; created if missing unless only_find is set.
+local function find_bin(media_pool, only_find)
   local root = api(media_pool, "GetRootFolder")
   for _, sub in pairs(api(root, "GetSubFolderList") or {}) do
     if api(sub, "GetName") == BIN_NAME then
       return sub
     end
+  end
+  if only_find then
+    return nil
   end
   return api(media_pool, "AddSubFolder", root, BIN_NAME)
 end
@@ -897,6 +906,73 @@ end
 M.place_in_timeline = place_in_timeline
 
 -- Apply a marker JSON file. Returns true/false and a message for the user.
+-- ─── Remove ──────────────────────────────────────────────────────────────────
+-- Everything BeatAnalyzer put on a song: own markers on the clips, the subtitle tracks "BeatAnalyzer - <song>"
+-- (and "BeatThis - <song>") in the open timeline, the subtitle clips of the song in the bin BeatAnalyzer.
+
+local function removal_targets(clips, tl)
+  local song = tostring(api(clips[1], "GetClipProperty", "File Name") or api(clips[1], "GetName") or "")
+  song = song:gsub("%.[^%.]*$", "")
+  local t = { song = song, markers = 0, tracks = 0, srt_clips = 0, srt_items = {} }
+  for _, clip in ipairs(clips) do
+    for _, m in pairs(api(clip, "GetMarkers") or {}) do
+      if type(m) == "table" and m.customData == MARKER_TAG then
+        t.markers = t.markers + 1
+      end
+    end
+  end
+  if tl then
+    local n = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
+    for i = 1, n do
+      local name = api(tl, "GetTrackName", "subtitle", i)
+      if name == TRACK_PREFIX .. song or name == OLD_TRACK_PREFIX .. song then
+        t.tracks = t.tracks + 1
+      end
+    end
+  end
+  local pm = api(resolve, "GetProjectManager")
+  local project = pm and api(pm, "GetCurrentProject")
+  t.media_pool = project and api(project, "GetMediaPool")
+  local bin = t.media_pool and find_bin(t.media_pool, true)
+  for _, clip in pairs(bin and api(bin, "GetClipList") or {}) do
+    local name = is_clip(clip) and api(clip, "GetName")
+    if name == song .. ".srt" or name == song .. " (Timeline).srt" then
+      t.srt_items[#t.srt_items + 1] = clip
+    end
+  end
+  t.srt_clips = #t.srt_items
+  return t
+end
+
+-- What "Remove BeatAnalyzer markers" would delete, with the question for the window; deletes nothing.
+function M.removal(clips, tl)
+  local t = removal_targets(clips, tl)
+  if t.markers + t.tracks + t.srt_clips == 0 then
+    t.text = T("plugin.remove_nothing", { song = t.song })
+  else
+    t.text = T("plugin.remove_confirm", { song = t.song, markers = t.markers, tracks = t.tracks, srt = t.srt_clips })
+  end
+  return t
+end
+
+-- Delete it; markers set by hand stay.
+function M.remove(clips, tl)
+  local t = removal_targets(clips, tl)
+  local done = { markers = 0, tracks = 0, srt_clips = 0 }
+  for _, clip in ipairs(clips) do
+    done.markers = done.markers + remove_own_markers(clip)
+  end
+  if tl then
+    done.tracks = delete_tracks(tl, TRACK_PREFIX .. t.song) + delete_tracks(tl, OLD_TRACK_PREFIX .. t.song)
+  end
+  if #t.srt_items > 0 and api(t.media_pool, "DeleteClips", t.srt_items) then
+    done.srt_clips = #t.srt_items
+  end
+  done.text = T("plugin.remove_done", { markers = done.markers, tracks = done.tracks, srt = done.srt_clips })
+  log(done.text)
+  return done
+end
+
 -- ─── Selection ───────────────────────────────────────────────────────────────
 -- What the window shows before OK: the clip, warnings, the analysis program, the timeline.
 
