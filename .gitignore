@@ -12,4 +12,6 @@ __pycache__/
 install_log.txt
 update-temp/
 update-backup/
+settings.json
+resolve_temp/
 .beatthis-files

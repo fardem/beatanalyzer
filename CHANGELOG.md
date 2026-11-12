@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.1.0] – 2026-11-12
+
+### Hinzugefügt
+- Sprachdateien `lang/en.json`, `lang/de.json`, `lang/tr.json` (Englisch, Deutsch, Türkisch). Die türkischen Texte sind noch zu prüfen.
+- Einstellungsdatei `settings.json` im BeatAnalyzer-Ordner mit der Sprache (Vorgabe „wie das System“, sonst Englisch). Der Server liest und schreibt sie über `/api/settings`.
+- Angaben zum Analyse-Programm (`engineInfo`: beat_this oder librosa, CUDA oder CPU, Grafikkarte, Grund für den Ersatz) im Ergebnis, in der Marker-JSON und in `/api/health`.
+
+### Geändert
+- Resolve-Skript: eigenes Fenster statt sofortigem Dateidialog. JSON wählen; das Fenster zeigt den Ziel-Clip im Media Pool mit Laufzeit, warnt bei anderem Dateinamen oder wenn die Laufzeit des Clips um 0,5 s oder mehr von der analysierten Datei abweicht, und zeigt das Analyse-Programm. Ohne Ziel-Clip bleibt OK gesperrt.
+- Resolve-Skript: Häkchen „Subtitle Track in der Timeline anlegen“ mit Erklärung, die sich nach Häkchen und offener Timeline richtet.
+- Resolve-Skript: Markerfarben pro Zählzeit (Downbeat, Beat 2, 3, 4, übrige), jeweils auch „kein Marker“. Die Subtitles enthalten immer alle Beats.
+- Resolve-Skript: Nach OK zeigt das Fenster die Schritte mit Fortschritt („240 / 512“) und bleibt gesperrt, bis alles fertig ist; das X wird so lange ignoriert. Der Subtitle Track kommt in die Timeline, die beim OK offen war.
+- Resolve-Skript: Knopf „BeatAnalyzer-Marker entfernen“ mit Nachfrage (eigene Marker, Subtitle Track, Subtitle im Ordner BeatAnalyzer; Marker von Hand bleiben).
+- Resolve-Skript: Das Fenster merkt sich Ordner der letzten JSON, Häkchen, Farben und Fenstergröße in `resolve_temp/plugin.txt`.
+- Resolve-Skript: Die SRT-Dateien entstehen in einem Arbeitsordner unter `resolve_temp/` und werden nach dem Import gelöscht, nicht mehr neben der JSON. Im Ordner BeatAnalyzer im Media Pool liegt nur noch `<Song>.srt`; `<Song> (Timeline).srt` wird nach dem Platzieren entfernt.
+- Resolve-Skript: Meldungen in der eingestellten Sprache.
+- Resolve-Skript: Marker und Subtitles erscheinen in der eingestellten Sprache, z. B. „Takt 24 – Beat 1“, „89,6 BPM“, „Confidence 75 %“. Beat, Downbeat und Confidence bleiben in allen Sprachen englisch, der Trenner ist „–“. Downbeat-Marker heißen „Takt 1“ / „Bar 1“ / „Ölçü 1“.
+- Resolve-Skript: Das installierte Skript enthält Sprache, BeatAnalyzer-Ordner und Texte. Der Server gleicht es beim Start und bei einem Sprachwechsel ab; *In Resolve aktualisieren* zeigt ein veraltetes Skript an.
+- Confidence pro Beat kommt jetzt von beat_this (Wahrscheinlichkeit des Modells, immer über 50 %), statt fester 95 % bzw. 88 %. Ohne beat_this steht „–“.
+- Die Kurven der Web-App zeigen bei beat_this dessen Wahrscheinlichkeiten pro Frame. Ohne beat_this ist es die Onset-Stärke, eine Downbeat-Kurve gibt es dann nicht.
+- Taktart: statt einer festen Confidence von 95 % der Anteil der Takte mit dieser Beat-Anzahl („96 % der Takte“), nur mit beat_this; ohne beat_this „–“. Der Name der Taktart ist nur noch „4/4“ (ohne „(Standard)“, „(Walzer)“).
+- Ein installiertes Resolve-Skript wird bei gleicher Version nur im Konfigurationsblock angepasst; eigene Änderungen, z. B. der Farben oben im Skript, bleiben erhalten.
+- Resolve-Fenster: Die JSON-Zeile zeigt den Dateinamen, der volle Pfad steht im Tooltip. Das Fenster ist mindestens 600 × 640 groß; Zeilen für Warnungen und Analyse-Programm erscheinen nur, wenn sie etwas zeigen. Steht in der JSON kein Analyse-Programm, sagt das Fenster das.
+- Server: Die Startmeldung sagt klar, womit analysiert wird (beat_this, librosa oder gar nicht). `/api/health` meldet zusätzlich den Grund `analyzer_failed`.
+- `install_and_run.bat`: Lassen sich NumPy, SciPy, librosa oder soundfile nicht laden, bricht die Installation mit Anleitung ab. Fehlt beat_this, kommt eine deutliche Warnung mit den häufigen Ursachen (Git fehlt, kein Internet, laufender Server), statt still mit librosa weiterzumachen. Ohne Git steht ein Hinweis mit Download-Link da. Am Anfang steht der Hinweis, laufende BeatAnalyzer-Fenster vorher zu schließen.
+
+### Behoben
+- Windows-Batch-Dateien: Ein `&` in Titel- und Textzeilen wurde als Befehl ausgeführt („Die Datei "mit" kann nicht gefunden werden“). Klammern in Textzeilen innerhalb von Blöcken beendeten den Block vorzeitig; `install_and_run.bat` legte dadurch die Umgebung `venv` bei jedem Start neu an.
+- Server: Ließ sich `analyzer.py` nicht laden (z. B. wegen einer beschädigten NumPy-Installation), endete jede Analyse mit `NameError: err`; die eigentliche Ursache ging verloren.
+- Resolve-Skript: Laufzeit des Clips aus „Duration“, wenn Resolve bei Audio-Clips keine Frame-Anzahl liefert (vorher „· ?“).
+- Resolve-Skript: Der alte Subtitle Track wird vor dem neuen Import gelöscht. Weil Resolve einen noch benutzten Clip nicht löscht, sammelten sich sonst bei jedem Lauf `<Song> (Timeline).srt`-Clips im Media Pool.
+- Resolve-Skript unter Windows: Dateien und Ordner mit Umlauten im Pfad werden über die Unicode-Funktionen gelöscht und angelegt; vorher blieb beim Löschen eine Datei geöffnet und der Arbeitsordner liegen.
+- Resolve-Skript: Der Zwischen-Clip `<Song> (Timeline).srt` wird auf jedem Weg entfernt, auch wenn der Subtitle Track nicht angelegt werden kann; scheitert das Entfernen, nennt das Ergebnis den Clip.
+- Resolve-Skript: „BeatAnalyzer-Marker entfernen“ ohne gewählte JSON wirkt nur auf ausgewählte Clips, nicht auf Einträge ohne Dateinamen (z. B. Timelines).
+- Resolve-Skript: Schließt Resolve das Fenster während der Arbeit trotzdem, endet das Skript nach getaner Arbeit, statt unsichtbar weiterzulaufen.
+- Längenwarnung zeigt Zehntelsekunden, wenn beide Laufzeiten sonst gleich aussähen.
+- `/api/health` startet CUDA nicht mehr nur, um den Namen der Grafikkarte zu lesen; die erste Analyse nach dem Start lief sonst unter Umständen im Browser statt mit beat_this.
+
+### Bekannt, kommt in einer späteren Version
+- Die Web-App dekodiert die Datei zuerst im Browser und rechnet ohne Rückmeldung im Browser weiter, wenn der Server nicht antwortet oder die Analyse dort scheitert. Die Oberfläche der Web-App ist noch nur deutsch.
+- Das README beschreibt noch den Ablauf von 0.0.5 (SRT neben der JSON, „Nur Downbeats“ im Export).
+- Analyse direkt aus Resolve ohne JSON.
+
 ## [0.0.5] – 2026-11-12
 
 ### Geändert

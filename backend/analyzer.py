@@ -3,16 +3,21 @@ CPJKU beat_this Python Integration Engine
 Führt Beat & Downbeat Tracking mit PyTorch / beat_this oder Librosa-Fallback durch.
 """
 
+import math
 import os
 import sys
 import tempfile
 import numpy as np
 import soundfile as sf
 import librosa
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple
 
 BEAT_THIS_AVAILABLE = False
 predictor_instance = None
+MODEL_LOAD_FAILED = False        # the last attempt to load the beat_this model failed
+PREDICTOR_DEVICE = None          # "cuda" or "cpu" of the loaded model
+
+ENGINE_LABELS = {"beat_this": "CPJKU beat_this Transformer", "librosa": "Librosa MIR (Fallback)"}
 
 try:
     # Versuche offiziellen CPJKU beat_this Import
@@ -27,7 +32,7 @@ except Exception as e:
 
 
 def get_predictor():
-    global predictor_instance
+    global predictor_instance, MODEL_LOAD_FAILED, PREDICTOR_DEVICE
     if not BEAT_THIS_AVAILABLE:
         return None
     if predictor_instance is None:
@@ -37,11 +42,51 @@ def get_predictor():
             print(f"[BeatAnalyzer Backend] Initialisiere CPJKU Audio2Beats auf Device: {device}...")
             # 'final0' ist das offizielle Standard-Checkpoint-Modell von CPJKU
             predictor_instance = Audio2Beats(checkpoint_path="final0", device=device)
+            MODEL_LOAD_FAILED, PREDICTOR_DEVICE = False, device
             print("[BeatAnalyzer Backend] Modell bereit für Inferenz.")
         except Exception as err:
             print(f"[BeatAnalyzer Backend] Fehler beim Laden des Modells: {err}")
             predictor_instance = None
+            MODEL_LOAD_FAILED = True
     return predictor_instance
+
+
+def _gpu_name() -> Optional[str]:
+    """Name of the graphics card, only once CUDA runs: get_device_name() would start CUDA, which can take
+    longer than the web app waits for /api/health."""
+    try:
+        import torch
+        if not torch.cuda.is_initialized():
+            return None
+        return str(torch.cuda.get_device_name(0))
+    except Exception:
+        return None
+
+
+def engine_info(engine_id: str, fallback_reason: Optional[str] = None, device: Optional[str] = None) -> Dict[str, Any]:
+    """What computed (or would compute) the beats: engine, device, graphics card and why librosa took over."""
+    return {
+        "id": engine_id,
+        "device": device,
+        "gpu": _gpu_name() if device == "cuda" else None,
+        "fallbackReason": fallback_reason,
+    }
+
+
+def engine_status() -> Dict[str, Any]:
+    """What the next analysis would use, without loading the model."""
+    if not BEAT_THIS_AVAILABLE:
+        return engine_info("librosa", "not_installed")
+    if MODEL_LOAD_FAILED:
+        return engine_info("librosa", "model_load_failed")
+    if PREDICTOR_DEVICE:
+        return engine_info("beat_this", device=PREDICTOR_DEVICE)
+    try:
+        import torch
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:
+        device = "cpu"
+    return engine_info("beat_this", device=device)
 
 
 def load_audio_safely(file_path: str, target_sr: int = 44100):
@@ -53,6 +98,66 @@ def load_audio_safely(file_path: str, target_sr: int = 44100):
         return mono.astype(np.float32), target_sr
     except Exception:
         return librosa.load(file_path, sr=target_sr, mono=True)
+
+
+FPS = 50   # frames per second of the framewise beat_this predictions
+
+
+def _to_numpy(x) -> np.ndarray:
+    if hasattr(x, "detach"):
+        x = x.detach().float().cpu().numpy()
+    return np.asarray(x, dtype=np.float64)
+
+
+def sigmoid(x: np.ndarray) -> np.ndarray:
+    return 1.0 / (1.0 + np.exp(-np.asarray(x, dtype=np.float64)))
+
+
+def run_beat_this(predictor, y: np.ndarray, sr: int):
+    """
+    beat_this in its single steps (Audio2Beats = signal2spect + spect2frames + frames2beats): beats and downbeats
+    in seconds plus the probability per frame (50 frames/s) for beat and downbeat, from one model run.
+    """
+    spect = predictor.signal2spect(y, sr)
+    beat_logits, downbeat_logits = predictor.spect2frames(spect)
+    beats, downbeats = predictor.frames2beats(beat_logits, downbeat_logits)
+    return ([float(b) for b in beats], [float(d) for d in downbeats],
+            sigmoid(_to_numpy(beat_logits)), sigmoid(_to_numpy(downbeat_logits)))
+
+
+def beat_confidence(time: float, is_downbeat: bool, beat_prob: np.ndarray, downbeat_prob: np.ndarray,
+                    fps: int = FPS) -> float:
+    """Probability of the model at the beat; for a downbeat the highest downbeat probability within +-3 frames."""
+    probs = downbeat_prob if is_downbeat else beat_prob
+    f = min(max(int(round(time * fps)), 0), len(probs) - 1)
+    value = float(np.max(probs[max(f - 3, 0): f + 4])) if is_downbeat else float(probs[f])
+    return round(value, 3)
+
+
+def activation_curve(beat_prob: np.ndarray, downbeat_prob: Optional[np.ndarray], fps: int = FPS,
+                     points: int = 1000) -> List[Dict[str, Any]]:
+    """Curve with at most `points` points; each point is the maximum of its block, so no peak gets lost."""
+    n = len(beat_prob)
+    size = max(1, int(math.ceil(n / points)))
+    curve = []
+    for start in range(0, n, size):
+        curve.append({
+            "time": round(start / fps, 3),
+            "beatActivation": round(float(np.max(beat_prob[start:start + size])), 3),
+            "downbeatActivation": (round(float(np.max(downbeat_prob[start:start + size])), 3)
+                                   if downbeat_prob is not None else None),
+        })
+    return curve
+
+
+def meter_from_beats(beats_sec: List[float], downbeats_sec: List[float]) -> Tuple[int, Optional[int]]:
+    """Beats per bar (most frequent of 2, 3, 4, 6, else 4) and the share of bars with that count in percent."""
+    counts = [sum(1 for b in beats_sec if d1 <= b < d2) for d1, d2 in zip(downbeats_sec, downbeats_sec[1:])]
+    if not counts:
+        return 4, None
+    allowed = [c for c in counts if c in (2, 3, 4, 6)]
+    numerator = max(set(allowed), key=allowed.count) if allowed else 4
+    return numerator, int(round(100 * counts.count(numerator) / len(counts)))
 
 
 def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]:
@@ -68,50 +173,34 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
 
     beats_sec: List[float] = []
     downbeats_sec: List[float] = []
-    engine_used = "CPJKU beat_this Transformer"
+    beat_prob: Optional[np.ndarray] = None
+    downbeat_prob: Optional[np.ndarray] = None
+    info = engine_info("beat_this", device=PREDICTOR_DEVICE)
 
     if predictor is not None:
         try:
             print(f"[BeatAnalyzer Backend] Starte CPJKU Transformer Inferenz für: {original_filename}")
-            preds = predictor(y, sr)
-            # In CPJKU beat_this ist der Rückgabewert (beats, downbeats)
-            if isinstance(preds, tuple) and len(preds) == 2:
-                beats_sec = [float(b) for b in preds[0]]
-                downbeats_sec = [float(d) for d in preds[1]]
-            elif isinstance(preds, dict):
-                beats_sec = [float(b) for b in preds.get("beats", [])]
-                downbeats_sec = [float(d) for d in preds.get("downbeats", [])]
+            beats_sec, downbeats_sec, beat_prob, downbeat_prob = run_beat_this(predictor, y, sr)
         except Exception as e:
+            beat_prob = downbeat_prob = None
             print(f"[BeatAnalyzer Backend] Fehler bei Transformer-Inferenz, wechsle auf Fallback: {e}")
-            engine_used = "High-Performance Librosa MIR (Fallback)"
+            info = engine_info("librosa", "inference_failed")
             beats_sec, downbeats_sec = fallback_mir_track(y, sr)
     else:
-        engine_used = "High-Performance Librosa MIR"
+        info = engine_info("librosa", "not_installed" if not BEAT_THIS_AVAILABLE else "model_load_failed")
         beats_sec, downbeats_sec = fallback_mir_track(y, sr)
 
-    # Berechne Spektral-Onset Kurven (BAF / DAF) für Visualisierung
-    hop_length = int(sr / 100) # 10ms Frames
-    onset_env = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop_length, aggregate=np.median)
-    if len(onset_env) > 0 and np.max(onset_env) > 0:
-        onset_env = onset_env / np.max(onset_env)
-
-    # Downsample Aktivierungskurve auf ~1000 Punkte für flüssige Web-Darstellung
-    target_points = 1000
-    step = max(1, len(onset_env) // target_points)
-    activation_curve = []
-    downbeat_set = set(round(d, 2) for d in downbeats_sec)
-
-    for i in range(0, len(onset_env), step):
-        t = round((i * hop_length) / sr, 3)
-        b_act = float(round(onset_env[i], 3))
-        # Berechne DAF Nähe zu Downbeats
-        is_near_down = any(abs(t - d) < 0.08 for d in downbeat_set)
-        d_act = float(round(b_act * 1.2 if is_near_down else b_act * 0.3, 3))
-        activation_curve.append({
-            "time": t,
-            "beatActivation": min(1.0, b_act),
-            "downbeatActivation": min(1.0, d_act)
-        })
+    # Kurven fuer die Web-App: Wahrscheinlichkeiten von beat_this, sonst die Onset-Staerke von librosa
+    if beat_prob is not None:
+        curve = activation_curve(beat_prob, downbeat_prob)
+        activation_source = "beat_this"
+    else:
+        hop_length = int(sr / 100)  # 10 ms Frames
+        onset_env = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop_length, aggregate=np.median)
+        if len(onset_env) > 0 and np.max(onset_env) > 0:
+            onset_env = onset_env / np.max(onset_env)
+        curve = activation_curve(onset_env, None, fps=sr / hop_length)
+        activation_source = "onset"
 
     # Statistiken & Strukturierte Beats erzeugen
     intervals = []
@@ -138,20 +227,10 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
         max_bpm = 120.0
         tempo_stability = 90
 
-    # Taktart / Time Signature bestimmen (z.B. Zähle Beats zwischen Downbeats)
-    beats_per_bar = 4
-    if len(downbeats_sec) >= 2:
-        counts = []
-        for d_idx in range(len(downbeats_sec) - 1):
-            d1 = downbeats_sec[d_idx]
-            d2 = downbeats_sec[d_idx + 1]
-            cnt = sum(1 for b in beats_sec if d1 <= b < d2)
-            if cnt in (2, 3, 4, 6):
-                counts.append(cnt)
-        if counts:
-            beats_per_bar = int(max(set(counts), key=counts.count))
-
-    meter_name = "3/4 (Walzer)" if beats_per_bar == 3 else f"{beats_per_bar}/4 (Standard)"
+    # Taktart: haeufigste Beat-Anzahl zwischen zwei Downbeats und ihr Anteil an allen Takten
+    beats_per_bar, bar_share = meter_from_beats(beats_sec, downbeats_sec)
+    if beat_prob is None:
+        bar_share = None   # librosa puts a downbeat on every 3rd/4th beat: a share of those bars says nothing
 
     # Erzeuge strukturierte Beat-Liste mit Takt & Zählzeit
     downbeat_indices = set()
@@ -182,7 +261,9 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
             "beatInBar": beat_in_bar,
             "barIndex": current_bar,
             "isDownbeat": is_down,
-            "confidence": 0.95 if is_down else 0.88,
+            # a downbeat the model did not report (first beat when there are no downbeats) gets the beat value
+            "confidence": (beat_confidence(b_time, is_down and idx in downbeat_indices, beat_prob, downbeat_prob)
+                           if beat_prob is not None else None),
             "instantBpm": instant_bpm,
             "deltaMs": delta_ms
         }
@@ -209,7 +290,8 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
     file_format = original_filename.split(".")[-1].upper() if "." in original_filename else "AUDIO"
 
     return {
-        "engine": engine_used,
+        "engine": ENGINE_LABELS[info["id"]],
+        "engineInfo": info,
         "metadata": {
             "fileName": original_filename,
             "fileSize": os.path.getsize(file_path),
@@ -229,13 +311,14 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
         "timeSignature": {
             "numerator": beats_per_bar,
             "denominator": 4,
-            "name": meter_name,
-            "confidence": 95
+            "name": f"{beats_per_bar}/4",
+            "barShare": bar_share
         },
         "swingRatio": 50.0,
         "totalBeats": len(structured_beats),
         "totalBars": len(structured_downbeats),
-        "activationCurve": activation_curve,
+        "activationCurve": curve,
+        "activationSource": activation_source,
         "waveformPeaks": waveform_peaks,
         "waveformDuration": round(duration, 3)
     }
@@ -278,7 +361,7 @@ def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) ->
     Zeiten in Sekunden ab Anfang der Audiodatei.
     """
     beats = [b for b in result["beats"] if b["isDownbeat"]] if only_downbeats else result["beats"]
-    return {
+    data = {
         "format": RESOLVE_MARKER_FORMAT,
         "fileName": result["metadata"]["fileName"],
         "duration": result["metadata"]["duration"],
@@ -296,3 +379,6 @@ def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) ->
             for b in beats
         ],
     }
+    if result.get("engineInfo"):
+        data["engine"] = result["engineInfo"]
+    return data

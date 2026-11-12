@@ -168,6 +168,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
 
       for (let i = 0; i < actCurve.length; i++) {
         const pt = actCurve[i];
+        if (pt.downbeatActivation === null) continue; // no downbeat curve (librosa, browser)
         if (pt.time < scrollOffsetSec - 0.5) continue;
         if (pt.time > scrollOffsetSec + visibleDuration + 0.5) break;
 

@@ -5,7 +5,7 @@ color 0A
 
 if "%~1"=="" (
     echo ======================================================================
-    echo  BeatAnalyzer CLI Analyzer (Drag & Drop)
+    echo  BeatAnalyzer CLI Analyzer ^(Drag ^& Drop^)
     echo ======================================================================
     echo  Ziehe einfach eine MP3-, WAV-, AAC- oder FLAC-Datei auf diese
     echo  .bat-Datei im Windows Explorer, um sie sofort zu analysieren!

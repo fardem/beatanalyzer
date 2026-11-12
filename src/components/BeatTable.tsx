@@ -185,17 +185,21 @@ export const BeatTable: React.FC<BeatTableProps> = ({
                   </td>
 
                   <td className="py-2 px-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-12 bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                        <div
-                          className="bg-cyan-400 h-full rounded-full"
-                          style={{ width: `${Math.round(b.confidence * 100)}%` }}
-                        />
+                    {b.confidence === null ? (
+                      <span className="text-[10px] text-slate-500">–</span>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-12 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-cyan-400 h-full rounded-full"
+                            style={{ width: `${Math.round(b.confidence * 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-400">
+                          {Math.round(b.confidence * 100)}%
+                        </span>
                       </div>
-                      <span className="text-[10px] text-slate-400">
-                        {Math.round(b.confidence * 100)}%
-                      </span>
-                    </div>
+                    )}
                   </td>
 
                   <td className="py-2 px-3 text-right space-x-1">
