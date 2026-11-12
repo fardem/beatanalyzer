@@ -31,7 +31,7 @@ mimetypes.add_type("application/json", ".json")
 # Lade Analyzer
 ANALYZER_ERROR = ""   # why analyzer.py could not be loaded (e.g. a broken NumPy in venv)
 try:
-    from analyzer import analyze_audio_file, engine_status, BEAT_THIS_AVAILABLE
+    from analyzer import analyze_audio_file, engine_status, clamp_protect, BEAT_THIS_AVAILABLE
 except Exception as _err:   # the name of an except variable is deleted after the block: keep the text
     ANALYZER_ERROR = str(_err) or type(_err).__name__
     print("=" * 70)
@@ -41,11 +41,14 @@ except Exception as _err:   # the name of an except variable is deleted after th
     print("=" * 70)
     BEAT_THIS_AVAILABLE = False
 
-    def analyze_audio_file(p, f, smooth=True):
+    def analyze_audio_file(p, f, smooth=True, protect=0.85):
         raise RuntimeError(f"Analyzer-Fehler (analyzer.py nicht geladen): {ANALYZER_ERROR}")
 
     def engine_status():
         return {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "analyzer_failed"}
+
+    def clamp_protect(value):
+        return 0.85   # nothing is analysed anyway
 
 import i18n
 import resolve_plugin
@@ -794,7 +797,8 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             try:
                 query = parse_qs(urlparse(self.path).query)
                 smooth = query.get("smoothBars", ["1"])[0] != "0"
-                result = analyze_audio_file(temp_path, filename, smooth=smooth)
+                protect = clamp_protect(query.get("protect", [None])[0])
+                result = analyze_audio_file(temp_path, filename, smooth=smooth, protect=protect)
                 body = json.dumps(result).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

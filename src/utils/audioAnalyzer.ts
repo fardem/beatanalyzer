@@ -12,17 +12,21 @@ export async function analyzeAudioFile(
   fileName: string = 'audio.mp3',
   onProgress?: (progress: number, stage: string) => void,
   // requireServer: no silent fallback to the browser analysis (re-analysis of a server result)
-  options: { smoothBars?: boolean; requireServer?: boolean } = {}
+  // protect: protection of clear "1"s for the smoothing (0.5 ... 1); audioBuffer: already decoded, skip decoding
+  options: { smoothBars?: boolean; requireServer?: boolean; protect?: number; audioBuffer?: AudioBuffer } = {}
 ): Promise<{ result: AnalysisResult; audioBuffer: AudioBuffer }> {
-  onProgress?.(5, 'Lade Audiodatei in Speicher...');
-  const arrayBuffer = await file.arrayBuffer();
-
-  onProgress?.(15, 'Dekodiere Audioformat (MP3 / WAV / AAC / FLAC)...');
-  const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-  
   let audioBuffer: AudioBuffer;
   try {
-    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+    if (options.audioBuffer) {
+      audioBuffer = options.audioBuffer;
+    } else {
+      onProgress?.(5, 'Lade Audiodatei in Speicher...');
+      const arrayBuffer = await file.arrayBuffer();
+      onProgress?.(15, 'Dekodiere Audioformat (MP3 / WAV / AAC / FLAC)...');
+      const audioCtx = new (window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+    }
   } catch (err) {
     console.error('AudioContext decode error:', err);
     throw new Error(
@@ -47,7 +51,10 @@ export async function analyzeAudioFile(
       formData.append('audio', file, fileName);
 
       onProgress?.(65, 'Führe CPJKU beat_this Transformer Inferenz aus...');
-      const url = options.smoothBars === false ? '/api/analyze?smoothBars=0' : '/api/analyze';
+      const params = new URLSearchParams();
+      if (options.smoothBars === false) params.set('smoothBars', '0');
+      if (options.protect !== undefined) params.set('protect', String(options.protect));
+      const url = params.toString() ? `/api/analyze?${params}` : '/api/analyze';
       const apiResp = await fetch(url, { method: 'POST', body: formData });
       if (apiResp.ok) {
         const data = await apiResp.json();

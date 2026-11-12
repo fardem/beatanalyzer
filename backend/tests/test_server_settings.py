@@ -91,13 +91,16 @@ class ServerSettingsTests(unittest.TestCase):
     def test_analyze_passes_smooth_bars(self):
         calls = []
         original = server.analyze_audio_file
-        server.analyze_audio_file = lambda p, f, smooth=True: calls.append(smooth) or {"ok": True}
+        server.analyze_audio_file = lambda p, f, smooth=True, protect=0.85: calls.append((smooth, protect)) or {"ok": 1}
         try:
             self.post_audio()
             self.post_audio("?smoothBars=0")
+            self.post_audio("?protect=0.9")
+            self.post_audio("?protect=abc")
+            self.post_audio("?protect=5")
         finally:
             server.analyze_audio_file = original
-        self.assertEqual(calls, [True, False])
+        self.assertEqual(calls, [(True, 0.85), (False, 0.85), (True, 0.9), (True, 0.85), (True, 1.0)])
 
     def test_health_has_engine_info(self):
         status, data = self.request("/api/health")

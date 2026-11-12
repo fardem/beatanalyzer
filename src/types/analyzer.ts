@@ -36,6 +36,7 @@ export interface BarSmoothing {
   meter: number;
   changedBeats: number; // beats whose downbeat status changed against the model
   reanchors: number;
+  protect?: number; // a downbeat the model hears at least this sure stays a "1" (1 = no protection)
 }
 
 export interface AnalysisResult {

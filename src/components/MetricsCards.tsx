@@ -1,20 +1,61 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AnalysisResult } from '../types/analyzer';
 import { Gauge, Clock, Radio, Music, Zap, Disc3 } from 'lucide-react';
 
 interface MetricsCardsProps {
   result: AnalysisResult;
   smoothBars: boolean;
+  /** "Schutz klarer 1": a downbeat beat_this hears at least this sure stays a "1" (0.5 ... 1) */
+  protect: number;
   /** progress of a running re-analysis, null when idle */
   busyText: string | null;
   /** error of the last analysis, shown under the box */
   error: string | null;
   onToggleSmoothBars: (on: boolean) => void;
+  onChangeProtect: (value: number) => void;
 }
 
-export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, busyText, error, onToggleSmoothBars }) => {
+const COMMIT_MS = 300; // the slider rests this long before the bars are computed again
+
+export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, protect, busyText, error, onToggleSmoothBars, onChangeProtect }) => {
   const canSmooth = result.activationSource === 'beat_this';
   const busy = busyText !== null;
+  // slider value while moving; computed again once it rests (mouse released, no key for COMMIT_MS)
+  const applied = Math.round(protect * 100);
+  const [slider, setSlider] = useState<number>(applied);
+  const [dragging, setDragging] = useState<boolean>(false);
+  const sliderRef = useRef<HTMLInputElement>(null);
+  const refocus = useRef<boolean>(false);
+  const sliderOff = !canSmooth || busy || !smoothBars;
+  useEffect(() => setSlider(applied), [applied, result]);
+  useEffect(() => {
+    if (error) setSlider(applied); // a failed recomputation: show the value the beats were computed with
+  }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // released outside the slider: the window still gets the pointerup
+    const up = () => setDragging(false);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, []);
+  useEffect(() => {
+    if (dragging || sliderOff || slider === applied) return;
+    const t = setTimeout(() => {
+      refocus.current = document.activeElement === sliderRef.current;
+      onChangeProtect(slider / 100);
+    }, COMMIT_MS);
+    return () => clearTimeout(t);
+  }, [slider, dragging, sliderOff, applied]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // disabled during the recomputation drops the focus: give it back for the arrow keys
+    if (!busy && refocus.current) {
+      refocus.current = false;
+      sliderRef.current?.focus();
+    }
+  }, [busy]);
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -75,9 +116,11 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
           </span>
         </div>
         <div className="text-[11px] text-slate-400 mt-1 truncate">
-          {result.barSmoothing?.applied
-            ? `${result.barSmoothing.changedBeats} Beats neu eingeteilt`
-            : result.timeSignature.name}
+          {!canSmooth
+            ? result.timeSignature.name
+            : result.barSmoothing?.applied
+            ? `${result.barSmoothing.changedBeats} Beats neu eingeteilt · ${result.barSmoothing.reanchors} Neuansätze`
+            : 'nicht geglättet'}
         </div>
         <label
           className={`mt-1.5 flex items-center gap-1.5 text-[11px] ${canSmooth && !busy ? 'text-slate-300 cursor-pointer' : 'text-slate-600 cursor-not-allowed'}`}
@@ -91,6 +134,26 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             onChange={(e) => onToggleSmoothBars(e.target.checked)}
           />
           Takte glätten
+        </label>
+        <label
+          className={`mt-1 flex items-center gap-1.5 text-[11px] ${sliderOff ? 'text-slate-600' : 'text-slate-300'}`}
+          title="Eine „1“, die beat_this mindestens so sicher hört, bleibt eine „1“. 100 % = kein Schutz, das Raster entscheidet allein."
+        >
+          <span className="shrink-0">Schutz klarer 1</span>
+          <input
+            type="range"
+            min={50}
+            max={100}
+            step={1}
+            value={slider}
+            disabled={sliderOff}
+            aria-label="Schutz klarer 1"
+            className="w-full min-w-0 accent-purple-500"
+            ref={sliderRef}
+            onChange={(e) => setSlider(Number(e.target.value))}
+            onPointerDown={() => setDragging(true)}
+          />
+          <span className="w-8 text-right tabular-nums">{slider} %</span>
         </label>
         {busy && <div className="text-[10px] text-purple-300 mt-1 truncate" title={busyText}>{busyText}</div>}
         {!busy && error && (

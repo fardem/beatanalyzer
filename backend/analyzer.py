@@ -4,6 +4,7 @@ Führt Beat & Downbeat Tracking mit PyTorch / beat_this oder Librosa-Fallback du
 """
 
 import math
+import hashlib
 import os
 import sys
 import tempfile
@@ -161,26 +162,36 @@ def meter_from_beats(beats_sec: List[float], downbeats_sec: List[float]) -> Tupl
 
 
 REANCHOR_PENALTY = 9.0   # cost (nats) of starting the bar grid anew: about two bars of clear contrary evidence
-MIN_BAR_SHARE = 50       # below this share of regular model bars the song is left as the model sees it
-PROTECT_CONF = 0.85      # a downbeat the model hears this clearly stays a "1"; the grid never overrules it
+PROTECT_CONF = 0.85      # default: a downbeat the model hears this clearly stays a "1"; the grid never overrules it
 
 
-def smooth_bars(downbeat_conf: List[float], meter: int, bar_share: Optional[int]) -> Dict[str, Any]:
+def clamp_protect(value: Any) -> float:
+    """Protection threshold from the user (slider, URL, command line): 0.5 ... 1.0; unreadable -> PROTECT_CONF."""
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return PROTECT_CONF
+    if v != v:   # NaN
+        return PROTECT_CONF
+    return min(1.0, max(0.5, v))
+
+
+def smooth_bars(downbeat_conf: List[float], meter: int, protect: float = PROTECT_CONF) -> Dict[str, Any]:
     """
     Even bar grid from beat_this: the most likely beat of the bar (1..meter) for every beat (Viterbi). Counting on
     (1, 2, ..., meter, 1) is free; starting anew costs REANCHOR_PENALTY, so the grid only moves where the model
-    clearly hears the "1" elsewhere; a beat with downbeat_conf >= PROTECT_CONF is always a "1".
+    clearly hears the "1" elsewhere; a beat with downbeat_conf >= protect is always a "1" (protect 1.0: none).
     downbeat_conf[i] = downbeat probability at beat i.
     """
     off = {"applied": False, "positions": [], "reanchors": 0}
     n = len(downbeat_conf)
-    if bar_share is None or bar_share < MIN_BAR_SHARE or meter < 2 or n < 2 * meter:
+    if meter < 2 or n < 2 * meter:
         return off
     d = np.clip(np.asarray(downbeat_conf, dtype=np.float64), 1e-4, 1 - 1e-4)
     emit = np.empty((n, meter))
     emit[:, 0] = np.log(d)
     emit[:, 1:] = np.log(1 - d)[:, None]
-    emit[d >= PROTECT_CONF, 1:] = -1e9           # clear model downbeats: only beat 1 of the bar is allowed
+    emit[d >= protect, 1:] = -1e9            # clear model downbeats: only beat 1 of the bar is allowed
     nxt = np.roll(np.arange(meter), -1)          # state p (0-based) counts on to nxt[p]
     score = emit[0].copy()                       # every beat of the bar is a possible start (pickup)
     back = np.zeros((n, meter), dtype=np.int64)
@@ -203,15 +214,39 @@ def smooth_bars(downbeat_conf: List[float], meter: int, bar_share: Optional[int]
     return {"applied": True, "positions": [int(p) + 1 for p in path], "reanchors": reanchors}
 
 
-def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = True) -> Dict[str, Any]:
+# The last analysed file (key: SHA-256 of its content): audio and beat_this output, so that a new smoothing value
+# does not decode the file and run the model again. A failed model run is not kept. One tuple
+# (key, y, sr, model), replaced as a whole and read once per run: requests run in parallel threads.
+_LAST: Tuple = ()
+
+
+def _file_key(file_path: str) -> str:
+    h = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = True,
+                       protect: float = PROTECT_CONF) -> Dict[str, Any]:
     """
     Analysiert eine Audiodatei (MP3, WAV, AAC, FLAC) und liefert strukturierte
     Beats, Downbeats, Tempo, Taktart und BAF/DAF-Aktivierungskurven.
     """
     predictor = get_predictor()
 
+    protect = clamp_protect(protect)
+    global _LAST
+    key = _file_key(file_path)
+    last = _LAST
+    cached_model = last[3] if last and last[0] == key else None
     # Lade Audio sicher mit soundfile / librosa (kompatibel mit Python 3.9 bis 3.13)
-    y, sr = load_audio_safely(file_path, target_sr=44100)
+    if last and last[0] == key:
+        y, sr = last[1], last[2]
+    else:
+        y, sr = load_audio_safely(file_path, target_sr=44100)
+    model = None
     duration = float(len(y) / sr)
 
     beats_sec: List[float] = []
@@ -220,10 +255,15 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
     downbeat_prob: Optional[np.ndarray] = None
     info = engine_info("beat_this", device=PREDICTOR_DEVICE)
 
-    if predictor is not None:
+    if predictor is not None and cached_model is not None:
+        model = cached_model
+        print(f"[BeatAnalyzer Backend] Ergebnis von beat_this aus dem Speicher (nur Glättung neu): {original_filename}")
+        beats_sec, downbeats_sec, beat_prob, downbeat_prob = list(model[0]), list(model[1]), model[2], model[3]
+    elif predictor is not None:
         try:
             print(f"[BeatAnalyzer Backend] Starte CPJKU Transformer Inferenz für: {original_filename}")
             beats_sec, downbeats_sec, beat_prob, downbeat_prob = run_beat_this(predictor, y, sr)
+            model = (list(beats_sec), list(downbeats_sec), beat_prob, downbeat_prob)
         except Exception as e:
             beat_prob = downbeat_prob = None
             print(f"[BeatAnalyzer Backend] Fehler bei Transformer-Inferenz, wechsle auf Fallback: {e}")
@@ -232,6 +272,8 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
     else:
         info = engine_info("librosa", "not_installed" if not BEAT_THIS_AVAILABLE else "model_load_failed")
         beats_sec, downbeats_sec = fallback_mir_track(y, sr)
+
+    _LAST = (key, y, sr, model)
 
     # Kurven fuer die Web-App: Wahrscheinlichkeiten von beat_this, sonst die Onset-Staerke von librosa
     if beat_prob is not None:
@@ -284,11 +326,11 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
             downbeat_indices.add(closest_idx)
 
     # Takte glaetten (nur beat_this): gleichmaessiges Raster, Neuansatz nur bei klarer Evidenz des Modells
-    smoothing = {"applied": False, "meter": beats_per_bar, "changedBeats": 0, "reanchors": 0}
+    smoothing = {"applied": False, "meter": beats_per_bar, "changedBeats": 0, "reanchors": 0, "protect": protect}
     positions = None
-    if beat_prob is not None and smooth:
+    if beat_prob is not None and smooth and len(downbeat_indices) >= 2:   # fewer: no bar the model heard
         conf = [beat_confidence(t, True, beat_prob, downbeat_prob) for t in beats_sec]
-        smoothed = smooth_bars(conf, beats_per_bar, bar_share)
+        smoothed = smooth_bars(conf, beats_per_bar, protect)
         if smoothed["applied"]:
             positions = smoothed["positions"]
             new_down = {i for i, pos in enumerate(positions) if pos == 1}

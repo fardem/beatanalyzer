@@ -25,7 +25,7 @@ class ServerFallbackTests(unittest.TestCase):
 
     def test_analysis_reports_why_the_analyzer_is_missing(self):
         with self.assertRaises(RuntimeError) as ctx:
-            self.server.analyze_audio_file("x.wav", "x.wav", smooth=True)   # as handle_analyze calls it
+            self.server.analyze_audio_file("x.wav", "x.wav", smooth=True, protect=0.85)   # as handle_analyze calls it
         self.assertIn("analyzer", str(ctx.exception).lower())
 
     def test_health_names_the_broken_analyzer(self):
