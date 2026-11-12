@@ -1,5 +1,10 @@
 {
-  "_meta": { "name": "English", "decimal": ".", "percent": "{v}%", "html_lang": "en" },
+  "_meta": {
+    "name": "English",
+    "decimal": ".",
+    "percent": "{v}%",
+    "html_lang": "en"
+  },
   "output": {
     "marker_downbeat": "Bar {bar}",
     "marker_note": "{time} s | {bpm} BPM",
@@ -8,8 +13,43 @@
     "bar_beat": "Bar {bar} – Beat {beat}",
     "time_bpm": "{clock} – {bpm} BPM",
     "confidence": "Confidence {value}",
-    "intro": ["BeatAnalyzer", "{file}", "{bpm} BPM – {meter}"],
+    "intro": [
+      "BeatAnalyzer",
+      "{file}",
+      "{bpm} BPM – {meter}"
+    ],
     "meter": "{num}/{den}{suffix}",
-    "meter_suffix": { "2": "", "4": "", "8": "", "16": "" }
+    "meter_suffix": {
+      "2": "",
+      "4": "",
+      "8": "",
+      "16": ""
+    }
+  },
+  "plugin": {
+    "msg_not_json": "The file is not a BeatAnalyzer marker JSON.",
+    "msg_bad_format": "Unknown format '{format}', expected '{expected}'. Export the file in BeatAnalyzer under Export -> DaVinci Resolve.",
+    "msg_no_markers": "The JSON contains no markers.",
+    "msg_cannot_read": "Cannot read the file: {path}",
+    "msg_no_project": "No project is open.",
+    "msg_no_clip": "No clip found. Select the audio clip in the media pool, or import '{file}' into the media pool.",
+    "msg_markers": "{n} markers on {clips} clip(s): {names}",
+    "msg_skipped": "{n} markers skipped (outside the clip or not accepted by Resolve).",
+    "msg_other_file": "Note: the selected clip is not '{file}' from the JSON.",
+    "msg_srt_ok": "Subtitles: {srt} in media pool bin '{bin}'",
+    "msg_srt_write": "Subtitles: cannot write {path}",
+    "msg_srt_import": "Subtitles: {why} - import {path} by hand",
+    "msg_bin_missing": "media pool bin '{bin}' not available",
+    "msg_not_imported": "Resolve did not import {path}",
+    "msg_tl_empty": "Timeline: no beats in the part of the song that is in the timeline.",
+    "msg_tl_write": "Timeline: cannot write {path}",
+    "msg_tl_import": "Timeline: {why}",
+    "msg_tl_add": "Timeline: cannot add a subtitle track.",
+    "msg_tl_activate": "Timeline: cannot activate the new subtitle track.",
+    "msg_tl_none_placed": "Timeline: Resolve placed no subtitles.",
+    "msg_tl_ok": "Timeline: {n} subtitles on track ST{track} '{name}'{replaced}",
+    "msg_tl_replaced": " (old track replaced)",
+    "msg_tl_count": "Timeline: placed {placed} subtitles, the SRT has {count}.",
+    "msg_tl_offset": "Timeline: first subtitle at frame {actual}, expected {expected} (difference {diff} frames). Please run resolve/tools/probe_timeline.lua and send the console output."
   }
 }

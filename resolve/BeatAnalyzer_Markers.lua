@@ -48,6 +48,30 @@ local BA = {
       ["output.meter_suffix.4"] = "",
       ["output.meter_suffix.8"] = "",
       ["output.time_bpm"] = "{clock} – {bpm} BPM",
+      ["plugin.msg_bad_format"] = "Unknown format '{format}', expected '{expected}'. Export the file in BeatAnalyzer under Export -> DaVinci Resolve.",
+      ["plugin.msg_bin_missing"] = "media pool bin '{bin}' not available",
+      ["plugin.msg_cannot_read"] = "Cannot read the file: {path}",
+      ["plugin.msg_markers"] = "{n} markers on {clips} clip(s): {names}",
+      ["plugin.msg_no_clip"] = "No clip found. Select the audio clip in the media pool, or import '{file}' into the media pool.",
+      ["plugin.msg_no_markers"] = "The JSON contains no markers.",
+      ["plugin.msg_no_project"] = "No project is open.",
+      ["plugin.msg_not_imported"] = "Resolve did not import {path}",
+      ["plugin.msg_not_json"] = "The file is not a BeatAnalyzer marker JSON.",
+      ["plugin.msg_other_file"] = "Note: the selected clip is not '{file}' from the JSON.",
+      ["plugin.msg_skipped"] = "{n} markers skipped (outside the clip or not accepted by Resolve).",
+      ["plugin.msg_srt_import"] = "Subtitles: {why} - import {path} by hand",
+      ["plugin.msg_srt_ok"] = "Subtitles: {srt} in media pool bin '{bin}'",
+      ["plugin.msg_srt_write"] = "Subtitles: cannot write {path}",
+      ["plugin.msg_tl_activate"] = "Timeline: cannot activate the new subtitle track.",
+      ["plugin.msg_tl_add"] = "Timeline: cannot add a subtitle track.",
+      ["plugin.msg_tl_count"] = "Timeline: placed {placed} subtitles, the SRT has {count}.",
+      ["plugin.msg_tl_empty"] = "Timeline: no beats in the part of the song that is in the timeline.",
+      ["plugin.msg_tl_import"] = "Timeline: {why}",
+      ["plugin.msg_tl_none_placed"] = "Timeline: Resolve placed no subtitles.",
+      ["plugin.msg_tl_offset"] = "Timeline: first subtitle at frame {actual}, expected {expected} (difference {diff} frames). Please run resolve/tools/probe_timeline.lua and send the console output.",
+      ["plugin.msg_tl_ok"] = "Timeline: {n} subtitles on track ST{track} '{name}'{replaced}",
+      ["plugin.msg_tl_replaced"] = " (old track replaced)",
+      ["plugin.msg_tl_write"] = "Timeline: cannot write {path}",
     },
   },
 }
@@ -450,14 +474,13 @@ M.exact_fps = exact_fps
 -- Check the decoded JSON and return its marker list, or nil and a message.
 local function validate(data)
   if type(data) ~= "table" then
-    return nil, "The file is not a BeatAnalyzer marker JSON."
+    return nil, T("plugin.msg_not_json")
   end
   if data.format ~= JSON_FORMAT then
-    return nil, "Unknown format '" .. tostring(data.format) .. "', expected '" .. JSON_FORMAT
-      .. "'. Export the file in BeatAnalyzer under Export -> DaVinci Resolve."
+    return nil, T("plugin.msg_bad_format", { format = tostring(data.format), expected = JSON_FORMAT })
   end
   if type(data.markers) ~= "table" or #data.markers == 0 then
-    return nil, "The JSON contains no markers."
+    return nil, T("plugin.msg_no_markers")
   end
   return data.markers
 end
@@ -636,7 +659,7 @@ end
 local function import_subtitles(media_pool, path, name)
   local bin = find_bin(media_pool)
   if not bin then
-    return nil, "media pool bin '" .. BIN_NAME .. "' not available"
+    return nil, T("plugin.msg_bin_missing", { bin = BIN_NAME })
   end
   local old = {}
   for _, clip in pairs(api(bin, "GetClipList") or {}) do
@@ -655,7 +678,7 @@ local function import_subtitles(media_pool, path, name)
   end
   local item = items and items[1]
   if not item then
-    return nil, "Resolve did not import " .. path
+    return nil, T("plugin.msg_not_imported", { path = path })
   end
   log(string.format("Subtitles imported: %s (%d replaced)", tostring(api(item, "GetName") or name), #old))
   return item
@@ -745,16 +768,16 @@ local function place_in_timeline(media_pool, tl, data, clips, json_path, base)
 
   local text, count, first = build_srt(data, { shift = shift, from = from, to = to })
   if count == 0 then
-    return "Timeline: no beats in the part of the song that is in the timeline."
+    return T("plugin.msg_tl_empty")
   end
   local dir = json_path:match("^(.*[/\\])") or ""
   local srt_name = base .. " (Timeline).srt"
   if not write_file(dir .. srt_name, text) then
-    return "Timeline: cannot write " .. dir .. srt_name
+    return T("plugin.msg_tl_write", { path = dir .. srt_name })
   end
   local srt_item, ierr = import_subtitles(media_pool, dir .. srt_name, srt_name)
   if not srt_item then
-    return "Timeline: " .. tostring(ierr)
+    return T("plugin.msg_tl_import", { why = tostring(ierr) })
   end
 
   local track_name = TRACK_PREFIX .. base
@@ -763,24 +786,24 @@ local function place_in_timeline(media_pool, tl, data, clips, json_path, base)
   api(tl, "AddTrack", "subtitle")
   local target = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
   if target <= before then
-    return "Timeline: cannot add a subtitle track."
+    return T("plugin.msg_tl_add")
   end
   if not activate_only(tl, target) then
     api(tl, "DeleteTrack", "subtitle", target)
-    return "Timeline: cannot activate the new subtitle track."
+    return T("plugin.msg_tl_activate")
   end
   api(media_pool, "AppendToTimeline", { srt_item })
   local placed = subtitle_count(tl, target)
   if placed == 0 then
     api(tl, "DeleteTrack", "subtitle", target)
-    return "Timeline: Resolve placed no subtitles."
+    return T("plugin.msg_tl_none_placed")
   end
   api(tl, "SetTrackName", "subtitle", target, track_name)
 
-  local msg = string.format("Timeline: %d subtitles on track ST%d '%s'%s", placed, target, track_name,
-                            deleted > 0 and " (old track replaced)" or "")
+  local msg = T("plugin.msg_tl_ok", { n = placed, track = target, name = track_name,
+                                     replaced = deleted > 0 and T("plugin.msg_tl_replaced") or "" })
   if placed ~= count then
-    msg = msg .. string.format("\nTimeline: placed %d subtitles, the SRT has %d.", placed, count)
+    msg = msg .. "\n" .. T("plugin.msg_tl_count", { placed = placed, count = count })
   end
   local actual
   for _, it in ipairs(api(tl, "GetItemListInTrack", "subtitle", target) or {}) do
@@ -792,8 +815,7 @@ local function place_in_timeline(media_pool, tl, data, clips, json_path, base)
   local expected = tl_start + round(first * fps)
   log(string.format("Timeline: first subtitle at frame %s, expected %d", tostring(actual), expected))
   if actual and math.abs(actual - expected) > 1 then
-    msg = msg .. string.format("\nTimeline: first subtitle at frame %d, expected %d (difference %d frames)."
-      .. " Please run resolve/tools/probe_timeline.lua and send the console output.", actual, expected, actual - expected)
+    msg = msg .. "\n" .. T("plugin.msg_tl_offset", { actual = actual, expected = expected, diff = actual - expected })
   end
   return msg
 end
@@ -803,7 +825,7 @@ M.place_in_timeline = place_in_timeline
 function M.apply(path)
   local text = read_file(path)
   if not text then
-    return false, "Cannot read the file: " .. tostring(path)
+    return false, T("plugin.msg_cannot_read", { path = tostring(path) })
   end
   local okj, data = pcall(json_decode, text)
   if not okj then
@@ -817,14 +839,13 @@ function M.apply(path)
   local pm = api(resolve, "GetProjectManager")
   local project = pm and api(pm, "GetCurrentProject") or nil
   if not project then
-    return false, "No project is open."
+    return false, T("plugin.msg_no_project")
   end
   local media_pool = api(project, "GetMediaPool")
   local file_name = tostring(data.fileName or "")
   local clips, how = target_clips(media_pool, file_name)
   if #clips == 0 then
-    return false, "No clip found. Select the audio clip in the media pool, or import '" .. file_name
-      .. "' into the media pool."
+    return false, T("plugin.msg_no_clip", { file = file_name })
   end
   log(string.format("%d clip(s) by %s, %d markers in %s", #clips, how, #markers, path))
 
@@ -837,14 +858,14 @@ function M.apply(path)
     names[#names + 1] = tostring(api(clip, "GetName") or "?")
   end
 
-  local msg = string.format("%d markers on %d clip(s): %s", total, #clips, table.concat(names, ", "))
+  local msg = T("plugin.msg_markers", { n = total, clips = #clips, names = table.concat(names, ", ") })
   if skipped_total > 0 then
-    msg = msg .. string.format("\n%d markers skipped (outside the clip or not accepted by Resolve).", skipped_total)
+    msg = msg .. "\n" .. T("plugin.msg_skipped", { n = skipped_total })
   end
   if how == "selection" and file_name ~= "" then
     for _, clip in ipairs(clips) do
       if tostring(api(clip, "GetClipProperty", "File Name") or "") ~= file_name then
-        msg = msg .. "\nNote: the selected clip is not '" .. file_name .. "' from the JSON."
+        msg = msg .. "\n" .. T("plugin.msg_other_file", { file = file_name })
         break
       end
     end
@@ -852,13 +873,13 @@ function M.apply(path)
 
   local srt_file, srt_name = srt_path(path, file_name)
   if not write_file(srt_file, build_srt(data)) then
-    msg = msg .. "\nSubtitles: cannot write " .. srt_file
+    msg = msg .. "\n" .. T("plugin.msg_srt_write", { path = srt_file })
   else
     local item, ierr = import_subtitles(media_pool, srt_file, srt_name)
     if item then
-      msg = msg .. "\nSubtitles: " .. srt_name .. " in media pool bin '" .. BIN_NAME .. "'"
+      msg = msg .. "\n" .. T("plugin.msg_srt_ok", { srt = srt_name, bin = BIN_NAME })
     else
-      msg = msg .. "\nSubtitles: " .. tostring(ierr) .. " - import " .. srt_file .. " by hand"
+      msg = msg .. "\n" .. T("plugin.msg_srt_import", { why = tostring(ierr), path = srt_file })
     end
   end
 

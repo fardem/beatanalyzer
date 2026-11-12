@@ -305,6 +305,19 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(self.intro_cue(), ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4'lük"])
         self.assertEqual(self.first_beat_cue()[3], "Confidence %90")
 
+    def test_german_messages(self):
+        self.load_lang("de")
+        msg = self.run_apply()
+        self.assertTrue(msg.startswith("8 Marker auf 1 Clip(s): Song"), msg)
+        self.mock.selected = self.lua.table_from([self.mock.other])
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertIn("Hinweis: Der ausgewählte Clip ist nicht „Müller Song.wav“ aus der JSON.", msg)
+        data = resolve_marker_data(sample_result())
+        del data["format"]
+        ok, msg = self.M.apply(self.write_json(data))
+        self.assertFalse(ok)
+        self.assertTrue(msg.startswith("Unbekanntes Format"), msg)
+
     def test_meter_suffixes(self):
         self.load_lang("tr")
         for text, expected in [("6/8", "6/8'lik"), ("9/16", "9/16'lık"), ("2/2", "2/2'lik"), ("3/4", "3/4'lük"),

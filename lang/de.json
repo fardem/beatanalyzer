@@ -1,5 +1,10 @@
 {
-  "_meta": { "name": "Deutsch", "decimal": ",", "percent": "{v} %", "html_lang": "de" },
+  "_meta": {
+    "name": "Deutsch",
+    "decimal": ",",
+    "percent": "{v} %",
+    "html_lang": "de"
+  },
   "output": {
     "marker_downbeat": "Takt {bar}",
     "marker_note": "{time} s | {bpm} BPM",
@@ -8,8 +13,43 @@
     "bar_beat": "Takt {bar} – Beat {beat}",
     "time_bpm": "{clock} – {bpm} BPM",
     "confidence": "Confidence {value}",
-    "intro": ["BeatAnalyzer", "{file}", "{bpm} BPM – {meter}"],
+    "intro": [
+      "BeatAnalyzer",
+      "{file}",
+      "{bpm} BPM – {meter}"
+    ],
     "meter": "{num}/{den}{suffix}",
-    "meter_suffix": { "2": "", "4": "", "8": "", "16": "" }
+    "meter_suffix": {
+      "2": "",
+      "4": "",
+      "8": "",
+      "16": ""
+    }
+  },
+  "plugin": {
+    "msg_not_json": "Die Datei ist keine Marker-JSON von BeatAnalyzer.",
+    "msg_bad_format": "Unbekanntes Format „{format}“, erwartet „{expected}“. Die Datei in BeatAnalyzer unter Exportieren → DaVinci Resolve exportieren.",
+    "msg_no_markers": "Die JSON enthält keine Marker.",
+    "msg_cannot_read": "Datei nicht lesbar: {path}",
+    "msg_no_project": "Kein Projekt offen.",
+    "msg_no_clip": "Kein Clip gefunden. Den Audio-Clip im Media Pool auswählen oder „{file}“ in den Media Pool importieren.",
+    "msg_markers": "{n} Marker auf {clips} Clip(s): {names}",
+    "msg_skipped": "{n} Marker übersprungen (außerhalb des Clips oder von Resolve abgelehnt).",
+    "msg_other_file": "Hinweis: Der ausgewählte Clip ist nicht „{file}“ aus der JSON.",
+    "msg_srt_ok": "Subtitle: {srt} im Ordner {bin} im Media Pool",
+    "msg_srt_write": "Subtitle: {path} lässt sich nicht schreiben",
+    "msg_srt_import": "Subtitle: {why} – {path} von Hand importieren",
+    "msg_bin_missing": "Ordner {bin} im Media Pool nicht verfügbar",
+    "msg_not_imported": "Resolve hat {path} nicht importiert",
+    "msg_tl_empty": "Timeline: Im Teil des Songs, der in der Timeline liegt, gibt es keine Beats.",
+    "msg_tl_write": "Timeline: {path} lässt sich nicht schreiben",
+    "msg_tl_import": "Timeline: {why}",
+    "msg_tl_add": "Timeline: Subtitle Track lässt sich nicht anlegen.",
+    "msg_tl_activate": "Timeline: Der neue Subtitle Track lässt sich nicht aktivieren.",
+    "msg_tl_none_placed": "Timeline: Resolve hat keine Subtitles platziert.",
+    "msg_tl_ok": "Timeline: {n} Subtitles auf Track ST{track} „{name}“{replaced}",
+    "msg_tl_replaced": " (alter Track ersetzt)",
+    "msg_tl_count": "Timeline: {placed} Subtitles platziert, die SRT hat {count}.",
+    "msg_tl_offset": "Timeline: Erster Subtitle bei Frame {actual}, erwartet {expected} (Unterschied {diff} Frames). Bitte resolve/tools/probe_timeline.lua ausführen und die Ausgabe der Console schicken."
   }
 }
