@@ -73,7 +73,8 @@ class AnalyzerTests(unittest.TestCase):
         self.analyzer = importlib.import_module("analyzer")
         return self.analyzer.analyze_audio_file(self.wav, "click.wav")
 
-    def analyze_with_fake(self, init_raises=None, frames_raise=None, calls=None, no_downbeats=False):
+    def analyze_with_fake(self, init_raises=None, frames_raise=None, calls=None, no_downbeats=False,
+                          extra_downbeat_at=None, smooth=True):
         """Analyse with FakeBeatThis (50 frames/s, 600 frames): beat logit 4.0 at every beat (0.5 s, 1.0 s, ...),
         downbeat logit 2.0 one frame after every fourth beat, -4.0 everywhere else."""
         calls = {} if calls is None else calls
@@ -98,10 +99,15 @@ class AnalyzerTests(unittest.TestCase):
                     beat[int(round(t * 50))] = 4.0
                     if i % 4 == 0:
                         down[int(round(t * 50)) + 1] = 2.0
+                if extra_downbeat_at is not None:          # doubtful extra downbeat reported by the model
+                    down[int(round(extra_downbeat_at * 50))] = 0.5
                 return beat, down
 
             def frames2beats(self, beat_logits, downbeat_logits):
-                return beats, ([] if no_downbeats else beats[::4])
+                downs = [] if no_downbeats else list(beats[::4])
+                if extra_downbeat_at is not None:
+                    downs = sorted(downs + [extra_downbeat_at])
+                return beats, np.array(downs)
 
         class ExplodingFile2Beats(FakeBeatThis):
             def __call__(self, audio_path):
@@ -119,7 +125,7 @@ class AnalyzerTests(unittest.TestCase):
         try:
             self.analyzer = load_analyzer_with_fake_beat_this(fake)
             self.assertTrue(self.analyzer.BEAT_THIS_AVAILABLE)
-            return self.analyzer.analyze_audio_file(self.wav, "click.wav")
+            return self.analyzer.analyze_audio_file(self.wav, "click.wav", smooth=smooth)
         finally:
             if torch_stub_needed:
                 sys.modules.pop("torch", None)
@@ -206,6 +212,26 @@ class AnalyzerTests(unittest.TestCase):
             self.assertEqual(analyzer.engine_status()["gpu"], "RTX Test")
         finally:
             sys.modules.pop("torch", None)
+
+    def test_analysis_smooths_a_doubtful_bar(self):
+        result = self.analyze_with_fake(extra_downbeat_at=1.5)   # extra doubtful downbeat (logit 0.5) at beat 2
+        self.assertTrue(result["barSmoothing"]["applied"])
+        self.assertEqual(result["barSmoothing"]["changedBeats"], 1)
+        self.assertEqual(result["barSmoothing"]["meter"], 4)
+        self.assertTrue(all(b["beatInBar"] == (i % 4) + 1 for i, b in enumerate(result["beats"])))
+        self.assertEqual([b["barIndex"] for b in result["beats"][:9]], [1, 1, 1, 1, 2, 2, 2, 2, 3])
+        self.assertLess(result["timeSignature"]["barShare"], 100)    # share before smoothing
+        self.assertEqual(result["beats"][2]["confidence"], 0.982)    # no downbeat now: beat value
+        self.assertEqual(result["totalBars"], len(result["downbeats"]))
+
+    def test_analysis_without_smoothing_keeps_the_model(self):
+        result = self.analyze_with_fake(extra_downbeat_at=1.5, smooth=False)
+        self.assertFalse(result["barSmoothing"]["applied"])
+        self.assertTrue(result["beats"][2]["isDownbeat"])            # beat at 1.5 s stays a downbeat
+
+    def test_librosa_is_not_smoothed(self):
+        self.assertEqual(self.analyze_without_beat_this()["barSmoothing"],
+                         {"applied": False, "meter": 4, "changedBeats": 0, "reanchors": 0})
 
     # --- engineInfo --------------------------------------------------------------------------------
 

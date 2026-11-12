@@ -79,6 +79,26 @@ class ServerSettingsTests(unittest.TestCase):
             urllib.request.urlopen(req, timeout=10)
         self.assertEqual(ctx.exception.code, 400)
 
+    def post_audio(self, query=""):
+        boundary = "BeatAnalyzerTest"
+        body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"audio\"; filename=\"a.wav\"\r\n"
+                f"Content-Type: audio/wav\r\n\r\n").encode() + b"RIFF0000" + f"\r\n--{boundary}--\r\n".encode()
+        req = urllib.request.Request(self.base + "/api/analyze" + query, data=body, method="POST",
+                                     headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status
+
+    def test_analyze_passes_smooth_bars(self):
+        calls = []
+        original = server.analyze_audio_file
+        server.analyze_audio_file = lambda p, f, smooth=True: calls.append(smooth) or {"ok": True}
+        try:
+            self.post_audio()
+            self.post_audio("?smoothBars=0")
+        finally:
+            server.analyze_audio_file = original
+        self.assertEqual(calls, [True, False])
+
     def test_health_has_engine_info(self):
         status, data = self.request("/api/health")
         self.assertEqual(status, 200)

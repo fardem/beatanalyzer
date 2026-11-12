@@ -200,7 +200,7 @@ def smooth_bars(downbeat_conf: List[float], meter: int, bar_share: Optional[int]
     return {"applied": True, "positions": [int(p) + 1 for p in path], "reanchors": reanchors}
 
 
-def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]:
+def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = True) -> Dict[str, Any]:
     """
     Analysiert eine Audiodatei (MP3, WAV, AAC, FLAC) und liefert strukturierte
     Beats, Downbeats, Tempo, Taktart und BAF/DAF-Aktivierungskurven.
@@ -280,6 +280,19 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
         if closest_idx is not None and abs(beats_sec[closest_idx] - d) < 0.12:
             downbeat_indices.add(closest_idx)
 
+    # Takte glaetten (nur beat_this): gleichmaessiges Raster, Neuansatz nur bei klarer Evidenz des Modells
+    smoothing = {"applied": False, "meter": beats_per_bar, "changedBeats": 0, "reanchors": 0}
+    positions = None
+    if beat_prob is not None and smooth:
+        conf = [beat_confidence(t, True, beat_prob, downbeat_prob) for t in beats_sec]
+        smoothed = smooth_bars(conf, beats_per_bar, bar_share)
+        if smoothed["applied"]:
+            positions = smoothed["positions"]
+            new_down = {i for i, pos in enumerate(positions) if pos == 1}
+            smoothing.update(applied=True, changedBeats=len(new_down ^ downbeat_indices),
+                             reanchors=smoothed["reanchors"])
+            downbeat_indices = new_down
+
     structured_beats = []
     structured_downbeats = []
     current_bar = 1
@@ -298,7 +311,7 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
         item = {
             "id": idx + 1,
             "time": round(b_time, 3),
-            "beatInBar": beat_in_bar,
+            "beatInBar": positions[idx] if positions else beat_in_bar,
             "barIndex": current_bar,
             "isDownbeat": is_down,
             # a downbeat the model did not report (first beat when there are no downbeats) gets the beat value
@@ -348,6 +361,7 @@ def analyze_audio_file(file_path: str, original_filename: str) -> Dict[str, Any]
         "minBpm": min_bpm,
         "maxBpm": max_bpm,
         "tempoStability": tempo_stability,
+        "barSmoothing": smoothing,
         "timeSignature": {
             "numerator": beats_per_bar,
             "denominator": 4,
