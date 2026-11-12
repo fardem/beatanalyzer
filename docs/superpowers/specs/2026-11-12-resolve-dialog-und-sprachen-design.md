@@ -50,6 +50,7 @@ Transparenz darüber, womit analysiert wurde.
 | 19 | Standardsprache „wie das System“, sonst Englisch | Annahme, bestätigt |
 | 20 | Reihenfolge der Teilprojekte wie in Abschnitt 5 | Annahme, bestätigt |
 | 21 | Confidence und Kurven mit echten Werten aus beat_this statt fester Zahlen (Abschnitt 13) | Nutzer |
+| 22 | Detailstufe der Wellenform mit ca. 15 s Ausschnitt (Abschnitt 9) | Nutzer |
 
 ---
 
@@ -406,6 +407,10 @@ die Anzeige baut jede Oberfläche in ihrer Sprache.
 - Export „DaVinci Resolve“: Auswahl „Nur Downbeats“ entfällt; Hinweis, dass die Farben im Resolve-Dialog
   eingestellt werden. Die Option `--only-downbeats` der Kommandozeile bleibt unverändert.
 - Anzeige des Analyse-Programms nach Abschnitt 8.
+- **Detailstufe der Wellenform** (Nachtrag des Nutzers): neben den Lupen ein Symbol „Details“. Ein Klick zeigt
+  einen Ausschnitt von etwa 15 s um die aktuelle Abspielposition; beim Abspielen läuft er wie heute mit. Die
+  Grenze des Zooms (heute 16-fach) richtet sich nach der Songlänge, damit 15 s auch bei langen Songs erreichbar
+  sind. Songs unter 15 s bleiben ganz sichtbar. Zurück zur ganzen Datei wie bisher mit „Ganze Datei anzeigen“.
 
 ---
 
