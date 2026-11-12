@@ -161,26 +161,36 @@ def meter_from_beats(beats_sec: List[float], downbeats_sec: List[float]) -> Tupl
 
 
 REANCHOR_PENALTY = 9.0   # cost (nats) of starting the bar grid anew: about two bars of clear contrary evidence
-MIN_BAR_SHARE = 50       # below this share of regular model bars the song is left as the model sees it
-PROTECT_CONF = 0.85      # a downbeat the model hears this clearly stays a "1"; the grid never overrules it
+PROTECT_CONF = 0.85      # default: a downbeat the model hears this clearly stays a "1"; the grid never overrules it
 
 
-def smooth_bars(downbeat_conf: List[float], meter: int, bar_share: Optional[int]) -> Dict[str, Any]:
+def clamp_protect(value: Any) -> float:
+    """Protection threshold from the user (slider, URL, command line): 0.5 ... 1.0; unreadable -> PROTECT_CONF."""
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return PROTECT_CONF
+    if v != v:   # NaN
+        return PROTECT_CONF
+    return min(1.0, max(0.5, v))
+
+
+def smooth_bars(downbeat_conf: List[float], meter: int, protect: float = PROTECT_CONF) -> Dict[str, Any]:
     """
     Even bar grid from beat_this: the most likely beat of the bar (1..meter) for every beat (Viterbi). Counting on
     (1, 2, ..., meter, 1) is free; starting anew costs REANCHOR_PENALTY, so the grid only moves where the model
-    clearly hears the "1" elsewhere; a beat with downbeat_conf >= PROTECT_CONF is always a "1".
+    clearly hears the "1" elsewhere; a beat with downbeat_conf >= protect is always a "1" (protect 1.0: none).
     downbeat_conf[i] = downbeat probability at beat i.
     """
     off = {"applied": False, "positions": [], "reanchors": 0}
     n = len(downbeat_conf)
-    if bar_share is None or bar_share < MIN_BAR_SHARE or meter < 2 or n < 2 * meter:
+    if meter < 2 or n < 2 * meter:
         return off
     d = np.clip(np.asarray(downbeat_conf, dtype=np.float64), 1e-4, 1 - 1e-4)
     emit = np.empty((n, meter))
     emit[:, 0] = np.log(d)
     emit[:, 1:] = np.log(1 - d)[:, None]
-    emit[d >= PROTECT_CONF, 1:] = -1e9           # clear model downbeats: only beat 1 of the bar is allowed
+    emit[d >= protect, 1:] = -1e9            # clear model downbeats: only beat 1 of the bar is allowed
     nxt = np.roll(np.arange(meter), -1)          # state p (0-based) counts on to nxt[p]
     score = emit[0].copy()                       # every beat of the bar is a possible start (pickup)
     back = np.zeros((n, meter), dtype=np.int64)
@@ -286,9 +296,9 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
     # Takte glaetten (nur beat_this): gleichmaessiges Raster, Neuansatz nur bei klarer Evidenz des Modells
     smoothing = {"applied": False, "meter": beats_per_bar, "changedBeats": 0, "reanchors": 0}
     positions = None
-    if beat_prob is not None and smooth:
+    if beat_prob is not None and smooth and len(downbeat_indices) >= 2:   # fewer: no bar the model heard
         conf = [beat_confidence(t, True, beat_prob, downbeat_prob) for t in beats_sec]
-        smoothed = smooth_bars(conf, beats_per_bar, bar_share)
+        smoothed = smooth_bars(conf, beats_per_bar)
         if smoothed["applied"]:
             positions = smoothed["positions"]
             new_down = {i for i, pos in enumerate(positions) if pos == 1}
