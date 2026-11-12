@@ -24,6 +24,35 @@ local VERSION = "0.0.5"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
+-- >>> BA-CONFIG (written by backend/resolve_plugin.py - do not edit by hand) >>>
+local BA = {
+  home = nil,
+  python = nil,
+  lang = "en",
+  texts = {
+    ["en"] = {
+      ["_meta.decimal"] = ".",
+      ["_meta.html_lang"] = "en",
+      ["_meta.name"] = "English",
+      ["_meta.percent"] = "{v}%",
+      ["output.bar_beat"] = "Bar {bar} – Beat {beat}",
+      ["output.confidence"] = "Confidence {value}",
+      ["output.intro"] = "BeatAnalyzer\n{file}\n{bpm} BPM – {meter}",
+      ["output.kind_beat"] = "Beat {beat}",
+      ["output.kind_downbeat"] = "Downbeat (1)",
+      ["output.marker_downbeat"] = "Bar {bar}",
+      ["output.marker_note"] = "{time} s | {bpm} BPM",
+      ["output.meter"] = "{num}/{den}{suffix}",
+      ["output.meter_suffix.16"] = "",
+      ["output.meter_suffix.2"] = "",
+      ["output.meter_suffix.4"] = "",
+      ["output.meter_suffix.8"] = "",
+      ["output.time_bpm"] = "{clock} – {bpm} BPM",
+    },
+  },
+}
+-- <<< BA-CONFIG <<<
+
 -- ─── Settings ────────────────────────────────────────────────────────────────
 
 local DOWNBEAT_COLOR = "Red"     -- marker colour of beat 1 of each bar

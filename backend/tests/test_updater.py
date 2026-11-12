@@ -174,7 +174,7 @@ class ResolvePluginTests(unittest.TestCase):
         st = resolve_plugin.status(env=self.env, platform="win32")
         self.assertEqual(st["state"], "missing")
         target = resolve_plugin.install(env=self.env, platform="win32")
-        self.assertEqual(target.read_bytes(), resolve_plugin.PLUGIN_SOURCE.read_bytes())
+        self.assertEqual(target.read_text(encoding="utf-8"), resolve_plugin.expected_script("win32"))
         self.assertFalse(target.read_bytes().startswith(b"\xef\xbb\xbf"))
         self.assertEqual(resolve_plugin.status(env=self.env, platform="win32")["state"], "current")
         target.write_text('local VERSION = "0.0.0"\n', encoding="utf-8")
