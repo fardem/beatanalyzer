@@ -50,6 +50,17 @@
     "msg_tl_ok": "Timeline: {n} Subtitles auf Track ST{track} „{name}“{replaced}",
     "msg_tl_replaced": " (alter Track ersetzt)",
     "msg_tl_count": "Timeline: {placed} Subtitles platziert, die SRT hat {count}.",
-    "msg_tl_offset": "Timeline: Erster Subtitle bei Frame {actual}, erwartet {expected} (Unterschied {diff} Frames). Bitte resolve/tools/probe_timeline.lua ausführen und die Ausgabe der Console schicken."
+    "msg_tl_offset": "Timeline: Erster Subtitle bei Frame {actual}, erwartet {expected} (Unterschied {diff} Frames). Bitte resolve/tools/probe_timeline.lua ausführen und die Ausgabe der Console schicken.",
+    "clip_found": "{names} im Media Pool · {length}",
+    "warn_other_file": "Der ausgewählte Clip ist nicht „{file}“ aus der JSON.",
+    "warn_length": "Die Laufzeit des Clips ({clip}) weicht von der analysierten Datei ({json}) ab.",
+    "engine": "Analysiert mit {engine}",
+    "reason_not_installed": "beat_this nicht installiert",
+    "reason_model_load_failed": "Modell von beat_this nicht geladen",
+    "reason_inference_failed": "Analyse mit beat_this gescheitert",
+    "explain_present": "In der Timeline „{timeline}“ liegt der Song auf A{track} ab {tc}. Darunter entsteht der Subtitle Track „{track_name}“ und wird aktiv. Resolve erlaubt nur einen aktiven Subtitle Track; die anderen bleiben, werden aber deaktiviert.",
+    "explain_absent": "Der Song liegt nicht in der Timeline „{timeline}“. Es entsteht nur der Subtitle im Media Pool.",
+    "explain_no_timeline": "Keine Timeline offen. Es entsteht nur der Subtitle im Media Pool.",
+    "explain_off": "Die Timeline bleibt unverändert. Der Subtitle mit allen Beats liegt im Ordner BeatAnalyzer im Media Pool und kann von dort in jede Timeline gezogen werden."
   }
 }

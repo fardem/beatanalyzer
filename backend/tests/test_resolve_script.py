@@ -428,6 +428,85 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(self.sub_tracks(tl), [])
         self.assertNotIn("Timeline:", msg)
 
+    def test_prepare_finds_clip_and_length(self):
+        self.load_lang("de")
+        info = self.M.prepare(self.write_json(resolve_marker_data(sample_result())))
+        self.assertTrue(info.ok, info.error)
+        self.assertEqual(info.clip_text, "Song im Media Pool · 0:20")      # mock: 500 frames at 25 fps
+        self.assertEqual(list(info.warnings.values()), [])
+        self.assertEqual((info.file_name, info.song), ("Müller Song.wav", "Müller Song"))
+        self.assertIsNone(info.engine)
+
+    def test_prepare_warns_about_length(self):
+        self.load_lang("de")
+        data = resolve_marker_data(sample_result())
+        data["duration"] = 19.4                                            # 0.6 s difference
+        info = self.M.prepare(self.write_json(data))
+        self.assertTrue(info.ok)
+        self.assertEqual(list(info.warnings.values()),
+                         ["Die Laufzeit des Clips (0:20) weicht von der analysierten Datei (0:19) ab."])
+        data["duration"] = 19.6                                            # 0.4 s: no warning
+        self.assertEqual(list(self.M.prepare(self.write_json(data)).warnings.values()), [])
+
+    def test_prepare_warns_about_other_file(self):
+        self.load_lang("de")
+        self.mock.selected = self.lua.table_from([self.mock.other])
+        info = self.M.prepare(self.write_json(resolve_marker_data(sample_result())))
+        self.assertTrue(info.ok)
+        self.assertIn("Der ausgewählte Clip ist nicht „Müller Song.wav“ aus der JSON.", list(info.warnings.values()))
+
+    def test_prepare_without_clip_blocks(self):
+        data = resolve_marker_data(sample_result())
+        data["fileName"] = "fehlt.wav"
+        info = self.M.prepare(self.write_json(data))
+        self.assertFalse(info.ok)
+        self.assertIn("fehlt.wav", info.error)
+
+    def test_prepare_bad_json_blocks(self):
+        path = self.tmp / "kaputt.json"
+        path.write_text("{kaputt", encoding="utf-8")
+        info = self.M.prepare(str(path))
+        self.assertFalse(info.ok)
+        self.assertTrue(info.error)
+
+    def test_explanations(self):
+        self.load_lang("de")
+        tl = self.setup_timeline()
+        clips = self.lua.table_from([self.mock.song])
+        ti = self.M.timeline_info(tl, clips)
+        self.assertEqual((ti.state, ti.track, ti.tc), ("present", 1, "01:00:10:00"))
+        self.assertTrue(self.M.explanation(True, ti, "Müller Song").startswith(
+            "In der Timeline „Timeline 1“ liegt der Song auf A1 ab 01:00:10:00. Darunter entsteht der Subtitle Track "
+            "„BeatAnalyzer - Müller Song“"))
+        self.assertTrue(self.M.explanation(False, ti, "Müller Song").startswith("Die Timeline bleibt unverändert."))
+        self.assertEqual(self.M.timeline_info(None, clips).state, "none")
+        self.assertTrue(self.M.explanation(True, self.M.timeline_info(None, clips), "x").startswith("Keine Timeline offen."))
+        self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 0)")
+        absent = self.M.timeline_info(self.lua.globals().MOCK.timeline, clips)
+        self.assertEqual(absent.state, "absent")
+        self.assertTrue(self.M.explanation(True, absent, "x").startswith("Der Song liegt nicht in der Timeline „Timeline 1“."))
+
+    def test_engine_text(self):
+        t = lambda d: self.M.engine_text(self.lua.table_from(d))
+        self.assertEqual(t({"id": "beat_this", "device": "cuda", "gpu": "RTX 3080"}), "beat_this (CUDA, RTX 3080)")
+        self.assertEqual(t({"id": "beat_this", "device": "cpu"}), "beat_this (CPU)")
+        self.load_lang("de")
+        t = lambda d: self.M.engine_text(self.lua.table_from(d))
+        self.assertEqual(t({"id": "librosa", "fallbackReason": "not_installed"}), "librosa – beat_this nicht installiert")
+        self.assertIsNone(self.M.engine_text(None))
+
+    def test_prepare_shows_engine(self):
+        self.load_lang("de")
+        data = resolve_marker_data(sample_result())
+        data["engine"] = {"id": "beat_this", "device": "cpu", "gpu": None, "fallbackReason": None}
+        self.assertEqual(self.M.prepare(self.write_json(data)).engine, "Analysiert mit beat_this (CPU)")
+
+    def test_length_and_timecode(self):
+        self.assertEqual(self.M.fmt_length(222.4), "3:42")
+        self.assertEqual(self.M.fmt_length(59.6), "1:00")
+        self.assertEqual(self.M.timecode(90250, 25), "01:00:10:00")
+        self.assertEqual(self.M.timecode(86413, 23.976), "01:00:00:13")
+
     def test_second_run_replaces_subtitle_clip(self):
         path = self.write_json(resolve_marker_data(sample_result()))
         self.M.apply(path)

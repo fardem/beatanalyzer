@@ -51,6 +51,17 @@
     "msg_tl_ok": "Timeline: ST{track} '{name}' track'inde {n} subtitle{replaced}",
     "msg_tl_replaced": " (eski track değiştirildi)",
     "msg_tl_count": "Timeline: {placed} subtitle yerleştirildi, SRT'de {count} var.",
-    "msg_tl_offset": "Timeline: İlk subtitle {actual}. karede, beklenen {expected} (fark {diff} kare). Lütfen resolve/tools/probe_timeline.lua dosyasını çalıştırıp Console çıktısını gönderin."
+    "msg_tl_offset": "Timeline: İlk subtitle {actual}. karede, beklenen {expected} (fark {diff} kare). Lütfen resolve/tools/probe_timeline.lua dosyasını çalıştırıp Console çıktısını gönderin.",
+    "clip_found": "Media Pool'da {names} · {length}",
+    "warn_other_file": "Seçili clip, JSON'daki '{file}' değil.",
+    "warn_length": "Clip'in süresi ({clip}) analiz edilen dosyadan ({json}) farklı.",
+    "engine": "Analiz: {engine}",
+    "reason_not_installed": "beat_this kurulu değil",
+    "reason_model_load_failed": "beat_this modeli yüklenemedi",
+    "reason_inference_failed": "beat_this ile analiz başarısız oldu",
+    "explain_present": "'{timeline}' Timeline'ında şarkı A{track} üzerinde {tc} itibarıyla duruyor. Altına '{track_name}' Subtitle Track'i oluşturulur ve etkin yapılır. Resolve yalnızca bir etkin Subtitle Track'e izin verir; diğerleri kalır ama devre dışı bırakılır.",
+    "explain_absent": "Şarkı '{timeline}' Timeline'ında değil. Yalnızca Media Pool'daki Subtitle oluşturulur.",
+    "explain_no_timeline": "Açık Timeline yok. Yalnızca Media Pool'daki Subtitle oluşturulur.",
+    "explain_off": "Timeline değişmez. Tüm beat'leri içeren Subtitle, Media Pool'daki BeatAnalyzer klasöründedir ve oradan istenen Timeline'a sürüklenebilir."
   }
 }

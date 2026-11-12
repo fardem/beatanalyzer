@@ -48,6 +48,12 @@ local BA = {
       ["output.meter_suffix.4"] = "",
       ["output.meter_suffix.8"] = "",
       ["output.time_bpm"] = "{clock} – {bpm} BPM",
+      ["plugin.clip_found"] = "{names} in the Media Pool · {length}",
+      ["plugin.engine"] = "Analysed with {engine}",
+      ["plugin.explain_absent"] = "The song is not in the Timeline '{timeline}'. Only the Subtitle in the Media Pool is created.",
+      ["plugin.explain_no_timeline"] = "No Timeline is open. Only the Subtitle in the Media Pool is created.",
+      ["plugin.explain_off"] = "The Timeline stays unchanged. The Subtitle with all beats lies in the folder BeatAnalyzer in the Media Pool and can be dragged from there into any Timeline.",
+      ["plugin.explain_present"] = "In the Timeline '{timeline}' the song lies on A{track} from {tc}. Below it the Subtitle Track '{track_name}' is created and made active. Resolve allows only one active Subtitle Track; the others stay but are switched off.",
       ["plugin.msg_bad_format"] = "Unknown format '{format}', expected '{expected}'. Export the file in BeatAnalyzer under Export -> DaVinci Resolve.",
       ["plugin.msg_bin_missing"] = "media pool bin '{bin}' not available",
       ["plugin.msg_cannot_read"] = "Cannot read the file: {path}",
@@ -72,6 +78,11 @@ local BA = {
       ["plugin.msg_tl_ok"] = "Timeline: {n} subtitles on track ST{track} '{name}'{replaced}",
       ["plugin.msg_tl_replaced"] = " (old track replaced)",
       ["plugin.msg_tl_write"] = "Timeline: cannot write {path}",
+      ["plugin.reason_inference_failed"] = "analysis with beat_this failed",
+      ["plugin.reason_model_load_failed"] = "beat_this model could not be loaded",
+      ["plugin.reason_not_installed"] = "beat_this not installed",
+      ["plugin.warn_length"] = "The clip's duration ({clip}) differs from the analysed file ({json}).",
+      ["plugin.warn_other_file"] = "The selected clip is not '{file}' from the JSON.",
     },
   },
 }
@@ -762,18 +773,18 @@ local function first_use(tl, clips)
   for _, c in ipairs(clips) do
     keys[media_key(c)] = true
   end
-  local best, best_start
+  local best, best_start, best_track
   local n = tonumber(api(tl, "GetTrackCount", "audio")) or 0
   for i = 1, n do
     for _, item in ipairs(api(tl, "GetItemListInTrack", "audio", i) or {}) do
       local mpi = api(item, "GetMediaPoolItem")
       local start = tonumber(api(item, "GetStart"))
       if mpi and start and keys[media_key(mpi)] and (not best_start or start < best_start) then
-        best, best_start = item, start
+        best, best_start, best_track = item, start, i
       end
     end
   end
-  return best
+  return best, best_track
 end
 M.first_use = first_use
 
@@ -886,6 +897,134 @@ end
 M.place_in_timeline = place_in_timeline
 
 -- Apply a marker JSON file. Returns true/false and a message for the user.
+-- ─── Selection ───────────────────────────────────────────────────────────────
+-- What the window shows before OK: the clip, warnings, the analysis program, the timeline.
+
+M.LENGTH_TOLERANCE = 0.5   -- seconds between the length in the JSON and the clip before a warning
+
+-- 222.4 -> "3:42"
+function M.fmt_length(seconds)
+  local total = round(tonumber(seconds) or 0)
+  return string.format("%d:%02d", math.floor(total / 60), total % 60)
+end
+
+-- Frame number -> "01:00:10:00" at a whole frame rate (23.976 counts as 24).
+function M.timecode(frame, fps)
+  local f = round(tonumber(fps) or 25)
+  local n = math.max(0, round(tonumber(frame) or 0))
+  return string.format("%02d:%02d:%02d:%02d", math.floor(n / (3600 * f)), math.floor(n / (60 * f)) % 60,
+                       math.floor(n / f) % 60, n % f)
+end
+
+-- "beat_this (CUDA, RTX 3080)", "beat_this (CPU)", "librosa – <reason>" from the field engine of the JSON.
+function M.engine_text(engine)
+  if type(engine) ~= "table" or not engine.id then
+    return nil
+  end
+  if engine.id == "beat_this" then
+    local parts = { string.upper(tostring(engine.device or "?")) }
+    if type(engine.gpu) == "string" and engine.gpu ~= "" then
+      parts[#parts + 1] = engine.gpu
+    end
+    return "beat_this (" .. table.concat(parts, ", ") .. ")"
+  end
+  local reason = engine.fallbackReason and lookup("plugin.reason_" .. tostring(engine.fallbackReason))
+  return tostring(engine.id) .. (reason and (" – " .. reason) or "")
+end
+
+local function clip_seconds(clip)
+  local fps = exact_fps(parse_fps(api(clip, "GetClipProperty", "FPS")) or 25)
+  local frames = tonumber(api(clip, "GetClipProperty", "Frames"))
+  return frames and frames / fps or nil
+end
+
+-- Everything the window needs to know about a marker JSON before OK. info.ok = OK may be pressed.
+function M.prepare(path)
+  local info = { ok = false, warnings = {} }
+  local text = read_file(path)
+  if not text then
+    info.error = T("plugin.msg_cannot_read", { path = tostring(path) })
+    return info
+  end
+  local okj, data = pcall(json_decode, text)
+  if not okj then
+    info.error = tostring(data)
+    return info
+  end
+  local markers, err = validate(data)
+  if not markers then
+    info.error = err
+    return info
+  end
+  info.data = data
+  info.file_name = tostring(data.fileName or "")
+  info.song = (info.file_name:gsub("%.[^%.]*$", ""))
+  info.engine = M.engine_text(data.engine)
+  info.engine = info.engine and T("plugin.engine", { engine = info.engine }) or nil
+  local pm = api(resolve, "GetProjectManager")
+  local project = pm and api(pm, "GetCurrentProject") or nil
+  if not project then
+    info.error = T("plugin.msg_no_project")
+    return info
+  end
+  local clips, how = target_clips(api(project, "GetMediaPool"), info.file_name)
+  info.clips, info.how = clips, how
+  if #clips == 0 then
+    info.error = T("plugin.msg_no_clip", { file = info.file_name })
+    return info
+  end
+  local names = {}
+  for _, clip in ipairs(clips) do
+    names[#names + 1] = tostring(api(clip, "GetName") or "?")
+  end
+  local seconds = clip_seconds(clips[1])
+  info.clip_text = T("plugin.clip_found", { names = table.concat(names, ", "),
+                                            length = seconds and M.fmt_length(seconds) or "?" })
+  if how == "selection" and info.file_name ~= "" then
+    for _, clip in ipairs(clips) do
+      if tostring(api(clip, "GetClipProperty", "File Name") or "") ~= info.file_name then
+        info.warnings[#info.warnings + 1] = T("plugin.warn_other_file", { file = info.file_name })
+        break
+      end
+    end
+  end
+  local json_seconds = tonumber(data.duration)
+  if seconds and json_seconds and math.abs(seconds - json_seconds) >= M.LENGTH_TOLERANCE then
+    info.warnings[#info.warnings + 1] = T("plugin.warn_length", { clip = M.fmt_length(seconds),
+                                                                   json = M.fmt_length(json_seconds) })
+  end
+  info.ok = true
+  return info
+end
+
+-- Where the song lies in a timeline: state "none" (no timeline), "absent" or "present" with track and timecode.
+function M.timeline_info(tl, clips)
+  if not tl then
+    return { state = "none" }
+  end
+  local name = tostring(api(tl, "GetName") or "?")
+  local item, track = first_use(tl, clips or {})
+  if not item then
+    return { state = "absent", name = name }
+  end
+  local fps = parse_fps(api(tl, "GetSetting", "timelineFrameRate")) or 25
+  return { state = "present", name = name, track = track, tc = M.timecode(api(item, "GetStart"), fps) }
+end
+
+-- The text under the tick box "Subtitle Track in the Timeline".
+function M.explanation(checked, tinfo, song)
+  if not checked then
+    return T("plugin.explain_off")
+  end
+  if tinfo.state == "present" then
+    return T("plugin.explain_present", { timeline = tinfo.name, track = tinfo.track, tc = tinfo.tc,
+                                         track_name = TRACK_PREFIX .. tostring(song or "") })
+  elseif tinfo.state == "absent" then
+    return T("plugin.explain_absent", { timeline = tinfo.name })
+  end
+  return T("plugin.explain_no_timeline")
+end
+
 -- ─── Run in steps ────────────────────────────────────────────────────────────
 -- M.start() reads and checks everything and fixes project, clips and timeline; job:step() then does a small
 -- part (at most CHUNK markers), so the window stays responsive. M.apply() runs all steps at once.
@@ -897,29 +1036,15 @@ Job.__index = Job
 
 function M.start(path, opts)
   opts = opts or {}
-  local text = read_file(path)
-  if not text then
-    return nil, T("plugin.msg_cannot_read", { path = tostring(path) })
+  local info = M.prepare(path)
+  if not info.ok then
+    return nil, info.error
   end
-  local okj, data = pcall(json_decode, text)
-  if not okj then
-    return nil, tostring(data)
-  end
-  local markers, err = validate(data)
-  if not markers then
-    return nil, err
-  end
+  local data, clips, how, file_name = info.data, info.clips, info.how, info.file_name
+  local markers = data.markers
   local pm = api(resolve, "GetProjectManager")
-  local project = pm and api(pm, "GetCurrentProject") or nil
-  if not project then
-    return nil, T("plugin.msg_no_project")
-  end
+  local project = api(pm, "GetCurrentProject")
   local media_pool = api(project, "GetMediaPool")
-  local file_name = tostring(data.fileName or "")
-  local clips, how = target_clips(media_pool, file_name)
-  if #clips == 0 then
-    return nil, T("plugin.msg_no_clip", { file = file_name })
-  end
   log(string.format("%d clip(s) by %s, %d markers in %s", #clips, how, #markers, path))
 
   local job = setmetatable({

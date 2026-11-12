@@ -50,6 +50,17 @@
     "msg_tl_ok": "Timeline: {n} subtitles on track ST{track} '{name}'{replaced}",
     "msg_tl_replaced": " (old track replaced)",
     "msg_tl_count": "Timeline: placed {placed} subtitles, the SRT has {count}.",
-    "msg_tl_offset": "Timeline: first subtitle at frame {actual}, expected {expected} (difference {diff} frames). Please run resolve/tools/probe_timeline.lua and send the console output."
+    "msg_tl_offset": "Timeline: first subtitle at frame {actual}, expected {expected} (difference {diff} frames). Please run resolve/tools/probe_timeline.lua and send the console output.",
+    "clip_found": "{names} in the Media Pool · {length}",
+    "warn_other_file": "The selected clip is not '{file}' from the JSON.",
+    "warn_length": "The clip's duration ({clip}) differs from the analysed file ({json}).",
+    "engine": "Analysed with {engine}",
+    "reason_not_installed": "beat_this not installed",
+    "reason_model_load_failed": "beat_this model could not be loaded",
+    "reason_inference_failed": "analysis with beat_this failed",
+    "explain_present": "In the Timeline '{timeline}' the song lies on A{track} from {tc}. Below it the Subtitle Track '{track_name}' is created and made active. Resolve allows only one active Subtitle Track; the others stay but are switched off.",
+    "explain_absent": "The song is not in the Timeline '{timeline}'. Only the Subtitle in the Media Pool is created.",
+    "explain_no_timeline": "No Timeline is open. Only the Subtitle in the Media Pool is created.",
+    "explain_off": "The Timeline stays unchanged. The Subtitle with all beats lies in the folder BeatAnalyzer in the Media Pool and can be dragged from there into any Timeline."
   }
 }
