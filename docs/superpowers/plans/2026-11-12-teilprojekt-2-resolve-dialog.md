@@ -227,7 +227,7 @@ Neue Texte (`plugin.*`, Englisch / Deutsch; Türkisch nach Glossar):
 |---|---|---|
 | `clip_found` | {names} in the Media Pool · {length} | {names} im Media Pool · {length} |
 | `warn_other_file` | The selected clip is not '{file}' from the JSON. | Der ausgewählte Clip ist nicht „{file}“ aus der JSON. |
-| `warn_length` | JSON {json}, clip {clip} – is this the same version of the song? | JSON {json}, Clip {clip} – ist das dieselbe Fassung? |
+| `warn_length` | The clip's duration ({clip}) differs from the analysed file ({json}). | Die Laufzeit des Clips ({clip}) weicht von der analysierten Datei ({json}) ab. |
 | `engine` | Analysed with {engine} | Analysiert mit {engine} |
 | `reason_not_installed` | beat_this not installed | beat_this nicht installiert |
 | `reason_model_load_failed` | beat_this model could not be loaded | Modell von beat_this nicht geladen |

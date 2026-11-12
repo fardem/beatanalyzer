@@ -227,7 +227,8 @@ Ein Fenster mit drei Zuständen.
 │ ( ) Ausgewählten Clip analysieren   (•) JSON laden            │
 │ JSON:  C:\Musik\Song_resolve_markers.json       [Auswählen …] │
 │ Clip:  Song.mp3 im Media Pool · 3:42                          │
-│        ⚠ JSON 3:42, Clip 3:58 – ist das dieselbe Fassung?     │
+│        ⚠ Die Laufzeit des Clips (3:58) weicht von der         │
+│          analysierten Datei (3:42) ab.                        │
 │                                                               │
 │ [x] Subtitle Track in der Timeline anlegen                    │
 │     In der Timeline „Edit 1“ liegt der Song auf A2 ab         │
