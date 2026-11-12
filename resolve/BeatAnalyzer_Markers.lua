@@ -594,7 +594,31 @@ local function remove_own_markers(clip)
 end
 
 -- Put the markers on one media pool clip. Returns added, skipped, removed.
-local function mark_clip(clip, markers, fallback_fps)
+-- Marker colours of Resolve; "none" = no marker for this beat of the bar.
+M.MARKER_COLORS = { "Blue", "Cyan", "Green", "Yellow", "Red", "Pink", "Purple", "Fuchsia", "Rose", "Lavender",
+                    "Sky", "Mint", "Lemon", "Sand", "Cocoa", "Cream" }
+M.NO_MARKER = "none"
+M.DEFAULT_COLORS = { downbeat = DOWNBEAT_COLOR, beat2 = BEAT_COLOR, beat3 = BEAT_COLOR, beat4 = BEAT_COLOR,
+                     other = BEAT_COLOR }
+local COLOR_OK = {}
+for _, c in ipairs(M.MARKER_COLORS) do
+  COLOR_OK[c] = true
+end
+
+-- Colour of a marker by its beat in the bar: downbeat, beat 2-4, all others; nil = no marker.
+-- An unknown colour falls back to the default of that slot.
+function M.marker_color(m, colors)
+  local slot = m.type == "downbeat" and "downbeat"
+    or ((tonumber(m.beat) or 0) >= 2 and (tonumber(m.beat) or 0) <= 4 and ("beat" .. tonumber(m.beat)))
+    or "other"
+  local color = colors and colors[slot]
+  if color == M.NO_MARKER then
+    return nil
+  end
+  return COLOR_OK[color] and color or M.DEFAULT_COLORS[slot]
+end
+
+local function mark_clip(clip, markers, fallback_fps, colors)
   local fps = exact_fps(parse_fps(api(clip, "GetClipProperty", "FPS")) or fallback_fps)
   local frames = tonumber(api(clip, "GetClipProperty", "Frames"))
   local removed = remove_own_markers(clip)
@@ -602,13 +626,16 @@ local function mark_clip(clip, markers, fallback_fps)
   for _, m in ipairs(markers) do
     local frame = round((tonumber(m.time) or -1) * fps)
     local down = m.type == "downbeat"
-    if frame < 0 or (frames and frame >= frames) then
+    local color = M.marker_color(m, colors)
+    if not color then
+      -- "no marker" chosen for this beat of the bar: neither set nor skipped
+    elseif frame < 0 or (frames and frame >= frames) then
       skipped = skipped + 1
     else
       local name = down and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
         or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
       local note = T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) })
-      if api(clip, "AddMarker", frame, down and DOWNBEAT_COLOR or BEAT_COLOR, name, note, 1, MARKER_TAG) then
+      if api(clip, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
         added = added + 1
       else
         skipped = skipped + 1
@@ -920,7 +947,7 @@ function M.apply(path, opts)
   local total, skipped_total = 0, 0
   local names = {}
   for _, clip in ipairs(clips) do
-    local added, skipped = mark_clip(clip, markers, fallback_fps)
+    local added, skipped = mark_clip(clip, markers, fallback_fps, opts.colors)
     total, skipped_total = total + added, skipped_total + skipped
     names[#names + 1] = tostring(api(clip, "GetName") or "?")
   end

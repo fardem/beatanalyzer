@@ -212,10 +212,11 @@ class ResolveScriptTests(unittest.TestCase):
         block = resolve_plugin.render_config(home, None, code, {c: i18n.texts(c) for c in i18n.LANGUAGES})
         self.load_script(resolve_plugin.apply_config(SCRIPT, block))
 
-    def run_apply(self, json_overrides=None):
+    def run_apply(self, json_overrides=None, colors=None):
         data = resolve_marker_data(sample_result())
         data.update(json_overrides or {})
-        ok, msg = self.M.apply(self.write_json(data))
+        opts = self.lua.table_from({"colors": self.lua.table_from(colors)}) if colors else None
+        ok, msg = self.M.apply(self.write_json(data), opts)
         self.assertTrue(ok, msg)
         return msg
 
@@ -346,6 +347,35 @@ class ResolveScriptTests(unittest.TestCase):
         kept = list(self.tmp.glob("resolve_temp/*/Müller Song.srt"))
         self.assertEqual(len(kept), 1)
         self.assertIn(str(kept[0]), msg)
+
+    def test_colors_per_beat(self):
+        self.run_apply(colors={"downbeat": "Green", "beat2": "Yellow", "beat3": "none", "beat4": "Pink", "other": "Cyan"})
+        marks = self.markers(self.mock.song)
+        self.assertEqual([marks[f]["color"] for f in sorted(marks)], ["Green", "Yellow", "Pink", "Green", "Yellow", "Pink"])
+        self.assertEqual(len(self.srt_cues()), 9)          # subtitles keep all 8 beats (+ intro)
+
+    def test_meters_with_more_than_four_beats(self):
+        m = lambda typ, beat: self.lua.table_from({"type": typ, "beat": beat})
+        tc = self.lua.table_from({"downbeat": "Red", "beat2": "Blue", "beat3": "Green", "beat4": "Yellow", "other": "Sand"})
+        self.assertEqual([self.M.marker_color(m("beat", b), tc) for b in (2, 3, 4, 5, 6, 7)],
+                         ["Blue", "Green", "Yellow", "Sand", "Sand", "Sand"])
+        self.assertEqual(self.M.marker_color(m("downbeat", 1), tc), "Red")
+
+    def test_unknown_color_falls_back_to_default(self):
+        tc = self.lua.table_from({"downbeat": "Purpur", "beat2": "Cyan", "beat3": "Cyan", "beat4": "Cyan", "other": "Cyan"})
+        self.assertEqual(self.M.marker_color(self.lua.table_from({"type": "downbeat", "beat": 1}), tc), "Red")
+        self.assertEqual(self.M.marker_color(self.lua.table_from({"type": "beat", "beat": 2}), None), "Cyan")
+
+    def test_only_downbeats_by_colors(self):
+        msg = self.run_apply(colors={"downbeat": "Red", "beat2": "none", "beat3": "none", "beat4": "none", "other": "none"})
+        self.assertEqual(sorted(self.markers(self.mock.song)), [13, 63])
+        self.assertNotIn("skipped", msg)
+
+    def test_color_list(self):
+        self.assertEqual(list(self.M.MARKER_COLORS.values()),
+                         ["Blue", "Cyan", "Green", "Yellow", "Red", "Pink", "Purple", "Fuchsia", "Rose", "Lavender",
+                          "Sky", "Mint", "Lemon", "Sand", "Cocoa", "Cream"])
+        self.assertEqual(self.M.NO_MARKER, "none")
 
     def test_second_run_replaces_subtitle_clip(self):
         path = self.write_json(resolve_marker_data(sample_result()))
