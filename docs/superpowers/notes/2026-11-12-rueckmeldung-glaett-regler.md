@@ -41,3 +41,22 @@
 - Teilprojekt 3 inkl. Wunsch „Marker auch auf dem Clip in der Timeline“ (Gesamtkonzept §7.3).
 - Teilprojekt 4 (Web-App: Sprachen, Anzeige Analyse-Programm, Export, Server zuerst, Detailstufe Wellenform).
 - Teilprojekt 5 (README).
+
+## Nachtrag (Nutzer, später am Abend)
+
+- **100 % soll nicht der neue Standard werden.**
+- **Frage:** Ist beat_this das Beste, oder gibt es bessere Python-/GitHub-Projekte? Und reicht vielleicht, was man
+  heute bekommt (in der Timeline sieht es „nicht verkehrt“ aus)?
+  - Recherche 2026-11-12: beat_this gilt in der Forschung weiter als Bezugspunkt. Neuere Arbeiten (BeatFM mit
+    Musik-Foundation-Modellen, „Explore This!“ mit Tatum-Raster, Diffusions-Ansatz) melden laut Paper wenige
+    Prozentpunkte besser bei Downbeats; ob es nutzbaren Code gibt, ist ungeprüft. Fehleranalyse „SMC Blind Spot“
+    nennt Oktav- und Taktfehler bei beat_this, madmom und Beat Transformer gleichermaßen.
+  - Nächster Schritt, falls gewünscht: zwei, drei Kandidaten mit Code an denselben Songs vergleichen.
+- **Frage:** Geht das auch für DaVinci Resolve **Free**? Idee: Studio mit Übergabe/Übernahme, Free nur Import.
+  - Recherche: In Free 21.1 laufen Lua-Skripte über Workspace → Scripts, aber laut Community-Messungen liefert
+    `UIManager` dort nil (kein Fenster); Python-Skripte laufen in Free 21.1 gar nicht mehr. Nicht von Blackmagic
+    dokumentiert, am eigenen Build prüfen.
+  - Wege für Free: (a) Lua-Skript ohne Fenster (nimmt den ausgewählten Clip und die neueste JSON aus einem festen
+    Ordner, Meldungen in der Konsole) – ob die Marker-Funktionen der API in Free gehen, ist zu prüfen;
+    (b) ganz ohne Skript: Web-App exportiert Marker als EDL und die Untertitel als SRT, Import in Resolve von Hand
+    (Timeline-Marker aus EDL, SRT-Import).
