@@ -31,9 +31,17 @@ export interface EngineInfo {
   fallbackReason: 'not_installed' | 'model_load_failed' | 'inference_failed' | 'analyzer_failed' | null;
 }
 
+export interface BarSmoothing {
+  applied: boolean;
+  meter: number;
+  changedBeats: number; // beats whose downbeat status changed against the model
+  reanchors: number;
+}
+
 export interface AnalysisResult {
   engine?: string;
   engineInfo?: EngineInfo;
+  barSmoothing?: BarSmoothing;
   activationSource?: 'beat_this' | 'onset'; // beat_this probabilities or librosa/browser onset strength
   metadata: AudioMetadata;
   beats: BeatItem[];

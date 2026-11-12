@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1] – in Arbeit
+
+### Hinzugefügt
+- Takte glätten bei Analysen mit beat_this: beat_this setzt jeden Downbeat einzeln, an unsicheren Stellen (Intro, Break, Build-up) entstanden so Takte mit 2 oder 3 Beats. BeatAnalyzer legt jetzt ein gleichmäßiges Taktraster darüber und setzt es nur dort neu an, wo das Modell über etwa zwei Takte klar eine andere „1“ hört. Die Beats selbst bleiben unverändert, die Confidence bleibt der Wert des Modells – ein vom Raster ergänzter Downbeat zeigt also eine niedrige Confidence. Nicht geglättet wird, wenn weniger als die Hälfte der Takte des Modells regelmäßig ist.
+- Web-App: Häkchen „Takte glätten“ an der Kachel Taktart (standardmäßig an, Umschalten analysiert den Song neu); die Kachel zeigt, wie viele Beats neu eingeteilt wurden. Der Anteil „… % der Takte“ bezieht sich auf das Modell vor dem Glätten.
+- Kommandozeile `--no-smooth-bars`, Server `POST /api/analyze?smoothBars=0`, Ergebnisfeld `barSmoothing`.
+
 ## [0.1.0] – 2026-11-12
 
 ### Hinzugefügt

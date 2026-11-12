@@ -21,6 +21,7 @@ def main():
     parser.add_argument("--only-downbeats", help="Resolve-Marker nur auf Downbeats", action="store_true")
     parser.add_argument("--export-audacity", help="Optionaler Pfad für Audacity Label Track (.txt)", default=None)
     parser.add_argument("--export-csv", help="Optionaler Pfad für CSV-Datei", default=None)
+    parser.add_argument("--no-smooth-bars", help="Takte nicht glätten (wie beat_this sie liefert)", action="store_true")
 
     args = parser.parse_args()
 
@@ -33,7 +34,7 @@ def main():
     print(f" Analysiere: {os.path.basename(audio_path)}")
     print(f"=======================================================")
 
-    result = analyze_audio_file(audio_path, os.path.basename(audio_path))
+    result = analyze_audio_file(audio_path, os.path.basename(audio_path), smooth=not args.no_smooth_bars)
 
     print(f" Engine:           {result['engine']}")
     print(f" Dauer:            {result['metadata']['duration']} Sekunden")

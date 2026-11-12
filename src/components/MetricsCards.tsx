@@ -4,9 +4,12 @@ import { Gauge, Clock, Radio, Music, Zap, Disc3 } from 'lucide-react';
 
 interface MetricsCardsProps {
   result: AnalysisResult;
+  smoothBars: boolean;
+  onToggleSmoothBars: (on: boolean) => void;
 }
 
-export const MetricsCards: React.FC<MetricsCardsProps> = ({ result }) => {
+export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, onToggleSmoothBars }) => {
+  const canSmooth = result.activationSource === 'beat_this';
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -67,8 +70,23 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result }) => {
           </span>
         </div>
         <div className="text-[11px] text-slate-400 mt-1 truncate">
-          {result.timeSignature.name}
+          {result.barSmoothing?.applied
+            ? `${result.barSmoothing.changedBeats} Beats neu eingeteilt`
+            : result.timeSignature.name}
         </div>
+        <label
+          className={`mt-1.5 flex items-center gap-1.5 text-[11px] ${canSmooth ? 'text-slate-300 cursor-pointer' : 'text-slate-600 cursor-not-allowed'}`}
+          title={canSmooth ? 'Gleichmäßiges Taktraster; neu angesetzt nur, wo beat_this klar eine andere „1“ hört' : 'nur mit beat_this'}
+        >
+          <input
+            type="checkbox"
+            className="accent-purple-500"
+            checked={canSmooth && smoothBars}
+            disabled={!canSmooth}
+            onChange={(e) => onToggleSmoothBars(e.target.checked)}
+          />
+          Takte glätten
+        </label>
       </div>
 
       {/* 3. Takte / Bars */}

@@ -10,7 +10,8 @@ import { AnalysisResult, AudioMetadata, BeatItem, ActivationPoint } from '../typ
 export async function analyzeAudioFile(
   file: File | Blob,
   fileName: string = 'audio.mp3',
-  onProgress?: (progress: number, stage: string) => void
+  onProgress?: (progress: number, stage: string) => void,
+  options: { smoothBars?: boolean } = {}
 ): Promise<{ result: AnalysisResult; audioBuffer: AudioBuffer }> {
   onProgress?.(5, 'Lade Audiodatei in Speicher...');
   const arrayBuffer = await file.arrayBuffer();
@@ -45,7 +46,8 @@ export async function analyzeAudioFile(
       formData.append('audio', file, fileName);
 
       onProgress?.(65, 'Führe CPJKU beat_this Transformer Inferenz aus...');
-      const apiResp = await fetch('/api/analyze', { method: 'POST', body: formData });
+      const url = options.smoothBars === false ? '/api/analyze?smoothBars=0' : '/api/analyze';
+      const apiResp = await fetch(url, { method: 'POST', body: formData });
       if (apiResp.ok) {
         const data = await apiResp.json();
         const rawPeaks = data.waveformPeaks;

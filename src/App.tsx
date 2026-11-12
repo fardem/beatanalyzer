@@ -19,6 +19,8 @@ export default function App() {
   const [progress, setProgress] = useState<number>(0);
   const [stageText, setStageText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [smoothBars, setSmoothBars] = useState<boolean>(true);
+  const lastFileRef = useRef<{ file: File | Blob; name: string } | null>(null);
 
   // Playback state
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -60,7 +62,9 @@ export default function App() {
     };
   }, []);
 
-  const handleFileSelected = async (file: File | Blob, name: string) => {
+  const handleFileSelected = async (file: File | Blob, name: string, smooth: boolean = true) => {
+    lastFileRef.current = { file, name };
+    setSmoothBars(smooth);
     try {
       setError(null);
       setIsAnalyzing(true);
@@ -79,7 +83,8 @@ export default function App() {
         (pct, stage) => {
           setProgress(pct);
           setStageText(stage);
-        }
+        },
+        { smoothBars: smooth }
       );
 
       setResult(analysisResult);
@@ -183,7 +188,16 @@ export default function App() {
         ) : (
           <div className="space-y-6 animate-in fade-in duration-300">
             {/* 1. Metrics & Key Stats */}
-            <MetricsCards result={result} />
+            <MetricsCards
+              result={result}
+              smoothBars={smoothBars}
+              onToggleSmoothBars={(on) => {
+                // the same file once more, with or without an even bar grid
+                if (lastFileRef.current) {
+                  handleFileSelected(lastFileRef.current.file, lastFileRef.current.name, on);
+                }
+              }}
+            />
 
             {/* 2. Interactive Waveform & Beat Grid Canvas */}
             <div className="p-4 sm:p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">

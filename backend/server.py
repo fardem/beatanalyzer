@@ -11,7 +11,7 @@ import tempfile
 import mimetypes
 import traceback
 from http.server import HTTPServer, ThreadingHTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 # Füge Verzeichnisse zum Suchpfad hinzu
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -792,7 +792,9 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
                 f_out.write(file_bytes)
 
             try:
-                result = analyze_audio_file(temp_path, filename)
+                query = parse_qs(urlparse(self.path).query)
+                smooth = query.get("smoothBars", ["1"])[0] != "0"
+                result = analyze_audio_file(temp_path, filename, smooth=smooth)
                 body = json.dumps(result).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
