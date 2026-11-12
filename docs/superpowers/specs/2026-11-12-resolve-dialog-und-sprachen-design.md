@@ -49,6 +49,7 @@ Transparenz darüber, womit analysiert wurde.
 | 18 | Alte Marker-JSONs funktionieren weiter; neue Felder sind optional | Annahme, bestätigt |
 | 19 | Standardsprache „wie das System“, sonst Englisch | Annahme, bestätigt |
 | 20 | Reihenfolge der Teilprojekte wie in Abschnitt 5 | Annahme, bestätigt |
+| 21 | Confidence und Kurven mit echten Werten aus beat_this statt fester Zahlen (Abschnitt 13) | Nutzer |
 
 ---
 
@@ -178,10 +179,12 @@ Skript es braucht.
 
 ## 5. Teilprojekte und Reihenfolge
 
-1. **Grundlage:** Sprachdateien, Einstellungsdatei, Konfigurationsblock, Angaben zum Analyse-Programm im Backend.
+1. **Grundlage:** Sprachdateien, Einstellungsdatei, Konfigurationsblock, Angaben zum Analyse-Programm im Backend,
+   echte Confidence und Kurven aus beat_this (Abschnitt 13).
 2. **Resolve-Dialog mit dem JSON-Weg.**
 3. **Analyse direkt aus Resolve.**
-4. **Web-App:** Sprachen, Anzeige des Analyse-Programms, Export ohne „Nur Downbeats“.
+4. **Web-App:** Sprachen, Anzeige des Analyse-Programms, Export ohne „Nur Downbeats“, Beschriftung von Kurven,
+   Confidence und Taktart nach Abschnitt 13.
 5. **README.**
 
 Jedes Teilprojekt bekommt einen eigenen Umsetzungsplan und endet lauffähig.
@@ -445,6 +448,8 @@ die Anzeige baut jede Oberfläche in ihrer Sprache.
 - `resolve_plugin.py`: Konfigurationsblock schreiben, erneut schreiben, Sprachwechsel; englische Texte im
   Repository stimmen mit `lang/en.json` überein.
 - `analyzer.py`: `engineInfo` für beat_this, nicht installiert, Fehler bei der Analyse.
+- `analyzer.py`: Confidence und Kurven aus vorgegebenen Logits (ohne Modell), Downbeat-Fenster ±3 Frames,
+  librosa ohne Confidence, Anteil der Takte für die Taktart.
 
 **Lua** (über `lupa` gegen den nachgebauten Resolve in `test_resolve_script.py`). Die Logik wird von der
 Oberfläche getrennt, damit sie testbar ist:
@@ -477,33 +482,39 @@ verschobener Clip in der Timeline, zweiter Lauf ersetzt Marker und Track, Entfer
 
 ---
 
-## 13. Offene Entscheidungen
+## 13. Echte Werte statt fester Zahlen
 
-Beim Lesen des Codes aufgefallen. Beides gehört nicht zur ursprünglichen Sammlung, betrifft aber die Subtitles
-und den README-Vergleich direkt.
+Beim Lesen des Codes aufgefallen, vom Nutzer entschieden: **echte Werte aus beat_this.**
 
-**13.1 Confidence ist heute kein echter Wert.**
-Das Backend setzt für jeden Downbeat 0,95 und für jeden anderen Beat 0,88 (`backend/analyzer.py:185`), die
-Confidence der Taktart steht fest auf 95. Im Subtitle stünde also immer „Confidence 95 %“ oder „88 %“.
+**Ausgangslage**
 
-- a) Echten Wert aus beat_this übernehmen: die Wahrscheinlichkeit, die das Modell am Beat-Frame ausgibt.
-  Bei librosa steht „–“. Ob beat_this diese Werte über seine Schnittstelle herausgibt, wird in Teilprojekt 1
-  geprüft.
-- b) Confidence aus Subtitles und Beat-Tabelle entfernen.
+- Confidence ist heute fest: 0,95 für jeden Downbeat, 0,88 für jeden anderen Beat
+  (`backend/analyzer.py:185`), 95 für die Taktart.
+- Die „Aktivierungskurven“ der Web-App sind die Onset-Stärke von librosa; die Downbeat-Kurve wird in der Nähe
+  von Downbeats künstlich angehoben (`backend/analyzer.py:94-115`).
 
-Empfehlung: a.
+**Grundlage in beat_this** (Quellcode geprüft, Stand Commit `b95c8ab`): `Audio2Beats.__call__` ruft zuerst
+`Audio2Frames.__call__` auf, das pro Frame (50 Frames pro Sekunde) je einen Logit für Beat und Downbeat
+liefert, und gibt diese dann an den `Postprocessor`. Beides lässt sich am selben Objekt einzeln aufrufen; die
+Analyse braucht dafür keinen zweiten Modelldurchlauf. Der Standard-Postprocessor (`minimal`) behält nur
+Spitzen mit einer Wahrscheinlichkeit über 0,5 (Logit > 0) innerhalb von ±70 ms.
 
-**13.2 Die Aktivierungskurven in der Web-App stammen nicht von beat_this.**
-„Beat-Aktivierung“ ist die Onset-Stärke von librosa, die „Downbeat-Aktivierung“ wird in der Nähe von
-Downbeats künstlich angehoben (`backend/analyzer.py:94-115`). Das README nennt sie Aktivierungskurven von
-beat_this.
+**Umsetzung (Teilprojekt 1)**
 
-- a) Echte Ausgaben von beat_this anzeigen (derselbe Modellaufruf wie 13.1 a). Bei librosa heißt die Kurve
-  „Onset-Stärke“, eine Downbeat-Kurve gibt es dann nicht.
-- b) Kurven umbenennen und README berichtigen.
+| Wert | beat_this | librosa | Browser ohne Server |
+|---|---|---|---|
+| Confidence Beat | Sigmoid des Beat-Logits am Frame des Beats | – | – |
+| Confidence Downbeat | höchster Sigmoid des Downbeat-Logits im Bereich ±3 Frames um den Beat | – | – |
+| Beat-Kurve | Sigmoid der Beat-Logits, auf ca. 1000 Punkte verdichtet | Onset-Stärke, so benannt | wie heute, als Onset-Stärke benannt |
+| Downbeat-Kurve | Sigmoid der Downbeat-Logits, verdichtet | keine | keine |
+| Taktart | Anteil der Takte mit dieser Beat-Anzahl („in 96 % der Takte“) | ebenso | ebenso |
 
-Empfehlung: a. Für den README-Vergleich (Abschnitt 10) ist es glaubwürdiger, wenn die Web-App zeigt, was das
-Modell tatsächlich ausgibt.
+- Weil beat_this nur Beats über 0,5 behält, liegt die Confidence eines erkannten Beats immer zwischen 50 und
+  100 %. Das steht im README und als Hinweis an der Beat-Tabelle.
+- Fehlt ein Wert, ist `confidence` in den JSONs `null`; Subtitles und Tabelle zeigen „–“ (das Lua-Skript
+  kann das schon, Test `test_missing_confidence_shows_dash`).
+- Für die Taktart gibt es keinen Modellwert. Statt der festen 95 zeigt die Web-App den Anteil der Takte, die
+  die angezeigte Beat-Anzahl haben; das ist eine Zählung, keine Wahrscheinlichkeit, und wird so beschriftet.
 
 ---
 
