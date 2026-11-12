@@ -289,6 +289,42 @@ class DialogTests(unittest.TestCase):
             self.close()
         self.run_dialog(scenario)
 
+    def test_json_line_shows_the_file_name_and_the_path_as_tooltip(self):
+        def scenario():
+            self.pick_json()
+            self.assertEqual(self.item("JsonPath").Text, "Müller Song_resolve_markers.json")
+            self.assertEqual(self.item("JsonPath").ToolTip, self.json_path)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_window_has_a_minimum_size_and_a_small_saved_size_grows(self):
+        (self.tmp / "resolve_temp").mkdir()
+        (self.tmp / "resolve_temp" / "plugin.txt").write_text("geometry=50,60,432,470\n", encoding="utf-8")
+
+        def scenario():
+            spec = self.ui.win.spec
+            self.assertEqual(list(spec.MinimumSize.values()), [600, 640])
+            self.assertEqual(list(spec.Geometry.values()), [50, 60, 600, 640])
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_empty_lines_are_hidden(self):
+        def scenario():
+            self.pick_json()
+            self.assertTrue(self.item("Warnings").Hidden)               # no warning for this JSON
+            self.assertFalse(self.item("Engine").Hidden)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_result_does_not_repeat_the_analysis_program(self):
+        def scenario():
+            self.pick_json()
+            self.click("OK")
+            self.tick(10)
+            self.assertNotIn("Analyse-Programm", self.item("Status").Text)
+            self.close()
+        self.run_dialog(scenario)
+
     def test_settings_saved_on_close(self):
         def scenario():
             self.check("Colors", True)

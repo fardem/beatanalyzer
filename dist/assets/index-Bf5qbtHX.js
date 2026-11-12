@@ -1422,6 +1422,7 @@ end
 -- about once a second, in "work" one job step runs per tick.
 
 local TICK_MS = 50
+local WIN_MIN = { 600, 640 }   -- smaller windows wrap every line (seen in Resolve)
 local REFRESH_TICKS = 20
 
 local COLOR_IDS = { downbeat = "ColorDownbeat", beat2 = "ColorBeat2", beat3 = "ColorBeat3", beat4 = "ColorBeat4",
@@ -1454,16 +1455,18 @@ function M.main()
       ui:ComboBox({ ID = COLOR_IDS[slot], Weight = 1 }) })
   end
 
+  local geometry = settings.geometry or { 300, 150, 680, 680 }
+  geometry = { geometry[1], geometry[2], math.max(geometry[3], WIN_MIN[1]), math.max(geometry[4], WIN_MIN[2]) }
   local win = disp:AddWindow({ ID = "BeatAnalyzerWin", WindowTitle = T("plugin.title", { version = VERSION }),
-                               Geometry = settings.geometry or { 300, 150, 680, 640 } },
+                               Geometry = geometry, MinimumSize = WIN_MIN },
     ui:VGroup({ Spacing = 6,
       ui:HGroup({ Weight = 0,
         ui:Label({ ID = "JsonLabel", Text = "JSON:", Weight = 0 }),
-        ui:Label({ ID = "JsonPath", Text = T("plugin.json_none"), WordWrap = true, Weight = 1 }),
+        ui:Label({ ID = "JsonPath", Text = T("plugin.json_none"), WordWrap = true, Weight = 1, MinimumSize = { 0, 36 } }),
         ui:Button({ ID = "Choose", Text = T("plugin.btn_choose"), Weight = 0 }) }),
       ui:Label({ ID = "ClipInfo", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 20 } }),
-      ui:Label({ ID = "Warnings", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 36 } }),
-      ui:Label({ ID = "Engine", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 20 } }),
+      ui:Label({ ID = "Warnings", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 36 }, Hidden = true }),
+      ui:Label({ ID = "Engine", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 20 }, Hidden = true }),
       ui:CheckBox({ ID = "Timeline", Text = T("plugin.check_timeline"), Checked = settings.timeline, Weight = 0 }),
       ui:Label({ ID = "Explain", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 72 } }),
       ui:CheckBox({ ID = "Colors", Text = T("plugin.check_colors"), Checked = settings.colors_open, Weight = 0 }),
@@ -1541,14 +1544,18 @@ function M.main()
     end
     if S.json then
       S.info = M.prepare(S.json)
-      set("JsonPath", "Text", S.json)
+      set("JsonPath", "Text", S.json:match("([^/\\\\]+)$") or S.json)   -- the file name; the path as tooltip
+      set("JsonPath", "ToolTip", S.json)
       set("ClipInfo", "Text", S.info.ok and S.info.clip_text or (S.info.error or ""))
       local warnings = {}
       for _, w in ipairs(S.info.warnings or {}) do
         warnings[#warnings + 1] = "⚠ " .. w
       end
       set("Warnings", "Text", table.concat(warnings, "\\n"))
+      set("Warnings", "Hidden", #warnings == 0)
       set("Engine", "Text", S.info.engine or "")
+      set("Engine", "Hidden", not S.info.engine)
+      pcall(function() win:RecalcLayout() end)
       S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
       set("Explain", "Text", M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song))
     end
@@ -1591,11 +1598,7 @@ function M.main()
 
   local function finish()
     S.state = "result"
-    local text = S.job.msg or ""
-    if S.info and S.info.engine then
-      text = text .. "\\n" .. S.info.engine
-    end
-    set("Status", "Text", text)
+    set("Status", "Text", S.job.msg or "")   -- the analysis program stays visible in its own line above
     set("Close", "Text", T("plugin.btn_ok"))
     set("Close", "Enabled", true)
     set("OK", "Hidden", true)
