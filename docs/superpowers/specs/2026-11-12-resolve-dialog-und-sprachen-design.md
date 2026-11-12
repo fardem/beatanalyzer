@@ -35,7 +35,7 @@ Transparenz darüber, womit analysiert wurde.
 | 4 | Nach OK erklärt das Fenster die Schritte und bleibt gesperrt, bis alles fertig ist | Nutzer |
 | 5 | Ordner **BeatAnalyzer** im Media Pool wird angelegt, falls er fehlt | Nutzer |
 | 6 | Im Media Pool liegt nur die vollständige SRT; die gekürzte Fassung gibt es nur als Subtitle Track | Nutzer |
-| 7 | SRT-Dateien liegen in einem Temp-Ordner und werden nach dem Import gelöscht | Nutzer (Probelauf nötig, Abschnitt 6.1) |
+| 7 | SRT-Dateien liegen in einem Temp-Ordner und werden nach dem Import gelöscht | Nutzer (in Resolve beobachtet, Abschnitt 6.1) |
 | 8 | Längenprüfung JSON gegen Clip (Warnung) | Nutzer (Vorschlag B) |
 | 9 | Erweiterter Bereich: Markerfarbe für Downbeat, Beat 2, Beat 3, Beat 4 und „übrige“, jeweils auch „kein Marker“ | Nutzer (Vorschlag C) |
 | 10 | Knopf „BeatAnalyzer-Marker entfernen“ | Nutzer (Vorschlag D) |
@@ -130,7 +130,6 @@ Die türkischen Texte werden in den Sprachdateien als „zu prüfen“ markiert.
 | `backend/resolve_plugin.py` | geändert | Konfigurationsblock ins Lua-Skript schreiben; bei Sprachwechsel neu schreiben |
 | `backend/server.py` | geändert | `/api/settings`; `/api/health` mit Angaben zum Analyse-Programm |
 | `resolve/BeatAnalyzer_Markers.lua` | geändert | Dialog, Timer-Ablauf, Auftrag, Farben, Entfernen, Merken, Texte |
-| `resolve/tools/probe_srt_cleanup.lua` | neu | Probelauf zu Abschnitt 6.1 |
 | `src/i18n.ts` | neu | `t()`, Sprachwahl, Zahlenformat |
 | `src/components/*` | geändert | Texte über `t()`, Sprachwahl, Anzeige des Analyse-Programms, Export ohne „Nur Downbeats“ |
 | `.gitignore` | geändert | `settings.json`, `resolve_temp/` |
@@ -180,7 +179,7 @@ Skript es braucht.
 ## 5. Teilprojekte und Reihenfolge
 
 1. **Grundlage:** Sprachdateien, Einstellungsdatei, Konfigurationsblock, Angaben zum Analyse-Programm im Backend.
-2. **Resolve-Dialog mit dem JSON-Weg**, vorher der Probelauf (6.1).
+2. **Resolve-Dialog mit dem JSON-Weg.**
 3. **Analyse direkt aus Resolve.**
 4. **Web-App:** Sprachen, Anzeige des Analyse-Programms, Export ohne „Nur Downbeats“.
 5. **README.**
@@ -191,27 +190,27 @@ Jedes Teilprojekt bekommt einen eigenen Umsetzungsplan und endet lauffähig.
 
 ## 6. Resolve-Dialog
 
-### 6.1 Probelauf vor dem Bau
+### 6.1 SRT-Dateien und Media Pool
 
-Zwei Fragen lassen sich nur in Resolve Studio 21.2 klären. `resolve/tools/probe_srt_cleanup.lua` prüft sie und
-schreibt das Ergebnis in die *Console*:
+Vom Nutzer in Resolve beobachtet:
 
-1. Eine SRT wird importiert und per `AppendToTimeline` auf einen neuen Subtitle Track gelegt. Danach wird der
-   Clip im Media Pool gelöscht. **Bleiben die Subtitles in der Timeline stehen?**
-2. Eine SRT wird importiert, danach wird die Datei auf der Platte gelöscht. **Ist der Clip im Media Pool danach
-   offline, und lässt er sich noch in eine Timeline ziehen?**
+1. Wird der Clip im Media Pool gelöscht, nachdem er per `AppendToTimeline` auf einen Subtitle Track gelegt
+   wurde, **bleiben die Subtitles in der Timeline stehen.**
+2. Ein SRT-Clip im Media Pool **bleibt verwendbar, wenn seine Datei gelöscht ist.** Resolve braucht die Datei
+   nach dem Import nicht mehr (anders als bei Bild, Audio und Video).
 
-Das Workbench-README sagt zu 2: „once that file has been deleted … the item is offline. The subtitles on the
-timeline belong to the project.“ Der Nutzer hat anderes beobachtet. Der Probelauf entscheidet.
+Das Workbench-README sagt zu 2 etwas anderes („once that file has been deleted … the item is offline“). Hier
+gilt die Beobachtung des Nutzers.
 
 **Folgen:**
 
-| Ergebnis | Vorgehen |
-|---|---|
-| 1 ja | Der Zwischen-Clip `<Song> (Timeline).srt` wird nach dem Platzieren gelöscht |
-| 1 nein | Der Zwischen-Clip bleibt in einem Unterordner `BeatAnalyzer/Timeline` |
-| 2 Clip bleibt nutzbar | Beide SRT-Dateien kommen in den Auftragsordner und werden danach gelöscht |
-| 2 Clip unbrauchbar | Die vollständige SRT bleibt dauerhaft in `<BeatAnalyzer>\srt\`, nur die gekürzte wird gelöscht |
+- Beide SRT-Dateien (`<Song>.srt` und `<Song> (Timeline).srt`) entstehen in einem Arbeitsordner und werden
+  nach dem Import gelöscht. Arbeitsordner ist der Auftragsordner aus Abschnitt 7.1, beim JSON-Weg ein eigener
+  Ordner nach demselben Muster unter `<BeatAnalyzer>\resolve_temp\`. Ist der BeatAnalyzer-Ordner unbekannt
+  (Skript von Hand kopiert), der Temp-Ordner des Systems.
+- Die SRT entsteht damit nicht mehr neben der JSON wie bisher.
+- Der Zwischen-Clip `<Song> (Timeline).srt` wird nach dem Platzieren aus dem Media Pool gelöscht. Im Ordner
+  **BeatAnalyzer** bleibt nur `<Song>.srt`.
 
 ### 6.2 Zustände des Fensters
 
@@ -355,7 +354,7 @@ BeatAnalyzer-Ordner (Skript von Hand kopiert) wird nichts gemerkt.
    `done.txt` entsteht über eine temporäre Datei und Umbenennen, damit das Skript nie eine halbe Datei liest.
 4. Das Skript fragt einmal pro Sekunde nach, zeigt den Schritt an und macht nach `state=ok` weiter wie beim
    JSON-Weg (Marker, Subtitles, Timeline).
-5. Am Ende löscht das Skript den Auftragsordner, je nach Probelauf (6.1) samt SRT-Dateien. Auftragsordner, die
+5. Am Ende löscht das Skript den Auftragsordner samt SRT-Dateien (6.1). Auftragsordner, die
    älter als ein Tag sind, löscht es beim Start.
 
 Der Python-Prozess beendet sich nach `done.txt` selbst. Ein Server wird nicht gestartet.
@@ -520,7 +519,6 @@ Modell tatsächlich ausgibt.
 - [Müzik Defteri: 9/4'lük, 9/8'lik ve 9/16'lık](https://muzik-defteri.blogspot.com/2019/11/dokuz-zamanl-olculer-94luk-98lik-ve.html)
 - [Erturgut Sanat Merkezi](https://erturgutsanatmerkezi.com/bateride-sarki-nasil-ezberlenir/) („8'er ölçü“)
 - [Schreibregeln TR, Hochschul-Skript](https://web.ogu.edu.tr/Storage/DenizDepe/Uploads/kompozisyon-s%C4%B1n%C4%B1f%C4%B1-ic%CC%A7in-noktalama.pdf) (%25, Dezimalkomma)
-- Workbench-README, Abschnitt Resolve: Verhalten von SRT-Clips nach Löschen der Datei
 
 Ekşi Sözlük, keyfimuzik.net und trakyamuzik.net ließen sich in der Sitzung nicht direkt öffnen; die Angaben
 stammen aus den Zusammenfassungen der Websuche.
