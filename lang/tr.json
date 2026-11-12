@@ -88,6 +88,7 @@
     "btn_ok": "Tamam",
     "btn_cancel": "İptal",
     "msg_no_work_dir": "Subtitle: {path} içinde çalışma klasörü oluşturulamıyor",
-    "msg_tl_vehicle_left": "Timeline: '{clip}' clip'i Media Pool'dan kaldırılamadı – lütfen elle silin."
+    "msg_tl_vehicle_left": "Timeline: '{clip}' clip'i Media Pool'dan kaldırılamadı – lütfen elle silin.",
+    "engine_unknown": "Analiz programı: JSON'da belirtilmemiş (eski JSON veya tarayıcıda analiz edilmiş)"
   }
 }

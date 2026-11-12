@@ -87,6 +87,7 @@
     "btn_ok": "OK",
     "btn_cancel": "Abbrechen",
     "msg_no_work_dir": "Subtitle: Im Ordner {path} lässt sich kein Arbeitsordner anlegen",
-    "msg_tl_vehicle_left": "Timeline: Der Clip „{clip}“ ließ sich nicht aus dem Media Pool entfernen – bitte von Hand löschen."
+    "msg_tl_vehicle_left": "Timeline: Der Clip „{clip}“ ließ sich nicht aus dem Media Pool entfernen – bitte von Hand löschen.",
+    "engine_unknown": "Analyse-Programm: in der JSON nicht angegeben (ältere JSON oder im Browser analysiert)"
   }
 }

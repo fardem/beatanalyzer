@@ -35,6 +35,7 @@ local function clip(name, file, fps, frames)
     if key == "File Name" then return self.file end
     if key == "FPS" then return self.fps end
     if key == "Frames" then return self.frames end
+    if key == "Duration" then return self.duration or "" end
     return ""
   end
   function c:AddMarker(frame, color, name, note, duration, custom)
@@ -101,6 +102,11 @@ local pool = {
   DeleteClips = function(_, list)
     for _, c in ipairs(list) do
       if MOCK.fail_delete and MOCK.fail_delete[c.name] then return false end
+      if MOCK.refuse_in_use and MOCK.timeline then          -- Resolve may refuse clips used in a timeline
+        for _, t in ipairs(MOCK.timeline.subs) do
+          for _, it in ipairs(t.items) do if it.clip == c then return false end end
+        end
+      end
     end
     local gone = {}
     for _, c in ipairs(list) do gone[c] = true end
@@ -170,7 +176,7 @@ pool.AppendToTimeline = function(_, items)
     for h, m, sec, ms in text:gmatch("(%d+):(%d+):(%d+),(%d+) %-%->") do
       local t = h * 3600 + m * 60 + sec + ms / 1000
       local st = base + math.floor(t * tl.fps + 0.5)
-      local it = { GetStart = function() return st end, last = st }
+      local it = { GetStart = function() return st end, last = st, clip = c }
       active.items[#active.items + 1] = it
       out[#out + 1] = it
     end
@@ -445,7 +451,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(info.clip_text, "Song im Media Pool · 0:20")      # mock: 500 frames at 25 fps
         self.assertEqual(list(info.warnings.values()), [])
         self.assertEqual((info.file_name, info.song), ("Müller Song.wav", "Müller Song"))
-        self.assertIsNone(info.engine)
+        self.assertTrue(info.engine.startswith("Analyse-Programm: in der JSON nicht angegeben"))
 
     def test_prepare_warns_about_length(self):
         self.load_lang("de")
@@ -613,6 +619,28 @@ class ResolveScriptTests(unittest.TestCase):
         info = self.M.prepare(self.write_json(data))
         self.assertEqual(list(info.warnings.values()),
                          ["The clip's duration (0:20.0) differs from the analysed file (0:19.5)."])
+
+    def test_clip_length_from_duration_when_frames_are_empty(self):
+        # Resolve 21.2 gives no "Frames" for audio clips; "Duration" is a timecode
+        self.mock.song.frames = ""
+        self.mock.song.duration = "00:00:20:00"
+        info = self.M.prepare(self.write_json(resolve_marker_data(sample_result())))
+        self.assertEqual(info.clip_text, "Song in the Media Pool · 0:20")
+
+    def test_json_without_engine_says_so(self):
+        self.load_lang("de")
+        info = self.M.prepare(self.write_json(resolve_marker_data(sample_result())))
+        self.assertEqual(info.engine, "Analyse-Programm: in der JSON nicht angegeben (ältere JSON oder im Browser analysiert)")
+
+    def test_timeline_clips_do_not_pile_up_when_resolve_refuses_clips_in_use(self):
+        self.setup_timeline()
+        self.mock.refuse_in_use = True
+        self.run_apply()
+        self.run_apply()
+        self.run_apply()
+        names = self.bin_clips()
+        self.assertEqual(names.count("Müller Song.srt"), 1)
+        self.assertLessEqual(names.count("Müller Song (Timeline).srt"), 1)
 
     def test_second_run_replaces_subtitle_clip(self):
         path = self.write_json(resolve_marker_data(sample_result()))

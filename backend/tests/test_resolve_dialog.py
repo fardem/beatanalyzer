@@ -279,6 +279,16 @@ class DialogTests(unittest.TestCase):
         self.run_dialog(scenario)
         self.assertEqual(len(self.markers(self.mock.song)), 8)
 
+    def test_text_labels_reserve_their_height(self):
+        # Resolve does not grow wrapped labels by itself (seen in Resolve: texts overlapped)
+        def scenario():
+            for id, lines in (("ClipInfo", 1), ("Warnings", 2), ("Engine", 1), ("Explain", 4), ("Status", 6)):
+                size = self.item(id).MinimumSize
+                self.assertIsNotNone(size, id)
+                self.assertGreaterEqual(size[2], 16 * lines, id)
+            self.close()
+        self.run_dialog(scenario)
+
     def test_settings_saved_on_close(self):
         def scenario():
             self.check("Colors", True)

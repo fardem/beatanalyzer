@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
-title BeatAnalyzer - Installation & Start mit Logging (Windows)
+title BeatAnalyzer - Installation ^& Start mit Logging (Windows)
 color 0B
 
 set "LOGFILE=%~dp0install_log.txt"
@@ -16,7 +16,7 @@ echo. >> "%LOGFILE%"
 
 echo ======================================================================
 echo          BeatAnalyzer - CPJKU beat_this Lokale Installation
-echo          Beat- & Downbeat-Erkennung in isolierter Python-Umgebung
+echo          Beat- ^& Downbeat-Erkennung in isolierter Python-Umgebung
 echo ======================================================================
 echo  Ein ausfuehrliches Protokoll wird gespeichert in:
 echo  install_log.txt
@@ -155,7 +155,7 @@ if !errorlevel! neq 0 (
     echo   [OK] Audio-Pakete installiert.
 )
 
-echo   - Installiere Deep-Learning Engine (PyTorch & Torchaudio)...
+echo   - Installiere Deep-Learning Engine (PyTorch ^& Torchaudio)...
 !VENV_PIP! install "torch>=2.0.0" "torchaudio>=2.0.0" >> "%LOGFILE%" 2>&1
 if !errorlevel! neq 0 (
     echo   [WARNUNG] PyTorch Standard-Install fehlgeschlagen, versuche CPU-Version...

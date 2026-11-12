@@ -80,6 +80,7 @@ local BA = {
       ["plugin.color_none"] = "no marker",
       ["plugin.color_other"] = "other",
       ["plugin.engine"] = "Analysed with {engine}",
+      ["plugin.engine_unknown"] = "Analysis program: not given in the JSON (older JSON or analysed in the browser)",
       ["plugin.explain_absent"] = "The song is not in the Timeline '{timeline}'. Only the Subtitle in the Media Pool is created.",
       ["plugin.explain_no_timeline"] = "No Timeline is open. Only the Subtitle in the Media Pool is created.",
       ["plugin.explain_off"] = "The Timeline stays unchanged. The Subtitle with all beats lies in the folder BeatAnalyzer in the Media Pool and can be dragged from there into any Timeline.",
@@ -910,6 +911,10 @@ local function place_in_timeline(media_pool, tl, data, clips, dir, base)
   if not write_file(srt_file, text) then
     return T("plugin.msg_tl_write", { path = srt_file }), true
   end
+  -- The old track goes first: Resolve may refuse to delete a clip that a timeline still uses, so the clip of
+  -- the last run can only be replaced once its track is gone.
+  local track_name = TRACK_PREFIX .. base
+  local deleted = delete_tracks(tl, track_name) + delete_tracks(tl, OLD_TRACK_PREFIX .. base)
   local srt_item, ierr = import_subtitles(media_pool, srt_file, srt_name)
   if not srt_item then
     return T("plugin.msg_srt_import", { why = tostring(ierr), path = srt_file }), true
@@ -925,8 +930,6 @@ local function place_in_timeline(media_pool, tl, data, clips, dir, base)
     return msg
   end
 
-  local track_name = TRACK_PREFIX .. base
-  local deleted = delete_tracks(tl, track_name) + delete_tracks(tl, OLD_TRACK_PREFIX .. base)
   local before = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
   api(tl, "AddTrack", "subtitle")
   local target = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
@@ -1074,10 +1077,19 @@ function M.engine_text(engine)
   return tostring(engine.id) .. (reason and (" – " .. reason) or "")
 end
 
-local function clip_seconds(clip)
-  local fps = exact_fps(parse_fps(api(clip, "GetClipProperty", "FPS")) or 25)
+-- Length of a media pool clip in seconds: from "Frames", else from the timecode "Duration" (Resolve 21.2 gives
+-- no "Frames" for audio clips). fallback_fps: frame rate of the project when the clip has none.
+local function clip_seconds(clip, fallback_fps)
+  local fps = exact_fps(parse_fps(api(clip, "GetClipProperty", "FPS")) or fallback_fps or 25)
   local frames = tonumber(api(clip, "GetClipProperty", "Frames"))
-  return frames and frames / fps or nil
+  if frames and frames > 0 then
+    return frames / fps
+  end
+  local h, m, sec, f = tostring(api(clip, "GetClipProperty", "Duration") or ""):match("^(%d+):(%d+):(%d+)[:;](%d+)$")
+  if not h then
+    return nil
+  end
+  return tonumber(h) * 3600 + tonumber(m) * 60 + tonumber(sec) + tonumber(f) / round(fps)
 end
 
 -- Everything the window needs to know about a marker JSON before OK. info.ok = OK may be pressed.
@@ -1102,7 +1114,7 @@ function M.prepare(path)
   info.file_name = tostring(data.fileName or "")
   info.song = (info.file_name:gsub("%.[^%.]*$", ""))
   info.engine = M.engine_text(data.engine)
-  info.engine = info.engine and T("plugin.engine", { engine = info.engine }) or nil
+  info.engine = info.engine and T("plugin.engine", { engine = info.engine }) or T("plugin.engine_unknown")
   local pm = api(resolve, "GetProjectManager")
   local project = pm and api(pm, "GetCurrentProject") or nil
   if not project then
@@ -1119,7 +1131,7 @@ function M.prepare(path)
   for _, clip in ipairs(clips) do
     names[#names + 1] = tostring(api(clip, "GetName") or "?")
   end
-  local seconds = clip_seconds(clips[1])
+  local seconds = clip_seconds(clips[1], parse_fps(api(project, "GetSetting", "timelineFrameRate")))
   info.clip_text = T("plugin.clip_found", { names = table.concat(names, ", "),
                                             length = seconds and M.fmt_length(seconds) or "?" })
   if how == "selection" and info.file_name ~= "" then
@@ -1442,17 +1454,17 @@ function M.main()
   end
 
   local win = disp:AddWindow({ ID = "BeatAnalyzerWin", WindowTitle = T("plugin.title", { version = VERSION }),
-                               Geometry = settings.geometry or { 300, 200, 640, 560 } },
+                               Geometry = settings.geometry or { 300, 150, 680, 640 } },
     ui:VGroup({ Spacing = 6,
       ui:HGroup({ Weight = 0,
         ui:Label({ ID = "JsonLabel", Text = "JSON:", Weight = 0 }),
         ui:Label({ ID = "JsonPath", Text = T("plugin.json_none"), WordWrap = true, Weight = 1 }),
         ui:Button({ ID = "Choose", Text = T("plugin.btn_choose"), Weight = 0 }) }),
-      ui:Label({ ID = "ClipInfo", Text = "", WordWrap = true, Weight = 0 }),
-      ui:Label({ ID = "Warnings", Text = "", WordWrap = true, Weight = 0 }),
-      ui:Label({ ID = "Engine", Text = "", WordWrap = true, Weight = 0 }),
+      ui:Label({ ID = "ClipInfo", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 20 } }),
+      ui:Label({ ID = "Warnings", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 36 } }),
+      ui:Label({ ID = "Engine", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 20 } }),
       ui:CheckBox({ ID = "Timeline", Text = T("plugin.check_timeline"), Checked = settings.timeline, Weight = 0 }),
-      ui:Label({ ID = "Explain", Text = "", WordWrap = true, Weight = 0 }),
+      ui:Label({ ID = "Explain", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 72 } }),
       ui:CheckBox({ ID = "Colors", Text = T("plugin.check_colors"), Checked = settings.colors_open, Weight = 0 }),
       ui:HGroup({ Weight = 0,
         color_row("downbeat", T("plugin.color_downbeat")),
@@ -1461,7 +1473,7 @@ function M.main()
       ui:HGroup({ Weight = 0,
         color_row("beat4", T("plugin.color_beat", { n = 4 })),
         color_row("other", T("plugin.color_other")) }),
-      ui:Label({ ID = "Status", Text = "", WordWrap = true, Weight = 1 }),
+      ui:Label({ ID = "Status", Text = "", WordWrap = true, Weight = 1, MinimumSize = { 0, 120 } }),
       ui:HGroup({ Weight = 0,
         ui:Button({ ID = "Remove", Text = T("plugin.btn_remove"), Weight = 0 }),
         ui:Button({ ID = "RemoveYes", Text = T("plugin.btn_remove_yes"), Weight = 0, Hidden = true }),
