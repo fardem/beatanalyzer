@@ -360,6 +360,21 @@ class DialogTests(unittest.TestCase):
             self.close()
         self.run_dialog(scenario)
 
+    def test_unknown_engine_line_gets_the_lines_it_needs(self):
+        # seen in Resolve: "Analyse-Programm: in der JSON nicht angegeben (...)" wraps to 2 lines, 1 was reserved
+        data = resolve_marker_data(trs.sample_result())
+        data.pop("engine", None)
+        Path(self.json_path).write_text(json.dumps(data), encoding="utf-8")
+
+        def scenario():
+            self.ui["items"]["BeatAnalyzerWin"].Geometry = self.lua.table_from([0, 0, 600, 640])
+            self.pick_json()
+            text = self.item("Engine").Text
+            self.assertGreater(len(text), 80, text)
+            self.assertGreaterEqual(self.item("Engine").MinimumSize[2], 2 * 17, text)
+            self.close()
+        self.run_dialog(scenario)
+
     def test_settings_saved_on_close(self):
         def scenario():
             self.check("Colors", True)

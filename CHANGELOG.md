@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.2] – 2026-11-12
+
+### Behoben
+- Resolve-Dialog: Die Zeile „Analyse-Programm: in der JSON nicht angegeben …“ bekommt jetzt die Höhe, die sie braucht (war auf eine Zeile beschränkt und abgeschnitten).
+
 ## [0.1.1] – 2026-11-12
 
 ### Hinzugefügt
