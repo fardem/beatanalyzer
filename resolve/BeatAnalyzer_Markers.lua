@@ -92,6 +92,7 @@ M.DOWNBEAT_COLOR, M.BEAT_COLOR, M.MARKER_TAG, M.JSON_FORMAT = DOWNBEAT_COLOR, BE
 
 local G_io      = rawget(_G, "io")
 local G_jit     = rawget(_G, "jit")
+local G_os      = rawget(_G, "os")
 local G_package = rawget(_G, "package")
 local IS_WIN = (G_jit ~= nil and G_jit.os == "Windows")
   or (G_package ~= nil and type(G_package.config) == "string" and G_package.config:sub(1, 1) == "\\")
@@ -348,6 +349,15 @@ M.json_decode = json_decode
 -- On Windows, io.open in Resolve's Lua cannot open paths with non-ASCII characters.
 -- _wfopen with the UTF-8 path converted to UTF-16 can.
 local ffi_lib, msvcrt = nil, nil
+
+-- UTF-8 -> UTF-16 for the _w functions of msvcrt (only after wide_open has loaded ffi).
+local function wide(s)
+  local ffi = ffi_lib
+  local n = ffi.C.MultiByteToWideChar(65001, 0, s, -1, nil, 0)
+  local buf = ffi.new("wchar_t[?]", n)
+  ffi.C.MultiByteToWideChar(65001, 0, s, -1, buf, n)
+  return buf
+end
 local function wide_open(path, mode)
   if not IS_WIN then
     return nil
@@ -364,19 +374,13 @@ local function wide_open(path, mode)
       size_t fread(void* buf, size_t size, size_t n, void* f);
       size_t fwrite(const void* buf, size_t size, size_t n, void* f);
       int fclose(void* f);
+      int _wremove(const wchar_t* name);
     ]])
     local okl, lib = pcall(ffi.load, "msvcrt")
     ffi_lib, msvcrt = ffi, okl and lib or nil
   end
   if not ffi_lib or not msvcrt then
     return nil
-  end
-  local ffi = ffi_lib
-  local function wide(s)
-    local n = ffi.C.MultiByteToWideChar(65001, 0, s, -1, nil, 0)
-    local buf = ffi.new("wchar_t[?]", n)
-    ffi.C.MultiByteToWideChar(65001, 0, s, -1, buf, n)
-    return buf
   end
   local f = msvcrt._wfopen(wide(path), wide(mode))
   if f == nil then
@@ -446,6 +450,62 @@ local function write_file(path, text)
   return false
 end
 M.write_file = write_file
+
+local SEP = IS_WIN and "\\" or "/"
+
+-- Delete a file. On Windows a path with non-ASCII characters goes through _wremove (os.remove cannot).
+local function remove_file(path)
+  if IS_WIN and path:find("[\128-\255]") then
+    local ok, done = pcall(function()
+      wide_open(path, "rb")   -- loads ffi and msvcrt; a missing file is fine
+      return msvcrt and msvcrt._wremove(wide(path)) == 0
+    end)
+    return ok and done == true
+  end
+  return G_os ~= nil and G_os.remove(path) == true
+end
+M.remove_file = remove_file
+
+local function remove_dir(path)
+  local bmd = rawget(_G, "bmd")
+  if bmd and type(bmd.removedir) == "function" then
+    local ok, done = pcall(bmd.removedir, path)
+    if ok and done then
+      return true
+    end
+  end
+  return G_os ~= nil and G_os.remove(path) == true   -- POSIX: removes an empty folder
+end
+M.remove_dir = remove_dir
+
+local function make_dir(path)
+  local bmd = rawget(_G, "bmd")
+  if bmd and type(bmd.createdir) == "function" then
+    local ok, done = pcall(bmd.createdir, path)
+    if ok and done then
+      return true
+    end
+  end
+  if not (G_os and type(G_os.execute) == "function") then
+    return false
+  end
+  local cmd = IS_WIN and ('mkdir "' .. path .. '" 2>nul') or ("mkdir -p '" .. path:gsub("'", "'\\''") .. "'")
+  local r = G_os.execute(cmd)
+  return r == 0 or r == true
+end
+
+-- New working folder for the SRT files: <BeatAnalyzer>/resolve_temp/<date-time>-<random>, without a known
+-- BeatAnalyzer folder in the temp folder of the system. nil if it cannot be created.
+function M.work_dir()
+  local base = BA.home and (BA.home .. SEP .. "resolve_temp")
+    or (G_os and (G_os.getenv("TEMP") or G_os.getenv("TMP"))) or "/tmp"
+  local path = base .. SEP .. G_os.date("%Y%m%d-%H%M%S") .. "-" .. string.format("%04d", math.random(0, 9999))
+  if not make_dir(path) then
+    log("Cannot create the working folder", path)
+    return nil
+  end
+  return path
+end
 
 -- ─── Markers ─────────────────────────────────────────────────────────────────
 
@@ -634,14 +694,14 @@ end
 M.build_srt = build_srt
 
 -- "C:\\Downloads\\x.json" + "01. Song.flac" -> "C:\\Downloads\\01. Song.srt"
-local function srt_path(json_path, file_name)
-  local dir = json_path:match("^(.*[/\\])") or ""
+-- "<dir>" + "01. Song.flac" -> "<dir>/01. Song.srt"; without a file name the name of the JSON.
+local function srt_path(dir, file_name, json_path)
   local base = file_name:gsub("%.[^%.]*$", "")
   if base == "" then
     base = (json_path:match("([^/\\]+)$") or "BeatAnalyzer"):gsub("%.[^%.]*$", "")
   end
   base = base:gsub('[<>:"/\\|%?%*]', "_")
-  return dir .. base .. ".srt", base .. ".srt"
+  return dir .. SEP .. base .. ".srt", base .. ".srt"
 end
 M.srt_path = srt_path
 
@@ -750,7 +810,7 @@ end
 
 -- Subtitles under the first use of the song in the open timeline, on the track "BeatAnalyzer - <song>".
 -- Returns a line for the result message, or nil when the song is not in the timeline.
-local function place_in_timeline(media_pool, tl, data, clips, json_path, base)
+local function place_in_timeline(media_pool, tl, data, clips, dir, base)
   local item = first_use(tl, clips)
   if not item then
     log("Timeline: the song is not on an audio track of '" .. tostring(api(tl, "GetName") or "?") .. "'")
@@ -770,14 +830,19 @@ local function place_in_timeline(media_pool, tl, data, clips, json_path, base)
   if count == 0 then
     return T("plugin.msg_tl_empty")
   end
-  local dir = json_path:match("^(.*[/\\])") or ""
   local srt_name = base .. " (Timeline).srt"
-  if not write_file(dir .. srt_name, text) then
-    return T("plugin.msg_tl_write", { path = dir .. srt_name })
+  local srt_file = dir .. SEP .. srt_name
+  if not write_file(srt_file, text) then
+    return T("plugin.msg_tl_write", { path = srt_file }), true
   end
-  local srt_item, ierr = import_subtitles(media_pool, dir .. srt_name, srt_name)
+  local srt_item, ierr = import_subtitles(media_pool, srt_file, srt_name)
   if not srt_item then
-    return T("plugin.msg_tl_import", { why = tostring(ierr) })
+    return T("plugin.msg_srt_import", { why = tostring(ierr), path = srt_file }), true
+  end
+  -- The subtitles on the track belong to the project: the clip and the file are only the way there.
+  local function drop_vehicle()
+    api(media_pool, "DeleteClips", { srt_item })
+    remove_file(srt_file)
   end
 
   local track_name = TRACK_PREFIX .. base
@@ -794,6 +859,7 @@ local function place_in_timeline(media_pool, tl, data, clips, json_path, base)
   end
   api(media_pool, "AppendToTimeline", { srt_item })
   local placed = subtitle_count(tl, target)
+  drop_vehicle()
   if placed == 0 then
     api(tl, "DeleteTrack", "subtitle", target)
     return T("plugin.msg_tl_none_placed")
@@ -822,7 +888,8 @@ end
 M.place_in_timeline = place_in_timeline
 
 -- Apply a marker JSON file. Returns true/false and a message for the user.
-function M.apply(path)
+function M.apply(path, opts)
+  opts = opts or {}
   local text = read_file(path)
   if not text then
     return false, T("plugin.msg_cannot_read", { path = tostring(path) })
@@ -871,24 +938,34 @@ function M.apply(path)
     end
   end
 
-  local srt_file, srt_name = srt_path(path, file_name)
-  if not write_file(srt_file, build_srt(data)) then
+  -- Subtitles: written into a working folder, imported, then file and folder are deleted. A file whose import
+  -- failed stays, so it can be imported by hand.
+  local dir = opts.work_dir or M.work_dir()
+  local keep = false
+  local srt_file, srt_name = srt_path(dir or "", file_name, path)
+  if not dir or not write_file(srt_file, build_srt(data)) then
     msg = msg .. "\n" .. T("plugin.msg_srt_write", { path = srt_file })
   else
     local item, ierr = import_subtitles(media_pool, srt_file, srt_name)
     if item then
       msg = msg .. "\n" .. T("plugin.msg_srt_ok", { srt = srt_name, bin = BIN_NAME })
+      remove_file(srt_file)
     else
       msg = msg .. "\n" .. T("plugin.msg_srt_import", { why = tostring(ierr), path = srt_file })
+      keep = true
     end
   end
 
   local tl = api(project, "GetCurrentTimeline")
-  if tl then
-    local line = place_in_timeline(media_pool, tl, data, clips, path, (srt_name:gsub("%.srt$", "")))
+  if tl and dir then
+    local line, kept = place_in_timeline(media_pool, tl, data, clips, dir, (srt_name:gsub("%.srt$", "")))
     if line then
       msg = msg .. "\n" .. line
     end
+    keep = keep or kept == true
+  end
+  if dir and not keep then
+    remove_dir(dir)
   end
   return total > 0, msg
 end

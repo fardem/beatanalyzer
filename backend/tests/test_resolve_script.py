@@ -57,7 +57,7 @@ local function folder(name, clips)
   function f:GetSubFolderList() local out = {} for i, s in ipairs(self.subs) do out[i] = s end return out end
   return f
 end
-MOCK = { clip = clip, selected = {}, imported = {} }
+MOCK = { clip = clip, selected = {}, imported = {}, texts = {} }
 local song = clip("Song", "Müller Song.wav", "25", "500")
 local other = clip("Other", "other.wav", "25", "500")
 MOCK.song, MOCK.other = song, other
@@ -80,8 +80,11 @@ local pool = {
     local out = {}
     for _, p in ipairs(paths) do
       local name = p:match("([^/\\]+)$")
+      if MOCK.fail_import then return {} end
       local c = clip(name, name, "25", "500")
       c.path = p
+      c.text = PY_READ(p)        -- Resolve keeps the subtitles; the file may be deleted afterwards
+      MOCK.texts[name] = c.text
       current.clips[#current.clips + 1] = c
       MOCK.imported[#MOCK.imported + 1] = p
       out[#out + 1] = c
@@ -151,7 +154,7 @@ pool.AppendToTimeline = function(_, items)
   if not active then return {} end
   local out = {}
   for _, c in ipairs(items) do
-    local text = PY_READ(c.path)  -- Resolve reads the file itself; Lua io.open fails on non-ASCII paths on Windows
+    local text = c.text           -- read at import; Lua io.open fails on non-ASCII paths on Windows
     local base = tl.start
     for _, it in ipairs(active.items) do base = math.max(base, it.last) end
     for h, m, sec, ms in text:gmatch("(%d+):(%d+):(%d+),(%d+) %-%->") do
@@ -190,8 +193,8 @@ def sample_result(n_beats=8, interval=0.5):
 @unittest.skipIf(luajit21 is None, "lupa not installed")
 class ResolveScriptTests(unittest.TestCase):
     def setUp(self):
-        self.load_script(SCRIPT)
         self.tmp = Path(tempfile.mkdtemp())
+        self.load_lang("en")
 
     def load_script(self, script):
         self.lua = luajit21.LuaRuntime(unpack_returned_tuples=True)
@@ -202,9 +205,11 @@ class ResolveScriptTests(unittest.TestCase):
         self.M = self.lua.execute(script)
         self.mock = self.lua.globals().MOCK
 
-    def load_lang(self, code):
-        """The script as the installer writes it for this language (texts of all languages)."""
-        block = resolve_plugin.render_config(None, None, code, {c: i18n.texts(c) for c in i18n.LANGUAGES})
+    def load_lang(self, code, home="tmp"):
+        """The script as the installer writes it for this language (texts of all languages); BeatAnalyzer
+        folder = the temporary folder of the test unless home is given."""
+        home = self.tmp if home == "tmp" else home
+        block = resolve_plugin.render_config(home, None, code, {c: i18n.texts(c) for c in i18n.LANGUAGES})
         self.load_script(resolve_plugin.apply_config(SCRIPT, block))
 
     def run_apply(self, json_overrides=None):
@@ -214,8 +219,16 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertTrue(ok, msg)
         return msg
 
+    def srt_text(self, name="Müller Song.srt"):
+        """Text of the SRT as Resolve imported it (the file itself is deleted after the import)."""
+        return self.mock.texts[name]
+
     def srt_cues(self):
-        return (self.tmp / "Müller Song.srt").read_text(encoding="utf-8").strip().split("\n\n")
+        return self.srt_text().strip().split("\n\n")
+
+    def work_dirs(self):
+        d = self.tmp / "resolve_temp"
+        return [x for x in d.iterdir() if x.is_dir()] if d.exists() else []
 
     def intro_cue(self):
         return self.srt_cues()[0].split("\n")[2:]
@@ -272,7 +285,7 @@ class ResolveScriptTests(unittest.TestCase):
     def test_subtitles_are_written_and_imported_with_song_name(self):
         ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result(n_beats=5))))
         self.assertTrue(ok, msg)
-        srt = (self.tmp / "Müller Song.srt").read_text(encoding="utf-8")
+        srt = self.srt_text()
         cues = srt.strip().split("\n\n")
         self.assertEqual(len(cues), 6)  # intro 0 s -> first beat, then one per beat
         self.assertEqual(cues[0].split("\n")[:2], ["1", "00:00:00,000 --> 00:00:00,500"])
@@ -282,6 +295,8 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(cues[5].split("\n")[1], "00:00:02,500 --> 00:00:03,000")  # last: + previous interval
         self.assertEqual(self.bin_clips(), ["Müller Song.srt"])
         self.assertIn("Subtitles: Müller Song.srt in media pool bin 'BeatAnalyzer'", msg)
+        self.assertFalse((self.tmp / "Müller Song.srt").exists())      # no longer next to the JSON
+        self.assertEqual(self.work_dirs(), [])                          # working folder removed
         self.assertTrue(self.lua.eval("MOCK.pool:GetCurrentFolder() == MOCK.root"))
 
     def test_english_intro(self):
@@ -324,6 +339,14 @@ class ResolveScriptTests(unittest.TestCase):
                                ("5/32", "5/32"), ("abc", "abc")]:
             self.assertEqual(self.M.fmt_meter(text), expected)
 
+    def test_failed_import_keeps_the_file(self):
+        self.mock.fail_import = True
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertIn("by hand", msg)
+        kept = list(self.tmp.glob("resolve_temp/*/Müller Song.srt"))
+        self.assertEqual(len(kept), 1)
+        self.assertIn(str(kept[0]), msg)
+
     def test_second_run_replaces_subtitle_clip(self):
         path = self.write_json(resolve_marker_data(sample_result()))
         self.M.apply(path)
@@ -335,7 +358,7 @@ class ResolveScriptTests(unittest.TestCase):
         data = resolve_marker_data(sample_result(n_beats=1))
         del data["markers"][0]["confidence"]
         self.M.apply(self.write_json(data))
-        srt = (self.tmp / "Müller Song.srt").read_text(encoding="utf-8")
+        srt = self.srt_text()
         self.assertIn("00:00.500 – 120.0 BPM\nConfidence –\n", srt)
 
     # Timeline at 25 fps starting at 01:00:00:00 (frame 90000). The song lies at 10 s, 1 s trimmed at the
@@ -367,11 +390,12 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(starts, [90250, 90263, 90275, 90288, 90300, 90313])  # .5 frames rounded up
         self.assertIn("Timeline: 6 subtitles on track ST1 'BeatAnalyzer - Müller Song'", msg)
         self.assertNotIn("difference", msg)
-        srt = (self.tmp / "Müller Song (Timeline).srt").read_text(encoding="utf-8")
+        srt = self.srt_text("Müller Song (Timeline).srt")
         self.assertTrue(srt.startswith("1\n00:00:10,000 --> 00:00:10,500\nBeat 2\nBar 1 – Beat 2"), srt[:80])
         self.assertIn("00:00:12,500 --> 00:00:13,000", srt)  # last subtitle ends at the clip end
         self.assertIn("00:01.000 – 120.0 BPM", srt)          # line 3 keeps the song time
-        self.assertEqual(sorted(self.bin_clips()), ["Müller Song (Timeline).srt", "Müller Song.srt"])
+        self.assertEqual(sorted(self.bin_clips()), ["Müller Song.srt"])   # the timeline SRT is only on the track
+        self.assertEqual(self.work_dirs(), [])
 
     def test_timeline_second_run_replaces_track_and_keeps_other_tracks(self):
         tl = self.setup_timeline()
