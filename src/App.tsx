@@ -211,18 +211,11 @@ export default function App() {
               protect={protect}
               busyText={isAnalyzing ? `${stageText} (${Math.round(progress)} %)` : null}
               error={error}
-              onToggleSmoothBars={(on) => {
-                // the same file once more, with or without an even bar grid; one analysis at a time
+              onChangeSmoothing={(smooth, value) => {
+                // the same file once more with other smoothing; one analysis at a time
                 if (lastFileRef.current && !isAnalyzing) {
                   handleFileSelected(lastFileRef.current.file, lastFileRef.current.name, {
-                    smooth: on, protect, reanalysis: true,
-                  });
-                }
-              }}
-              onChangeProtect={(value) => {
-                if (lastFileRef.current && !isAnalyzing) {
-                  handleFileSelected(lastFileRef.current.file, lastFileRef.current.name, {
-                    smooth: smoothBars, protect: value, reanalysis: true,
+                    smooth, protect: value, reanalysis: true,
                   });
                 }
               }}

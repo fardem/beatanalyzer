@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.4] – 2026-11-13
+
+### Geändert
+- Web-App, Kachel Taktart: Häkchen „Takte glätten“ und Regler „Schutz klarer 1“ sind zu einem Regler **„Glätten“ 0–100 %** zusammengelegt (Standard 70 %). 0 % = aus, die Takte bleiben wie von beat_this; nach rechts darf das gleichmäßige Raster immer mehr „1“en verschieben; 100 % = das Raster entscheidet allein. Intern entspricht 1–100 % dem bisherigen Schutz 50–100 % (70 % = bisher 85 %). Der Regler nutzt die ganze Breite der Kachel, Beschriftung und Wert stehen darüber; ein Tooltip erklärt 0 %, „weiter rechts“ und 100 %.
+- Die Kachel zeigt „n Beats neu eingeteilt“ und „k Neuansätze“ in zwei Zeilen.
+
+### Behoben
+- Web-App: „n Beats neu eingeteilt · k Neuansätze“ wurde abgeschnitten, der Wert „100 %“ brach in zwei Zeilen um.
+- Build: Tailwind las den alten Inhalt von `dist/` mit, dadurch änderte sich `dist/` bei jedem zweiten Build (die CI-Prüfung „dist/ is up to date“ hing davon ab). `dist/` ist jetzt ausgeschlossen.
+
 ## [0.1.3] – 2026-11-12
 
 ### Hinzugefügt

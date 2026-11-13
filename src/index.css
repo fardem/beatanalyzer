@@ -1,1 +1,2 @@
 @import "tailwindcss";
+@source not "../dist";   /* the built bundle must not feed the next build (dist/ is committed) */

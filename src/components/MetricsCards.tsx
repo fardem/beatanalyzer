@@ -11,22 +11,34 @@ interface MetricsCardsProps {
   busyText: string | null;
   /** error of the last analysis, shown under the box */
   error: string | null;
-  onToggleSmoothBars: (on: boolean) => void;
-  onChangeProtect: (value: number) => void;
+  /** new smoothing from the "Glätten" slider: off, or on with the protection of clear "1"s (0.5 ... 1) */
+  onChangeSmoothing: (smooth: boolean, protect: number) => void;
 }
+
+const SMOOTH_HELP = [
+  'Glätten – wie gleichmäßig das Taktraster wird',
+  '0 %: aus. Die Takte bleiben, wie beat_this sie hört – auch Takte mit nur 1 bis 3 Beats an unsicheren Stellen.',
+  'Weiter rechts: Das gleichmäßige Raster darf immer mehr „1“en von beat_this verschieben – zuerst nur unsichere, je weiter rechts, desto sicherere.',
+  '100 %: Das Raster entscheidet allein. Neu angesetzt wird nur, wo beat_this die „1“ über mehrere Takte an anderer Stelle hört (z. B. nach einem Edit).',
+  'Standard: 70 %. Die Beats selbst bleiben immer unverändert. Neu gerechnet wird, sobald der Regler kurz ruht.',
+].join('\n');
+
+// slider 1 ... 100 % <-> protection of clear "1"s 0.5 ... 1.0 (a "1" beat_this hears at least this sure stays)
+const toSlider = (protect: number) => Math.round((protect - 0.5) * 200);
+const toProtect = (slider: number) => Math.round((0.5 + slider / 200) * 1000) / 1000;
 
 const COMMIT_MS = 300; // the slider rests this long before the bars are computed again
 
-export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, protect, busyText, error, onToggleSmoothBars, onChangeProtect }) => {
+export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, protect, busyText, error, onChangeSmoothing }) => {
   const canSmooth = result.activationSource === 'beat_this';
   const busy = busyText !== null;
   // slider value while moving; computed again once it rests (mouse released, no key for COMMIT_MS)
-  const applied = Math.round(protect * 100);
+  const applied = smoothBars ? Math.max(1, toSlider(protect)) : 0;
   const [slider, setSlider] = useState<number>(applied);
   const [dragging, setDragging] = useState<boolean>(false);
   const sliderRef = useRef<HTMLInputElement>(null);
   const refocus = useRef<boolean>(false);
-  const sliderOff = !canSmooth || busy || !smoothBars;
+  const sliderOff = !canSmooth || busy;
   useEffect(() => setSlider(applied), [applied, result]);
   useEffect(() => {
     if (error) setSlider(applied); // a failed recomputation: show the value the beats were computed with
@@ -45,7 +57,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
     if (dragging || sliderOff || slider === applied) return;
     const t = setTimeout(() => {
       refocus.current = document.activeElement === sliderRef.current;
-      onChangeProtect(slider / 100);
+      onChangeSmoothing(slider > 0, slider > 0 ? toProtect(slider) : protect);
     }, COMMIT_MS);
     return () => clearTimeout(t);
   }, [slider, dragging, sliderOff, applied]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -115,45 +127,39 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             {result.timeSignature.barShare === null ? '–' : `${result.timeSignature.barShare} % der Takte`}
           </span>
         </div>
-        <div className="text-[11px] text-slate-400 mt-1 truncate">
+        <div className="text-[11px] text-slate-400 mt-1 leading-snug">
           {!canSmooth
             ? result.timeSignature.name
             : result.barSmoothing?.applied
-            ? `${result.barSmoothing.changedBeats} Beats neu eingeteilt · ${result.barSmoothing.reanchors} Neuansätze`
+            ? (
+              <>
+                <span className="block">{result.barSmoothing.changedBeats} Beats neu eingeteilt</span>
+                <span className="block">{result.barSmoothing.reanchors} Neuansätze</span>
+              </>
+            )
             : 'nicht geglättet'}
         </div>
         <label
-          className={`mt-1.5 flex items-center gap-1.5 text-[11px] ${canSmooth && !busy ? 'text-slate-300 cursor-pointer' : 'text-slate-600 cursor-not-allowed'}`}
-          title={canSmooth ? 'Gleichmäßiges Taktraster; neu angesetzt nur, wo beat_this klar eine andere „1“ hört' : 'nur mit beat_this'}
+          className={`mt-2 block text-[11px] ${sliderOff ? 'text-slate-600' : 'text-slate-300'}`}
+          title={canSmooth ? SMOOTH_HELP : 'Glätten geht nur mit beat_this'}
         >
-          <input
-            type="checkbox"
-            className="accent-purple-500"
-            checked={canSmooth && smoothBars}
-            disabled={!canSmooth || busy}
-            onChange={(e) => onToggleSmoothBars(e.target.checked)}
-          />
-          Takte glätten
-        </label>
-        <label
-          className={`mt-1 flex items-center gap-1.5 text-[11px] ${sliderOff ? 'text-slate-600' : 'text-slate-300'}`}
-          title="Eine „1“, die beat_this mindestens so sicher hört, bleibt eine „1“. 100 % = kein Schutz, das Raster entscheidet allein."
-        >
-          <span className="shrink-0">Schutz klarer 1</span>
+          <span className="flex items-baseline justify-between gap-2">
+            <span>Glätten</span>
+            <span className="whitespace-nowrap tabular-nums">{slider === 0 ? 'aus' : `${slider} %`}</span>
+          </span>
           <input
             type="range"
-            min={50}
+            min={0}
             max={100}
             step={1}
             value={slider}
             disabled={sliderOff}
-            aria-label="Schutz klarer 1"
-            className="w-full min-w-0 accent-purple-500"
+            aria-label="Glätten"
+            className="mt-1 block w-full min-w-0 accent-purple-500"
             ref={sliderRef}
             onChange={(e) => setSlider(Number(e.target.value))}
             onPointerDown={() => setDragging(true)}
           />
-          <span className="w-8 text-right tabular-nums">{slider} %</span>
         </label>
         {busy && <div className="text-[10px] text-purple-300 mt-1 truncate" title={busyText}>{busyText}</div>}
         {!busy && error && (
