@@ -18,6 +18,7 @@
 - Auftragsordner `<BeatAnalyzer>\resolve_temp\<Datum-Zeit>-<Zufall>\`; `job.txt` UTF-8 mit `format=beatanalyzer-resolve-job/1`, `audio=`, `lang=`, `smooth=0|1`, `protect=`; `done.txt` über temporäre Datei + Umbenennen; `cancel.txt` zum Abbrechen; Zeitgrenzen 60 s ohne `progress.txt`, 10 min ohne `done.txt`; Auftragsordner älter als ein Tag beim Start löschen (Spec 7.1/7.2).
 - Abbrechen nur während der Analyse; bis dahin ist im Projekt nichts verändert (Spec 6.2).
 - Alle neuen Texte in `lang/en.json`, `lang/de.json`, `lang/tr.json`; Resolve-Begriffe und Beat/Downbeat/Confidence englisch; Vorlage im Repo englisch (`python backend/resolve_plugin.py template`, Test prüft).
+- **Standard überall 90 %** (Nutzer 2026-11-13): Web-App-Regler, Resolve-Fenster, und dazu passend Schutz 0,95 als Vorgabe in `analyzer.PROTECT_CONF`, `clamp_protect` (nicht lesbarer Wert), Server und CLI `--protect`.
 - Web-App: Kachel Taktart ändert ihre Höhe beim Verstellen nicht (Infobereich immer 2 Zeilen hoch, Fortschritts-/Fehlerzeile ändert die Höhe nicht).
 - Version 0.1.5, Changelog, Release Notes `docs/releases/0.1.5.md` (ab 0.1.4), Test-Liste `docs/resolve-test-tp3.md`, `dist/` neu bauen.
 
@@ -74,11 +75,11 @@
 - [ ] **Step 1: Tests** (UI-Mock): Weg-Häkchen schließen sich aus; Weg „analysieren“ zeigt Clip-Zeile aus der Auswahl, OK gesperrt ohne gültigen Clip; Regler Standard 90, wird gespeichert; OK startet Auftrag (`job.txt` mit `protect=0.95`), Schritt 1 zeigt Fortschritt aus `progress.txt`; `done.txt` ok → Marker wie beim JSON-Weg auf genau dem festgehaltenen Clip; Abbrechen → `cancel.txt`, Rückkehr zur Auswahl, keine Marker; `state=error` → Meldung, keine Marker; X während der Analyse = Abbrechen; JSON-Weg unverändert (bestehende Tests grün).
 - [ ] **Step 2:** FAIL. **Step 3:** Implementieren; Höhen mit `fit()` wie bisher. **Step 4:** grün inkl. Vorlagen-Test. **Step 5:** Commit.
 
-### Task 5: Web-App – Kachel Taktart mit fester Höhe
+### Task 5: Web-App – Kachel Taktart mit fester Höhe, Standard 90 %
 
-**Files:** Modify `src/components/MetricsCards.tsx`; Prüfung Playwright im Scratchpad
+**Files:** Modify `src/components/MetricsCards.tsx`, `src/App.tsx` (Vorgabe Schutz 0,95), Tooltip „Standard: 90 %“; `backend/analyzer.py` (`PROTECT_CONF = 0.95`), `backend/analyze_cli.py` (Vorgabe), Tests mit bisheriger Vorgabe 0,85 anpassen; Prüfung Playwright im Scratchpad
 
-- [ ] **Step 1:** Prüfskript: Höhe der Kachel bei „nicht geglättet“, bei zwei Zeilen und während der Neuberechnung (Fortschrittszeile) sowie mit Fehlerzeile identisch.
+- [ ] **Step 1:** Prüfskript: Regler startet bei 90 %, erste Analyse schickt `protect=0.95`; Python-Test: Vorgabe von `analyze_audio_file`, `clamp_protect('abc')` und CLI ist 0,95. Höhe der Kachel bei „nicht geglättet“, bei zwei Zeilen und während der Neuberechnung (Fortschrittszeile) sowie mit Fehlerzeile identisch.
 - [ ] **Step 2:** gegen aktuellen Build → FAIL. **Step 3:** Infobereich mit fester Mindesthöhe (2 Zeilen), Fortschritt/Fehler in einem Bereich fester Höhe (einzeilig, Rest im Tooltip). **Step 4:** PASS, `npm run lint`. **Step 5:** Commit.
 
 ### Task 6: Abschluss
