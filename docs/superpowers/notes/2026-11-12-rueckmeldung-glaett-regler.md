@@ -79,10 +79,10 @@
 - Mögliche spätere Nutzung (nur als Hinweis, nicht zur Korrektur): Stellen, an denen zwei Beat-Erkenner sich bei
   den Beats nicht einig sind, als „unsicher“ markieren (in der Forschung als „Mutual Agreement“ bekannt, ungeprüft).
 
-## Für die nächste Version vorgemerkt (Nutzer, 2026-11-13) – mit dem nächsten Teilprojekt, nicht einzeln
+## Für die nächste Version vorgemerkt (Nutzer, 2026-11-13) – Korrektur mit dem nächsten Teilprojekt, nicht einzeln
 
-- **Kein Release 0.1.4 jetzt.** Die Release Notes (`docs/releases/0.1.4.md`, Änderungen seit 0.0.5) gehen mit dem
-  nächsten Teilprojekt in die nächste Version und werden dann fortgeschrieben; Tag und GitHub-Release erst dann.
+- **0.1.4 ist veröffentlicht** (vom Nutzer, mit `docs/releases/0.1.4.md`). Die nächste Version bekommt eigene
+  Release Notes ab 0.1.4.
 - **Kachel Taktart springt beim Verstellen des Reglers:** Die Zeile unter der Taktart wechselt zwischen
   „nicht geglättet“ (1 Zeile), „n Beats neu eingeteilt / k Neuansätze“ (2 Zeilen) und der Fortschrittszeile
   während der Neuberechnung – die Kachel wird dabei höher und wieder kleiner. Gewünscht: Die Kachel ist immer so
