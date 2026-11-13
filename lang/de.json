@@ -89,6 +89,9 @@
     "msg_no_work_dir": "Subtitle: Im Ordner {path} lässt sich kein Arbeitsordner anlegen",
     "msg_tl_vehicle_left": "Timeline: Der Clip „{clip}“ ließ sich nicht aus dem Media Pool entfernen – bitte von Hand löschen.",
     "engine_unknown": "Analyse-Programm: in der JSON nicht angegeben (ältere JSON oder im Browser analysiert)",
-    "reason_analyzer_failed": "Analyzer ließ sich nicht laden"
+    "reason_analyzer_failed": "Analyzer ließ sich nicht laden",
+    "msg_job_folder": "Der Arbeitsordner für die Analyse in resolve_temp lässt sich nicht anlegen.",
+    "msg_no_python": "Python von BeatAnalyzer nicht gefunden. In der Web-App „In Resolve installieren“ klicken oder BeatAnalyzer neu installieren.",
+    "msg_no_start": "Python ist nicht gestartet ({python}). BeatAnalyzer neu installieren oder in der Web-App „In Resolve installieren“ klicken."
   }
 }

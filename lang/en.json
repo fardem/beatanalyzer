@@ -89,6 +89,9 @@
     "msg_no_work_dir": "Subtitles: cannot create a working folder in {path}",
     "msg_tl_vehicle_left": "Timeline: the clip '{clip}' could not be removed from the Media Pool - delete it by hand.",
     "engine_unknown": "Analysis program: not given in the JSON (older JSON or analysed in the browser)",
-    "reason_analyzer_failed": "the analyzer could not be loaded"
+    "reason_analyzer_failed": "the analyzer could not be loaded",
+    "msg_job_folder": "Cannot create the working folder for the analysis in resolve_temp.",
+    "msg_no_python": "Python of BeatAnalyzer not found. Click 'Install in Resolve' in the web app or install BeatAnalyzer again.",
+    "msg_no_start": "Python did not start ({python}). Install BeatAnalyzer again or click 'Install in Resolve' in the web app."
   }
 }

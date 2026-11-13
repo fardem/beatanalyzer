@@ -90,6 +90,9 @@
     "msg_no_work_dir": "Subtitle: {path} içinde çalışma klasörü oluşturulamıyor",
     "msg_tl_vehicle_left": "Timeline: '{clip}' clip'i Media Pool'dan kaldırılamadı – lütfen elle silin.",
     "engine_unknown": "Analiz programı: JSON'da belirtilmemiş (eski JSON veya tarayıcıda analiz edilmiş)",
-    "reason_analyzer_failed": "analiz modülü yüklenemedi"
+    "reason_analyzer_failed": "analiz modülü yüklenemedi",
+    "msg_job_folder": "resolve_temp içinde analiz için çalışma klasörü oluşturulamıyor.",
+    "msg_no_python": "BeatAnalyzer'ın Python'u bulunamadı. Web uygulamasında „Resolve'a yükle“ye tıklayın veya BeatAnalyzer'ı yeniden kurun.",
+    "msg_no_start": "Python başlamadı ({python}). BeatAnalyzer'ı yeniden kurun veya web uygulamasında „Resolve'a yükle“ye tıklayın."
   }
 }

@@ -79,10 +79,13 @@ local BA = {
       ["plugin.msg_bad_format"] = "Unknown format '{format}', expected '{expected}'. Export the file in BeatAnalyzer under Export -> DaVinci Resolve.",
       ["plugin.msg_bin_missing"] = "media pool bin '{bin}' not available",
       ["plugin.msg_cannot_read"] = "Cannot read the file: {path}",
+      ["plugin.msg_job_folder"] = "Cannot create the working folder for the analysis in resolve_temp.",
       ["plugin.msg_markers"] = "{n} markers on {clips} clip(s): {names}",
       ["plugin.msg_no_clip"] = "No clip found. Select the audio clip in the media pool, or import '{file}' into the media pool.",
       ["plugin.msg_no_markers"] = "The JSON contains no markers.",
       ["plugin.msg_no_project"] = "No project is open.",
+      ["plugin.msg_no_python"] = "Python of BeatAnalyzer not found. Click 'Install in Resolve' in the web app or install BeatAnalyzer again.",
+      ["plugin.msg_no_start"] = "Python did not start ({python}). Install BeatAnalyzer again or click 'Install in Resolve' in the web app.",
       ["plugin.msg_no_work_dir"] = "Subtitles: cannot create a working folder in {path}",
       ["plugin.msg_not_imported"] = "Resolve did not import {path}",
       ["plugin.msg_not_json"] = "The file is not a BeatAnalyzer marker JSON.",
@@ -646,6 +649,182 @@ local function target_clips(media_pool, file_name)
   return found, "file name"
 end
 M.target_clips = target_clips
+
+-- ─── Analysis job (Teilprojekt 3) ─────────────────────────────────────────────
+-- The script writes job.txt into a new working folder, starts backend/resolve_job.py with the Python of the venv
+-- without a window and polls progress.txt / done.txt (see backend/resolve_job.py).
+
+local JOB_FORMAT = "beatanalyzer-resolve-job/1"
+local JOB_FILES = { "job.txt", "progress.txt", "progress.txt.tmp", "done.txt", "done.txt.tmp", "markers.json",
+                    "markers.json.tmp", "cancel.txt" }
+M.NO_START_SECONDS, M.TIMEOUT_SECONDS, M.JOB_MAX_AGE = 60, 600, 86400
+
+-- "Glätten" 1 ... 100 % -> protection of clear "1"s 0.5 ... 1.0 (as in the web app); 0 = off
+function M.slider_to_protect(v)
+  v = math.max(0, math.min(100, tonumber(v) or 90))
+  return math.floor((0.5 + v / 200) * 1000 + 0.5) / 1000
+end
+
+local function read_kv(path)
+  local text = read_file(path)
+  if not text then
+    return nil
+  end
+  local out = {}
+  for line in (text .. "\n"):gmatch("(.-)\r?\n") do
+    local k, v = line:match("^%s*([^=]-)%s*=%s*(.-)%s*$")
+    if k and k ~= "" then
+      out[k] = v
+    end
+  end
+  return out
+end
+
+local function jobs_list()
+  return work_base() .. SEP .. "jobs.txt"
+end
+
+-- New job folder with job.txt. opts: lang, slider (0 ... 100), now (for tests). Returns the folder or nil, error.
+function M.new_job(audio_path, opts)
+  opts = opts or {}
+  local dir = M.work_dir()
+  if not dir then
+    return nil, T("plugin.msg_job_folder")
+  end
+  local slider = tonumber(opts.slider) or 90
+  local text = table.concat({
+    "format=" .. JOB_FORMAT,
+    "audio=" .. tostring(audio_path),
+    "lang=" .. tostring(opts.lang or BA.lang or "en"),
+    "smooth=" .. (slider > 0 and "1" or "0"),
+    "protect=" .. string.format("%g", M.slider_to_protect(slider > 0 and slider or 90)),
+  }, "\n") .. "\n"
+  if not write_file(dir .. SEP .. "job.txt", text) then
+    return nil, T("plugin.msg_job_folder")
+  end
+  -- remembered for cleanup_jobs: Lua cannot list a folder
+  local list = read_file(jobs_list()) or ""
+  write_file(jobs_list(), list .. tostring(opts.now or G_os.time()) .. "\t" .. dir .. "\n")
+  return dir
+end
+
+-- Start the job without a window. M.spawn is the fallback (and the hook for tests).
+function M.spawn(cmd)
+  local r = G_os.execute(cmd)
+  return r == 0 or r == true
+end
+
+local function quote(s)
+  if IS_WIN then
+    return '"' .. s .. '"'
+  end
+  return "'" .. s:gsub("'", "'\\''") .. "'"
+end
+
+local function shell_execute(python, params)
+  if not load_msvcrt() then
+    return false
+  end
+  local ok, r = pcall(function()
+    pcall(ffi_lib.cdef, [[
+      void* ShellExecuteW(void* hwnd, const wchar_t* op, const wchar_t* file, const wchar_t* params,
+                          const wchar_t* dir, int show);
+    ]])
+    local shell32 = ffi_lib.load("shell32")
+    local h = shell32.ShellExecuteW(nil, wide("open"), wide(python), wide(params), nil, 0)   -- 0 = SW_HIDE
+    return tonumber(ffi_lib.cast("intptr_t", h)) > 32
+  end)
+  if not ok then
+    log("ShellExecuteW failed:", r)
+  end
+  return ok and r
+end
+
+function M.launch(job_dir)
+  if not BA.python or not BA.home then
+    return false, T("plugin.msg_no_python")
+  end
+  local script = BA.home .. SEP .. "backend" .. SEP .. "resolve_job.py"
+  local params = quote(script) .. " " .. quote(job_dir)
+  log("Start:", BA.python, params)
+  if IS_WIN and shell_execute(BA.python, params) then
+    return true
+  end
+  local cmd = quote(BA.python) .. " " .. params
+  if IS_WIN then
+    cmd = 'start "" /b ' .. cmd
+  else
+    cmd = cmd .. " >/dev/null 2>&1 &"
+  end
+  if M.spawn(cmd) then
+    return true
+  end
+  return false, T("plugin.msg_no_start", { python = BA.python })
+end
+
+-- State of a job: running (step), ok (markers_path), error (message), cancelled, no_start, timeout.
+function M.poll(job_dir, started, now)
+  local done = read_kv(job_dir .. SEP .. "done.txt")
+  if done and done.state then
+    return { state = done.state, message = done.message,
+             markers_path = done.markers and (job_dir .. SEP .. done.markers) or nil }
+  end
+  local progress = read_kv(job_dir .. SEP .. "progress.txt")
+  local elapsed = (now or G_os.time()) - (started or 0)
+  if not progress and elapsed > M.NO_START_SECONDS then
+    return { state = "no_start" }
+  end
+  if elapsed > M.TIMEOUT_SECONDS then
+    return { state = "timeout" }
+  end
+  return { state = "running", step = progress and progress.step or nil }
+end
+
+function M.cancel(job_dir)
+  return write_file(job_dir .. SEP .. "cancel.txt", "")
+end
+
+function M.remove_job(job_dir)
+  for _, name in ipairs(JOB_FILES) do
+    remove_file(job_dir .. SEP .. name)
+  end
+  return remove_dir(job_dir)
+end
+
+-- Remove job folders older than a day (a crash or a closed Resolve leaves them behind).
+function M.cleanup_jobs(now)
+  local list = read_file(jobs_list())
+  if not list then
+    return 0
+  end
+  local keep, removed = {}, 0
+  for line in list:gmatch("[^\n]+") do
+    local t, dir = line:match("^(%d+)\t(.+)$")
+    if t and (now or G_os.time()) - tonumber(t) > M.JOB_MAX_AGE then
+      M.remove_job(dir)
+      removed = removed + 1
+    elseif t then
+      keep[#keep + 1] = line
+    end
+  end
+  write_file(jobs_list(), #keep > 0 and (table.concat(keep, "\n") .. "\n") or "")
+  return removed
+end
+
+-- The clip to analyse: exactly one selected clip with a file path. Returns clip or nil, "none"|"many"|"no_path".
+function M.analysis_target(media_pool)
+  local clips = selected_clips(media_pool)
+  if #clips == 0 then
+    return nil, "none"
+  elseif #clips > 1 then
+    return nil, "many"
+  end
+  local path = api(clips[1], "GetClipProperty", "File Path")
+  if type(path) ~= "string" or path == "" then
+    return nil, "no_path"
+  end
+  return clips[1], nil
+end
 
 local function remove_own_markers(clip)
   local removed = 0

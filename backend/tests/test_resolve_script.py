@@ -36,6 +36,7 @@ local function clip(name, file, fps, frames)
     if key == "FPS" then return self.fps end
     if key == "Frames" then return self.frames end
     if key == "Duration" then return self.duration or "" end
+    if key == "File Path" then return self.filepath or "" end
     return ""
   end
   function c:AddMarker(frame, color, name, note, duration, custom)
@@ -771,6 +772,124 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(v["s"], 'x"ü\n')
         with self.assertRaises(Exception):
             decode('{"a": 1,}')
+
+
+
+@unittest.skipIf(luajit21 is None, "lupa not installed")
+class ResolveJobScriptTests(unittest.TestCase):
+    """Analysis job from Resolve: job.txt, start of Python, polling of progress.txt/done.txt (Teilprojekt 3)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp()) / "Bea Ünal"
+        self.tmp.mkdir()
+        block = resolve_plugin.render_config(self.tmp, self.tmp / "venv" / "bin" / "python", "de",
+                                             {c: i18n.texts(c) for c in i18n.LANGUAGES})
+        self.lua = luajit21.LuaRuntime(unpack_returned_tuples=True)
+        self.lua.globals().print = lambda *a: None
+        self.lua.globals().PY_READ = lambda p: Path(p).read_text(encoding="utf-8")
+        self.lua.execute(MOCK)
+        self.M = self.lua.execute(resolve_plugin.apply_config(SCRIPT, block))
+        self.mock = self.lua.globals().MOCK
+        self.spawned = []
+        self.M.spawn = lambda cmd: self.spawned.append(cmd) or True
+
+    def kv(self, path):
+        return dict(line.split("=", 1) for line in Path(path).read_text(encoding="utf-8").splitlines() if "=" in line)
+
+    def test_slider_to_protect(self):
+        self.assertEqual(self.M.slider_to_protect(90), 0.95)
+        self.assertEqual(self.M.slider_to_protect(100), 1.0)
+        self.assertEqual(self.M.slider_to_protect(1), 0.505)
+        self.assertEqual(self.M.slider_to_protect(250), 1.0)
+        self.assertEqual(self.M.slider_to_protect(-5), 0.5)
+
+    def test_new_job_writes_job_txt(self):
+        audio = str(self.tmp / "Şarkı – Müller.mp3")
+        job = self.M.new_job(audio, self.lua.table_from({"lang": "de", "slider": 90}))
+        self.assertTrue(Path(job).is_dir())
+        self.assertEqual(Path(job).parent, self.tmp / "resolve_temp")
+        kv = self.kv(Path(job) / "job.txt")
+        self.assertEqual(kv, {"format": "beatanalyzer-resolve-job/1", "audio": audio, "lang": "de",
+                              "smooth": "1", "protect": "0.95"})
+
+    def test_new_job_slider_zero_is_off(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"lang": "en", "slider": 0}))
+        self.assertEqual(self.kv(Path(job) / "job.txt")["smooth"], "0")
+
+    def test_launch_starts_resolve_job_with_the_venv_python(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90}))
+        ok = self.M.launch(job)
+        self.assertTrue(ok)
+        self.assertEqual(len(self.spawned), 1)
+        cmd = self.spawned[0]
+        self.assertIn(str(self.tmp / "venv" / "bin" / "python"), cmd)
+        self.assertIn(str(self.tmp / "backend" / "resolve_job.py"), cmd)
+        self.assertIn(job, cmd)
+
+    def test_launch_without_python_in_config(self):
+        block = resolve_plugin.render_config(self.tmp, None, "de", {c: i18n.texts(c) for c in i18n.LANGUAGES})
+        M = self.lua.execute(resolve_plugin.apply_config(SCRIPT, block))
+        ok, err = M.launch("/x/job")
+        self.assertFalse(ok)
+        self.assertTrue(err)
+
+    def poll(self, job, started, now):
+        r = self.M.poll(job, started, now)
+        return {k: r[k] for k in ("state", "step", "markers_path", "message") if r[k] is not None}
+
+    def test_poll_states(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90}))
+        self.assertEqual(self.poll(job, 1000, 1010), {"state": "running"})
+        self.assertEqual(self.poll(job, 1000, 1061)["state"], "no_start")      # 60 s without progress.txt
+        (Path(job) / "progress.txt").write_text("step=analyze\n", encoding="utf-8")
+        self.assertEqual(self.poll(job, 1000, 1061), {"state": "running", "step": "analyze"})
+        self.assertEqual(self.poll(job, 1000, 1601)["state"], "timeout")       # 10 min without done.txt
+        (Path(job) / "done.txt").write_text("state=ok\nmarkers=markers.json\n", encoding="utf-8")
+        r = self.poll(job, 1000, 1601)
+        self.assertEqual(r["state"], "ok")
+        self.assertEqual(r["markers_path"], str(Path(job) / "markers.json"))
+        (Path(job) / "done.txt").write_text("state=error\nmessage=kaputt\n", encoding="utf-8")
+        self.assertEqual(self.poll(job, 1000, 1010), {"state": "error", "message": "kaputt"})
+        (Path(job) / "done.txt").write_text("state=cancelled\n", encoding="utf-8")
+        self.assertEqual(self.poll(job, 1000, 1010)["state"], "cancelled")
+
+    def test_cancel_writes_cancel_txt(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90}))
+        self.M.cancel(job)
+        self.assertTrue((Path(job) / "cancel.txt").exists())
+
+    def test_remove_job_removes_the_folder(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90}))
+        for name in ("progress.txt", "done.txt", "markers.json", "cancel.txt"):
+            (Path(job) / name).write_text("x", encoding="utf-8")
+        self.M.remove_job(job)
+        self.assertFalse(Path(job).exists())
+
+    def test_cleanup_removes_only_old_jobs(self):
+        old = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90, "now": 1000}))
+        new = self.M.new_job("/x/b.mp3", self.lua.table_from({"slider": 90, "now": 1000 + 86400}))
+        (Path(old) / "done.txt").write_text("state=ok\n", encoding="utf-8")
+        self.M.cleanup_jobs(1000 + 86400 + 10)
+        self.assertFalse(Path(old).exists())
+        self.assertTrue(Path(new).exists())
+        self.M.cleanup_jobs(1000 + 2 * 86400 + 10)
+        self.assertFalse(Path(new).exists())
+
+    def target(self):
+        clip, reason = self.M.analysis_target(self.mock.pool)
+        return clip, reason
+
+    def test_analysis_target(self):
+        self.lua.execute("MOCK.selected = {}")
+        self.assertEqual(self.target(), (None, "none"))
+        self.lua.execute("MOCK.selected = { MOCK.song, MOCK.other }")
+        self.assertEqual(self.target(), (None, "many"))
+        self.lua.execute("MOCK.selected = { MOCK.song }")
+        self.assertEqual(self.target(), (None, "no_path"))                    # e.g. a compound clip
+        self.lua.execute("MOCK.song.filepath = '/Musik/Müller Song.wav'; MOCK.selected = { MOCK.song }")
+        clip, reason = self.target()
+        self.assertEqual(clip.GetName(clip), "Song")
+        self.assertIsNone(reason)
 
 
 if __name__ == "__main__":
