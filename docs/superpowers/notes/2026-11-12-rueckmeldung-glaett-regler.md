@@ -78,3 +78,14 @@
   Stand mit Regler bleibt.
 - Mögliche spätere Nutzung (nur als Hinweis, nicht zur Korrektur): Stellen, an denen zwei Beat-Erkenner sich bei
   den Beats nicht einig sind, als „unsicher“ markieren (in der Forschung als „Mutual Agreement“ bekannt, ungeprüft).
+
+## Für die nächste Version vorgemerkt (Nutzer, 2026-11-13) – mit dem nächsten Teilprojekt, nicht einzeln
+
+- **Kein Release 0.1.4 jetzt.** Die Release Notes (`docs/releases/0.1.4.md`, Änderungen seit 0.0.5) gehen mit dem
+  nächsten Teilprojekt in die nächste Version und werden dann fortgeschrieben; Tag und GitHub-Release erst dann.
+- **Kachel Taktart springt beim Verstellen des Reglers:** Die Zeile unter der Taktart wechselt zwischen
+  „nicht geglättet“ (1 Zeile), „n Beats neu eingeteilt / k Neuansätze“ (2 Zeilen) und der Fortschrittszeile
+  während der Neuberechnung – die Kachel wird dabei höher und wieder kleiner. Gewünscht: Die Kachel ist immer so
+  hoch, dass 2 Zeilen passen, und ändert ihre Höhe nicht mittendrin (feste Mindesthöhe für den Infobereich; die
+  Fortschritts-/Fehlerzeile darf die Höhe auch nicht ändern). Prüfung: Höhe der Kachel vor, während und nach
+  dem Verstellen gleich.
