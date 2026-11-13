@@ -3,7 +3,8 @@
 ## [0.1.4] – 2026-11-13
 
 ### Geändert
-- Web-App, Kachel Taktart: Der Regler „Schutz klarer 1“ nutzt die ganze Breite der Kachel, Beschriftung und Wert stehen darüber. Beim Überfahren mit der Maus erklärt ein Tooltip, was niedrige und hohe Werte bewirken.
+- Web-App, Kachel Taktart: Häkchen „Takte glätten“ und Regler „Schutz klarer 1“ sind zu einem Regler **„Glätten“ 0–100 %** zusammengelegt (Standard 70 %). 0 % = aus, die Takte bleiben wie von beat_this; nach rechts darf das gleichmäßige Raster immer mehr „1“en verschieben; 100 % = das Raster entscheidet allein. Intern entspricht 1–100 % dem bisherigen Schutz 50–100 % (70 % = bisher 85 %). Der Regler nutzt die ganze Breite der Kachel, Beschriftung und Wert stehen darüber; ein Tooltip erklärt 0 %, „weiter rechts“ und 100 %.
+- Die Kachel zeigt „n Beats neu eingeteilt“ und „k Neuansätze“ in zwei Zeilen.
 
 ### Behoben
 - Web-App: „n Beats neu eingeteilt · k Neuansätze“ wurde abgeschnitten, der Wert „100 %“ brach in zwei Zeilen um.
