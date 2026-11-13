@@ -60,3 +60,21 @@
     Ordner, Meldungen in der Konsole) – ob die Marker-Funktionen der API in Free gehen, ist zu prüfen;
     (b) ganz ohne Skript: Web-App exportiert Marker als EDL und die Untertitel als SRT, Import in Resolve von Hand
     (Timeline-Marker aus EDL, SRT-Import).
+
+## Für die README (Teilprojekt 5) vorgemerkt
+
+- **librosa-Fallback erkennt keine Downbeats:** `librosa.beat.beat_track` (Ellis 2007, dynamische Programmierung,
+  ein Tempo für den ganzen Song) liefert nur Beats. Unser Code setzt jeden 4. Beat ab dem ersten als „1“ (3/4 nur
+  bei deutlich höherer Klang-Ähnlichkeit nach 3 Beats). Deshalb gleichmäßig, aber ob die „1“ stimmt, hängt am
+  ersten erkannten Beat; nach Edits/halben Takten liegt alles daneben. Browser-Analyse ähnlich. Die Downbeat-Regel
+  ist eine Behelfslösung, nicht gemessen. Kommentar im Code („Bass-Gehalt“) stimmt nicht mit dem Verfahren überein.
+- Gegenüberstellung: librosa = richtiger Abstand, Glückssache bei der Lage; beat_this = hört die „1“, kurze Takte an
+  unsicheren Stellen; beat_this + Regler = gleichmäßig an der gehörten „1“, Neuansatz nach Edits.
+
+## Entscheidung: kein Vergleich zweier Verfahren zur Korrektur
+
+- Idee des Nutzers: beat_this und librosa vergleichen und daraus korrigieren. Verworfen (Nutzer, 2026-11-13):
+  librosa liefert keine Downbeat-Information, ein Vergleich kann die „1“ nicht verbessern, nur Fehler einschleppen.
+  Stand mit Regler bleibt.
+- Mögliche spätere Nutzung (nur als Hinweis, nicht zur Korrektur): Stellen, an denen zwei Beat-Erkenner sich bei
+  den Beats nicht einig sind, als „unsicher“ markieren (in der Forschung als „Mutual Agreement“ bekannt, ungeprüft).
