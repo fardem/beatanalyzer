@@ -8,6 +8,7 @@
 
 ### Behoben
 - Web-App: „n Beats neu eingeteilt · k Neuansätze“ wurde abgeschnitten, der Wert „100 %“ brach in zwei Zeilen um.
+- Build: Tailwind las den alten Inhalt von `dist/` mit, dadurch änderte sich `dist/` bei jedem zweiten Build (die CI-Prüfung „dist/ is up to date“ hing davon ab). `dist/` ist jetzt ausgeschlossen.
 
 ## [0.1.3] – 2026-11-12
 
