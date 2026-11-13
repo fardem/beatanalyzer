@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.4] – 2026-11-13
+
+### Geändert
+- Web-App, Kachel Taktart: Der Regler „Schutz klarer 1“ nutzt die ganze Breite der Kachel, Beschriftung und Wert stehen darüber. Beim Überfahren mit der Maus erklärt ein Tooltip, was niedrige und hohe Werte bewirken.
+
+### Behoben
+- Web-App: „n Beats neu eingeteilt · k Neuansätze“ wurde abgeschnitten, der Wert „100 %“ brach in zwei Zeilen um.
+
 ## [0.1.3] – 2026-11-12
 
 ### Hinzugefügt

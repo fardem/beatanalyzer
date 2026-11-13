@@ -434,7 +434,8 @@ def fallback_mir_track(y: np.ndarray, sr: int):
     tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr, hop_length=512, trim=False)
     beats_sec = [float(round(t, 3)) for t in librosa.frames_to_time(beat_frames, sr=sr, hop_length=512)]
 
-    # Downbeats über Bar-Grouping (jeder 4. oder 3. Beat basierend auf tiefem Bass-Gehalt)
+    # librosa erkennt keine Downbeats: jeder 4. Beat ab dem ersten (3., wenn sich der Klang nach 3 Beats
+    # deutlich aehnlicher wiederholt als nach 4). Ob die "1" stimmt, haengt am ersten erkannten Beat.
     downbeats_sec = []
     if beats_sec:
         step = 4
