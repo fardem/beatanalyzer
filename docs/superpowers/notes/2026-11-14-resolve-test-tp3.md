@@ -28,3 +28,20 @@ Nutzer-Rechner: BeatAnalyzer unter `C:\İünaöl\beatanalyzer` (Umlaut, türkisc
 | 22 | ✗ | Breite des Resolve-Fensters schwankt (Konsole: „requested 600x680, actual 431x680“) |
 
 Konsole außerdem: „Selection: ignored entries that are not clips: __flags=number“ jede Sekunde (Rauschen).
+
+## Antworten des Nutzers und nächste Runde (2026-11-14)
+
+- Frage 1 (Subtitle Track bei mehrfachem Song): **a** – ein Subtitle Track je Audiospur mit dem Song, alle Vorkommen dieser Spur darauf.
+- Frage 2 (nach dem Ende zurück in die zuletzt offene Timeline): ok.
+- Punkt 20: ✓ – nach `install_and_run`/`start` kam die Meldung „Python von BeatAnalyzer nicht gefunden“.
+- Punkt 17: Nutzer hat `%USERPROFILE%\.cache\torch\hub\checkpoints` umbenannt; der neue Download von
+  `beat_this-final0.ckpt` scheiterte: „Could not load the checkpoint given the provided name, final0“. beat_this
+  (`inference.load_checkpoint`) verschluckt die eigentliche Ursache (jede Ausnahme beim Download → ValueError).
+  Seitdem nur librosa. Abhilfe für den Nutzer: alten Ordner zurückbenennen.
+- **Wunsch:** Installation soll ein fehlendes Modell selbst reparieren. Vorschlag:
+  - `install_and_run.bat` lädt das Modell einmal vorab (Check `load_checkpoint("final0")`), zeigt bei Fehlern die
+    eigentliche Ursache (`__context__` der Ausnahme) und wohin die Datei von Hand gehört.
+  - Analyzer/Server: Fehler beim Laden des Modells mit Ursache loggen; Startmeldung und Web-App/Resolve sagen
+    „Modell nicht geladen: <Ursache>“.
+- Bestätigt: Kurze Texte (Tooltip für Details), „Tasks“ statt „Was jetzt passiert“, Marker-Notiz mit Takt/Beat/
+  Zeit/BPM/Confidence, Auftragsordner abgebrochener Läufe aufräumen, feste Fensterbreite, Konsolenrauschen weg.
