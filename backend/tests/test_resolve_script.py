@@ -820,9 +820,10 @@ class ResolveScriptTests(unittest.TestCase):
         tracks = {name: (enabled, starts) for name, enabled, starts in self.sub_tracks(tl)}
         self.assertEqual(sorted(tracks), ["BeatAnalyzer - Müller Song (A1)", "BeatAnalyzer - Müller Song (A2)"])
         a1 = tracks["BeatAnalyzer - Müller Song (A1)"][1]
-        # first use as before (visible beats 1.0 ... 3.5 s), second use at 40 s: all 8 beats, nothing twice
+        # first use as before (visible beats 1.0 ... 3.5 s, info block under the first), second use at 40 s:
+        # info subtitle from the clip start (0.5 s room, 0.1.7) and all 8 beats, nothing twice
         self.assertEqual(a1, [90250, 90263, 90275, 90288, 90300, 90313,
-                              91013, 91025, 91038, 91050, 91063, 91075, 91088, 91100])
+                              91000, 91013, 91025, 91038, 91050, 91063, 91075, 91088, 91100])
         self.assertEqual(tracks["BeatAnalyzer - Müller Song (A2)"][1], [92000])   # visible part 4 ... 12 s: beat 4.0
         self.assertEqual(sum(1 for e, _ in tracks.values() if e), 1)               # Resolve: one active track
         self.assertIn("(A1)", msg)
@@ -849,6 +850,60 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(self.M.removal(clips, tl).tracks, 2)
         self.M.remove(clips, tl)
         self.assertEqual(self.sub_tracks(tl), [])
+
+    # --- info block with model and licence in every subtitle (user, 0.1.7) --------------------------------
+
+    def data_with_model(self, first_beat=0.5, commercial=True, model=True):
+        result = sample_result()
+        shift = first_beat - 0.5
+        for b in result["beats"]:
+            b["time"] = round(b["time"] + shift, 3)
+        if model:
+            result["engineInfo"] = {"id": "beat_this", "device": "cpu", "gpu": None, "fallbackReason": None,
+                                    "model": {"name": "beat_this", "license": "MIT", "commercial": commercial}}
+        return resolve_marker_data(result)
+
+    MODEL_LINE = "Model: beat_this – Lizenz: MIT – Nutzung: frei, auch kommerziell"
+
+    def test_info_block_before_the_first_beat_with_model_and_licence(self):
+        self.load_lang("de")
+        self.M.apply(self.write_json(self.data_with_model(first_beat=0.5)))
+        srt = self.srt_text()
+        first = srt.split("\n\n")[0]
+        self.assertEqual(first.splitlines()[1], "00:00:00,000 --> 00:00:00,500")
+        self.assertEqual(first.splitlines()[2:], ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
+
+    def test_info_block_under_the_first_beat_without_room(self):
+        self.load_lang("de")
+        self.M.apply(self.write_json(self.data_with_model(first_beat=0.2)))
+        first = self.srt_text().split("\n\n")[0].splitlines()
+        self.assertEqual(first[1], "00:00:00,200 --> 00:00:00,700")              # the first beat itself
+        self.assertEqual(first[2:6], ["Downbeat (1)", "Takt 1 – Beat 1", "00:00.200 – 120,0 BPM", "Confidence 90 %"])
+        self.assertEqual(first[6:], ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
+
+    def test_info_block_for_every_use_in_the_timeline(self):
+        self.load_lang("de")
+        tl = self.setup_three_uses()
+        self.M.apply(self.write_json(self.data_with_model()))
+        a1 = self.srt_text("Müller Song (Timeline A1).srt")
+        cues = [c.splitlines() for c in a1.strip().split("\n\n")]
+        # use 1: trimmed to 1.0 s, its first visible beat is at 1.0 s -> no room -> under the first beat
+        self.assertEqual(cues[0][1], "00:00:10,000 --> 00:00:10,500")
+        self.assertIn(self.MODEL_LINE, cues[0])
+        self.assertIn("Beat 2", cues[0])
+        # use 2 at 40 s, untrimmed: 0.5 s before the first beat -> own info cue 40.0 ... 40.5 s
+        info = [c for c in cues if c[1].startswith("00:00:40,000")]
+        self.assertEqual(len(info), 1)
+        self.assertEqual(info[0][2:], ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
+
+    def test_model_line_for_a_non_commercial_model_and_without_model(self):
+        self.load_lang("de")
+        self.M.apply(self.write_json(self.data_with_model(commercial=False)))
+        self.assertIn("Nutzung: nicht für kommerzielle Nutzung", self.srt_text())
+        self.M.apply(self.write_json(self.data_with_model(model=False)))
+        srt = self.srt_text()
+        self.assertNotIn("Model:", srt)
+        self.assertIn("BeatAnalyzer\nMüller Song.wav\n120,0 BPM – 4/4", srt)
 
     def test_old_tracks_stay_when_the_new_srt_cannot_be_written(self):
         tl = self.setup_three_uses()
@@ -909,8 +964,9 @@ class ResolveScriptTests(unittest.TestCase):
         ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
         tracks = {name: starts for name, _, starts in self.sub_tracks(tl)}
         a2 = tracks["BeatAnalyzer - Müller Song (A2)"]
-        self.assertEqual(len(a2), 8)
-        self.assertEqual(a2[0], 90000 + 50 + 13)  # 0.5 s x 25 fps = 12.5, rounded up
+        self.assertEqual(len(a2), 9)                  # info subtitle (0.5 s before the first beat) + 8 beats
+        self.assertEqual(a2[0], 90000 + 50)
+        self.assertEqual(a2[1], 90000 + 50 + 13)  # 0.5 s x 25 fps = 12.5, rounded up
         self.assertEqual(len(tracks["BeatAnalyzer - Müller Song (A1)"]), 6)
 
     def test_no_timeline_track_when_song_is_not_in_timeline(self):

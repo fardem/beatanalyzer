@@ -54,7 +54,10 @@ local BA = {
       ["output.meter_suffix.2"] = "",
       ["output.meter_suffix.4"] = "",
       ["output.meter_suffix.8"] = "",
+      ["output.model_line"] = "Model: {name} – Licence: {license} – Use: {usage}",
       ["output.time_bpm"] = "{clock} – {bpm} BPM",
+      ["output.usage_commercial"] = "free, also commercial",
+      ["output.usage_noncommercial"] = "not for commercial use",
       ["plugin.analyze_many"] = "Several clips selected – please select exactly one audio clip.",
       ["plugin.analyze_no_path"] = "The selected item has no file (e.g. a Timeline or a Compound Clip).",
       ["plugin.analyze_none"] = "Select exactly one audio clip in the Media Pool.",
@@ -943,11 +946,27 @@ end
 -- opts.from / opts.to: only beats in this part of the song (seconds), the last subtitle ends at "to".
 -- opts.shift: seconds added to every time (position of song second 0 in the timeline).
 -- Returns the SRT text, the number of subtitles and the time of the first one (after the shift).
+M.INFO_GAP = 0.5   -- seconds before the first beat needed for an own info subtitle; else it goes under that beat
+
+-- Info block of every subtitle: BeatAnalyzer, file, tempo and meter, model with licence (if the JSON has one).
+function M.info_lines(data)
+  local text = T("output.intro", { file = tostring(data.fileName or ""),
+                                   bpm = tonumber(data.globalBpm) and fmt_num(data.globalBpm, 1) or "?",
+                                   meter = fmt_meter(data.timeSignature or "?") })
+  local model = type(data.engine) == "table" and type(data.engine.model) == "table" and data.engine.model or nil
+  if model and model.name then
+    text = text .. "\n" .. T("output.model_line", {
+      name = tostring(model.name), license = tostring(model.license or "?"),
+      usage = model.commercial == false and T("output.usage_noncommercial") or T("output.usage_commercial") })
+  end
+  return text
+end
+
 local function build_srt(data, opts)
   opts = opts or {}
   -- opts.segments: several parts of the song, each { shift, from, to } (one per use of the song on a track)
   local segments = opts.segments or { { shift = opts.shift or 0, from = opts.from, to = opts.to } }
-  local intro = not opts.segments and not opts.shift and not opts.from
+  local info = M.info_lines(data)
   local cues = {}
   for _, seg in ipairs(segments) do
     local shift, from, to = seg.shift or 0, seg.from, seg.to
@@ -960,10 +979,11 @@ local function build_srt(data, opts)
     end
     if #markers > 0 then
       local first = tonumber(markers[1].time)
-      if intro and first > 0.05 then
-        cues[#cues + 1] = { 0, first, T("output.intro", { file = tostring(data.fileName or ""),
-                                                           bpm = tonumber(data.globalBpm) and fmt_num(data.globalBpm, 1) or "?",
-                                                           meter = fmt_meter(data.timeSignature or "?") }) }
+      local start = from or 0
+      -- info block before the first beat of this part, or under the first beat when there is no room
+      local info_under = first - start < M.INFO_GAP
+      if not info_under then
+        cues[#cues + 1] = { start + shift, first + shift, info }
       end
       for i, m in ipairs(markers) do
         local t = tonumber(m.time)
@@ -983,6 +1003,9 @@ local function build_srt(data, opts)
           T("output.time_bpm", { clock = clock(t), bpm = fmt_num(m.bpm, 1) }),
           T("output.confidence", { value = fmt_pct(m.confidence) }),
         }
+        if i == 1 and info_under then
+          lines[#lines + 1] = info   -- no empty line: in an SRT it would end the subtitle
+        end
         cues[#cues + 1] = { t + shift, nxt + shift, table.concat(lines, "\n") }
       end
     end
