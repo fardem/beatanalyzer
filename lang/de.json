@@ -99,7 +99,7 @@
     "way_json": "JSON laden",
     "smooth_label": "Glätten",
     "smooth_off": "aus",
-    "smooth_tip": "Glätten – wie gleichmäßig das Taktraster wird.\n0 %: aus. Die Takte bleiben, wie beat_this sie hört – auch Takte mit nur 1 bis 3 Beats an unsicheren Stellen.\nWeiter rechts: Das gleichmäßige Raster darf immer mehr „1“en von beat_this verschieben – zuerst nur unsichere, je weiter rechts, desto sicherere.\n100 %: Das Raster entscheidet allein. Neu angesetzt wird nur, wo beat_this die „1“ über mehrere Takte an anderer Stelle hört (z. B. nach einem Edit).\nStandard: 90 %. Die Beats selbst bleiben immer unverändert.",
+    "smooth_tip": "0 % = aus: Takte wie von beat_this.\nMehr % = gleichmäßigeres Raster.\n100 % = voll geglättet; neu angesetzt nur bei klar anderer „1“.\nDie Beats bleiben unverändert.",
     "analyze_none": "Im Media Pool genau einen Audio-Clip auswählen.",
     "analyze_many": "Mehrere Clips ausgewählt – bitte genau einen Audio-Clip auswählen.",
     "analyze_no_path": "Der ausgewählte Eintrag hat keine Datei (z. B. Timeline oder Compound Clip).",
@@ -110,6 +110,19 @@
     "step_analysis_hint": "Abbrechen geht nur jetzt. Bis hier ist im Projekt nichts verändert.",
     "msg_cancelled": "Analyse abgebrochen. Im Projekt wurde nichts verändert.",
     "msg_analysis_error": "Analyse fehlgeschlagen: {message}. Im Projekt wurde nichts verändert.",
-    "msg_timeout": "Die Analyse ist nach 10 Minuten nicht fertig und wurde abgebrochen. Im Projekt wurde nichts verändert."
+    "msg_timeout": "Die Analyse ist nach 10 Minuten nicht fertig und wurde abgebrochen. Im Projekt wurde nichts verändert.",
+    "tasks_title": "Tasks",
+    "task_analyze": "Track wird analysiert",
+    "task_markers": "Marker werden gesetzt",
+    "task_subtitle": "Subtitle wird angelegt",
+    "task_track": "Subtitle Track in der Timeline",
+    "wait_short": "Bitte warten …",
+    "cancel_hint": "Abbrechen geht nur während der Analyse.",
+    "explain_short_present": "Subtitle Track kommt unter den Song ({tracks}).",
+    "explain_short_absent": "Song nicht in der Timeline „{timeline}“ – nur Subtitle im Media Pool.",
+    "explain_short_no_timeline": "Keine Timeline offen – nur Subtitle im Media Pool.",
+    "explain_short_off": "Timeline bleibt unverändert, Subtitle im Ordner BeatAnalyzer.",
+    "explain_short_tl_markers": "Marker auch auf den Clips in der Timeline ({items}).",
+    "explain_present_many": "In der Timeline „{timeline}“ liegt der Song auf {tracks}. Für jede dieser Spuren entsteht ein eigener Subtitle Track, z. B. „{track_name}“. Resolve erlaubt nur einen aktiven Subtitle Track; die anderen bleiben, werden aber deaktiviert."
   }
 }

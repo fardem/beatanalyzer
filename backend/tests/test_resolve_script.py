@@ -294,6 +294,13 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(len(self.markers(self.mock.song)), 0)
         self.assertIn("is not 'Müller Song.wav'", msg)
 
+    def test_ignored_selection_entries_are_logged_once(self):
+        # seen in the Resolve console: the same line every second while the window is open
+        self.mock.selected = self.lua.table_from([self.lua.eval("{}"), self.mock.song])
+        for _ in range(5):
+            self.M.selected_clips(self.mock.pool)
+        self.assertEqual(len([line for line in self.out if "ignored entries" in line]), 1, self.out)
+
     def test_selection_entries_that_are_not_clips_are_ignored(self):
         # Resolve Studio 21.2: GetSelectedClips() returned the clip plus an entry without clip methods
         not_a_clip = self.lua.eval("{}")
@@ -338,7 +345,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.run_apply()
         marks = self.markers(self.mock.song)
         self.assertEqual(marks[13]["name"], "Takt 1")
-        self.assertEqual(marks[13]["note"], "0,500 s | 120,0 BPM")
+        self.assertEqual(marks[13]["note"], "Takt 1 – Beat 1 | 0,500 s | 120,0 BPM | Confidence 90 %")
         self.assertEqual(marks[25]["name"], "1.2")
         self.assertEqual(self.first_beat_cue(), ["Downbeat (1)", "Takt 1 – Beat 1", "00:00.500 – 120,0 BPM",
                                                  "Confidence 90 %"])
@@ -445,9 +452,11 @@ class ResolveScriptTests(unittest.TestCase):
         tl = self.setup_timeline()
         job, _ = self.M.start(self.write_json(resolve_marker_data(sample_result())), None)
         self.assertEqual((job.timeline_name, job.track_name), ("Timeline 1", "BeatAnalyzer - Müller Song"))
-        self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 0)")   # the user opens another timeline
+        self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 0); MOCK.other_tl = MOCK.timeline")   # user switches
         self.run_job(job)
         self.assertEqual(len(self.sub_tracks(tl)), 1)                  # track in the timeline of the start
+        # afterwards Resolve shows again the timeline that was open before the timeline step (user: ok)
+        self.assertTrue(self.lua.eval("MOCK.timeline == MOCK.other_tl"))
 
     def test_no_timeline_when_switched_off(self):
         tl = self.setup_timeline()
@@ -503,16 +512,40 @@ class ResolveScriptTests(unittest.TestCase):
         clips = self.lua.table_from([self.mock.song])
         ti = self.M.timeline_info(tl, clips)
         self.assertEqual((ti.state, ti.track, ti.tc), ("present", 1, "01:00:10:00"))
-        self.assertTrue(self.M.explanation(True, ti, "Müller Song").startswith(
-            "In der Timeline „Timeline 1“ liegt der Song auf A1 ab 01:00:10:00. Darunter entsteht der Subtitle Track "
-            "„BeatAnalyzer - Müller Song“"))
-        self.assertTrue(self.M.explanation(False, ti, "Müller Song").startswith("Die Timeline bleibt unverändert."))
+        # short text in the window, the long one as tooltip (user: "zu viel Text")
+        text, tip = self.M.explanation(True, ti, "Müller Song")
+        self.assertEqual(text, "Subtitle Track kommt unter den Song (A1). Marker auch auf den Clips in der Timeline (1).")
+        self.assertTrue(tip.startswith("In der Timeline „Timeline 1“ liegt der Song auf A1 ab 01:00:10:00. Darunter "
+                                       "entsteht der Subtitle Track „BeatAnalyzer - Müller Song"))
+        self.assertIn("bekommen die Marker ebenfalls", tip)
+        text, tip = self.M.explanation(False, ti, "Müller Song")
+        self.assertEqual(text, "Timeline bleibt unverändert, Subtitle im Ordner BeatAnalyzer. "
+                               "Marker auch auf den Clips in der Timeline (1).")
+        self.assertTrue(tip.startswith("Die Timeline bleibt unverändert."))
         self.assertEqual(self.M.timeline_info(None, clips).state, "none")
-        self.assertTrue(self.M.explanation(True, self.M.timeline_info(None, clips), "x").startswith("Keine Timeline offen."))
+        text, tip = self.M.explanation(True, self.M.timeline_info(None, clips), "x")
+        self.assertEqual(text, "Keine Timeline offen – nur Subtitle im Media Pool.")
+        self.assertTrue(tip.startswith("Keine Timeline offen."))
         self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 0)")
         absent = self.M.timeline_info(self.lua.globals().MOCK.timeline, clips)
         self.assertEqual(absent.state, "absent")
-        self.assertTrue(self.M.explanation(True, absent, "x").startswith("Der Song liegt nicht in der Timeline „Timeline 1“."))
+        text, tip = self.M.explanation(True, absent, "x")
+        self.assertEqual(text, "Song nicht in der Timeline „Timeline 1“ – nur Subtitle im Media Pool.")
+        self.assertTrue(tip.startswith("Der Song liegt nicht in der Timeline „Timeline 1“."))
+
+    def test_marker_note_has_bar_beat_time_tempo_confidence(self):
+        self.load_lang("de")
+        m = self.lua.table_from({"time": 106.86, "type": "beat", "bar": 24, "beat": 2, "bpm": 120, "confidence": 0.75})
+        self.assertEqual(self.M.marker_note(m), "Takt 24 – Beat 2 | 106,860 s | 120,0 BPM | Confidence 75 %")
+        m = self.lua.table_from({"time": 0.5, "type": "downbeat", "bar": 1, "beat": 1, "bpm": 120})
+        self.assertEqual(self.M.marker_note(m), "Takt 1 – Beat 1 | 0,500 s | 120,0 BPM")      # no confidence
+
+    def test_markers_carry_the_note(self):
+        self.load_lang("de")
+        self.run_apply()
+        notes = {f: m["note"] for f, m in self.markers(self.mock.song).items()}
+        self.assertEqual(notes[13], "Takt 1 – Beat 1 | 0,500 s | 120,0 BPM | Confidence 90 %")
+        self.assertEqual(notes[25], "Takt 1 – Beat 2 | 1,000 s | 120,0 BPM | Confidence 90 %")
 
     def test_engine_text(self):
         t = lambda d: self.M.engine_text(self.lua.table_from(d))
@@ -743,9 +776,13 @@ class ResolveScriptTests(unittest.TestCase):
         info = self.M.timeline_info(tl, self.lua.table_from([self.mock.song]))
         self.assertEqual(info["items"], 1)
         for checked in (True, False):
-            self.assertIn("Clips des Songs in dieser Timeline", self.M.explanation(checked, info, "Müller Song"))
+            text, tip = self.M.explanation(checked, info, "Müller Song")
+            self.assertIn("Marker auch auf den Clips in der Timeline (1)", text)
+            self.assertIn("Clips des Songs in dieser Timeline", tip)
         absent = self.M.timeline_info(self.lua.globals().MOCK.new_timeline(25, 0), self.lua.table_from([self.mock.song]))
-        self.assertNotIn("Clips des Songs", self.M.explanation(True, absent, "Müller Song"))
+        text, tip = self.M.explanation(True, absent, "Müller Song")
+        self.assertNotIn("Clips", text)
+        self.assertNotIn("Clips des Songs", tip)
 
     def sub_tracks(self, tl):
         return [(t.name, t.enabled, [it.GetStart() for it in t["items"].values()]) for t in tl.subs.values()]
@@ -769,6 +806,85 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(sorted(self.bin_clips()), ["Müller Song.srt"])   # the timeline SRT is only on the track
         self.assertEqual(self.work_dirs(), [])
 
+    # --- one subtitle track per audio track with the song (user, answer a) ------------------------------
+
+    def setup_three_uses(self):
+        tl = self.setup_timeline(extra_items=[(1, 90000 + 1000)])     # A1: trimmed use + a second, later use
+        self.lua.execute("MOCK.timeline.audio[2] = { MOCK.timeline_item(MOCK.song, 92000, 100, 200) }")   # A2
+        return tl
+
+    def test_subtitle_track_per_audio_track(self):
+        tl = self.setup_three_uses()
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertTrue(ok, msg)
+        tracks = {name: (enabled, starts) for name, enabled, starts in self.sub_tracks(tl)}
+        self.assertEqual(sorted(tracks), ["BeatAnalyzer - Müller Song (A1)", "BeatAnalyzer - Müller Song (A2)"])
+        a1 = tracks["BeatAnalyzer - Müller Song (A1)"][1]
+        # first use as before (visible beats 1.0 ... 3.5 s), second use at 40 s: all 8 beats, nothing twice
+        self.assertEqual(a1, [90250, 90263, 90275, 90288, 90300, 90313,
+                              91013, 91025, 91038, 91050, 91063, 91075, 91088, 91100])
+        self.assertEqual(tracks["BeatAnalyzer - Müller Song (A2)"][1], [92000])   # visible part 4 ... 12 s: beat 4.0
+        self.assertEqual(sum(1 for e, _ in tracks.values() if e), 1)               # Resolve: one active track
+        self.assertIn("(A1)", msg)
+        self.assertIn("(A2)", msg)
+        self.assertEqual(sorted(self.bin_clips()), ["Müller Song.srt"])
+        self.assertEqual(self.work_dirs(), [])
+
+    def test_second_run_replaces_per_track_and_old_named_tracks(self):
+        tl = self.setup_three_uses()
+        self.lua.execute("""
+            local tl = MOCK.timeline
+            tl:AddTrack("subtitle")
+            tl.subs[1].name = "BeatAnalyzer - Müller Song"         -- track of 0.1.5 (one track, no "(A1)")
+        """)
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        names = sorted(name for name, _, _ in self.sub_tracks(tl))
+        self.assertEqual(names, ["BeatAnalyzer - Müller Song (A1)", "BeatAnalyzer - Müller Song (A2)"])
+
+    def test_remove_finds_all_tracks_per_audio_track(self):
+        tl = self.setup_three_uses()
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        clips = self.lua.table_from([self.mock.song])
+        self.assertEqual(self.M.removal(clips, tl).tracks, 2)
+        self.M.remove(clips, tl)
+        self.assertEqual(self.sub_tracks(tl), [])
+
+    def test_old_tracks_stay_when_the_new_srt_cannot_be_written(self):
+        tl = self.setup_three_uses()
+        self.lua.execute("""
+            local tl = MOCK.timeline
+            tl:AddTrack("subtitle")
+            tl.subs[1].name = "BeatAnalyzer - Müller Song (A1)"
+        """)
+        data = self.lua.eval("function(t) return t end")(self.M.prepare(self.write_json(
+            resolve_marker_data(sample_result()))).data)
+        line = self.M.place_in_timeline(self.mock.pool, tl, data, self.lua.table_from([self.mock.song]),
+                                        str(self.tmp / "gibt es nicht"), "Müller Song")
+        self.assertIn("gibt es nicht", str(line))
+        self.assertEqual([n for n, _, _ in self.sub_tracks(tl)], ["BeatAnalyzer - Müller Song (A1)"])   # kept
+
+    def test_tooltip_names_the_tracks_when_the_song_is_on_several(self):
+        self.load_lang("de")
+        tl = self.setup_three_uses()
+        info = self.M.timeline_info(tl, self.lua.table_from([self.mock.song]))
+        text, tip = self.M.explanation(True, info, "Müller Song")
+        self.assertIn("A1, A2", tip)
+        self.assertIn("„BeatAnalyzer - Müller Song (A1)“", tip)
+        self.assertNotIn("„BeatAnalyzer - Müller Song“", tip)
+
+    def test_song_on_one_track_keeps_the_plain_track_name(self):
+        tl = self.setup_timeline()
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertEqual([n for n, _, _ in self.sub_tracks(tl)], ["BeatAnalyzer - Müller Song"])
+
+    def test_explanation_names_every_audio_track(self):
+        self.load_lang("de")
+        tl = self.setup_three_uses()
+        info = self.M.timeline_info(tl, self.lua.table_from([self.mock.song]))
+        text, tip = self.M.explanation(True, info, "Müller Song")
+        self.assertTrue(text.startswith("Subtitle Track kommt unter den Song (A1, A2)."), text)
+
     def test_timeline_second_run_replaces_track_and_keeps_other_tracks(self):
         tl = self.setup_timeline()
         self.lua.execute("""
@@ -787,12 +903,15 @@ class ResolveScriptTests(unittest.TestCase):
                          [("Dialog", False, 1), ("BeatAnalyzer - Müller Song", True, 6)])
         self.assertIn("(old track replaced)", msg)
 
-    def test_timeline_uses_first_use_of_the_song(self):
+    def test_timeline_earlier_use_on_another_track_gets_its_own_track(self):
+        # up to 0.1.5 only the first use got subtitles; now one track per audio track (user, answer a)
         tl = self.setup_timeline(extra_items=[(2, 90000 + 50)])  # earlier use on A2 at 2 s, nothing trimmed
         ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
-        starts = self.sub_tracks(tl)[0][2]
-        self.assertEqual(len(starts), 8)
-        self.assertEqual(starts[0], 90000 + 50 + 13)  # 0.5 s x 25 fps = 12.5, rounded up
+        tracks = {name: starts for name, _, starts in self.sub_tracks(tl)}
+        a2 = tracks["BeatAnalyzer - Müller Song (A2)"]
+        self.assertEqual(len(a2), 8)
+        self.assertEqual(a2[0], 90000 + 50 + 13)  # 0.5 s x 25 fps = 12.5, rounded up
+        self.assertEqual(len(tracks["BeatAnalyzer - Müller Song (A1)"]), 6)
 
     def test_no_timeline_track_when_song_is_not_in_timeline(self):
         self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 90000)")
@@ -957,6 +1076,26 @@ class ResolveJobScriptTests(unittest.TestCase):
             (Path(job) / name).write_text("x", encoding="utf-8")
         self.M.remove_job(job)
         self.assertFalse(Path(job).exists())
+
+    def test_cleanup_removes_finished_jobs_at_once(self):
+        # user: folders of cancelled analyses stayed; Python writes done.txt also when cancelled
+        done = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90, "now": 1000}))
+        running = self.M.new_job("/x/b.mp3", self.lua.table_from({"slider": 90, "now": 1000}))
+        (Path(done) / "cancel.txt").write_text("", encoding="utf-8")
+        (Path(done) / "done.txt").write_text("state=cancelled\n", encoding="utf-8")
+        self.M.cleanup_jobs(1000 + 60)
+        self.assertFalse(Path(done).exists())
+        self.assertTrue(Path(running).exists())                # Python may still write into it
+
+    def test_cleanup_forgets_vanished_folders_quietly(self):
+        out = []
+        self.lua.globals().print = lambda *a: out.append(" ".join(str(x) for x in a))
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90, "now": 1000}))
+        self.M.remove_job(job)
+        out.clear()
+        self.M.cleanup_jobs(1000 + 2 * 86400)
+        self.assertEqual([line for line in out if "Cannot remove" in line], [])
+        self.assertEqual((self.tmp / "resolve_temp" / "jobs.txt").read_text(encoding="utf-8"), "")
 
     def test_cleanup_removes_only_old_jobs(self):
         old = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90, "now": 1000}))

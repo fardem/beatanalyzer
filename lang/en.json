@@ -99,7 +99,7 @@
     "way_json": "Load JSON",
     "smooth_label": "Smoothing",
     "smooth_off": "off",
-    "smooth_tip": "Smoothing – how even the bar grid becomes.\n0 %: off. The bars stay as beat_this hears them – including bars of only 1 to 3 beats at unsure places.\nFurther right: the even grid may move more and more of beat_this's '1's – first only unsure ones, the further right, the surer ones.\n100 %: the grid decides alone. It starts anew only where beat_this hears the '1' elsewhere over several bars (e.g. after an edit).\nDefault: 90 %. The beats themselves never change.",
+    "smooth_tip": "0 % = off: bars as beat_this hears them.\nMore % = a more even grid.\n100 % = fully smoothed; starts anew only where the '1' is clearly elsewhere.\nThe beats never change.",
     "analyze_none": "Select exactly one audio clip in the Media Pool.",
     "analyze_many": "Several clips selected – please select exactly one audio clip.",
     "analyze_no_path": "The selected item has no file (e.g. a Timeline or a Compound Clip).",
@@ -110,6 +110,19 @@
     "step_analysis_hint": "Cancel works only now. Up to here nothing in the project has changed.",
     "msg_cancelled": "Analysis cancelled. Nothing in the project has changed.",
     "msg_analysis_error": "Analysis failed: {message}. Nothing in the project has changed.",
-    "msg_timeout": "The analysis was not finished after 10 minutes and was cancelled. Nothing in the project has changed."
+    "msg_timeout": "The analysis was not finished after 10 minutes and was cancelled. Nothing in the project has changed.",
+    "tasks_title": "Tasks",
+    "task_analyze": "Analysing the track",
+    "task_markers": "Setting markers",
+    "task_subtitle": "Creating the Subtitle",
+    "task_track": "Subtitle Track in the Timeline",
+    "wait_short": "Please wait …",
+    "cancel_hint": "Cancel works only during the analysis.",
+    "explain_short_present": "The Subtitle Track goes under the song ({tracks}).",
+    "explain_short_absent": "Song not in the Timeline '{timeline}' – only the Subtitle in the Media Pool.",
+    "explain_short_no_timeline": "No Timeline open – only the Subtitle in the Media Pool.",
+    "explain_short_off": "The Timeline stays unchanged, Subtitle in the folder BeatAnalyzer.",
+    "explain_short_tl_markers": "Markers also on the clips in the Timeline ({items}).",
+    "explain_present_many": "In the Timeline '{timeline}' the song lies on {tracks}. Each of these tracks gets its own Subtitle Track, e.g. '{track_name}'. Resolve allows only one active Subtitle Track; the others stay but are disabled."
   }
 }

@@ -100,7 +100,7 @@
     "way_json": "JSON yükle",
     "smooth_label": "Düzeltme",
     "smooth_off": "kapalı",
-    "smooth_tip": "Düzeltme – ölçü ızgarasının ne kadar düzenli olacağı.\n%0: kapalı. Ölçüler beat_this'in duyduğu gibi kalır – belirsiz yerlerde yalnızca 1–3 beat'lik ölçüler dahil.\nSağa doğru: Düzenli ızgara beat_this'in „1“lerini giderek daha çok kaydırabilir – önce yalnızca belirsiz olanları, sağa gittikçe daha kesin olanları da.\n%100: Izgara tek başına karar verir. Yalnızca beat_this „1“i birkaç ölçü boyunca başka yerde duyduğunda yeniden başlar (ör. bir kesmeden sonra).\nVarsayılan: %90. Beat'lerin kendisi hiç değişmez.",
+    "smooth_tip": "%0 = kapalı: ölçüler beat_this'in duyduğu gibi.\nDaha fazla % = daha düzenli ızgara.\n%100 = tam düzeltme; yalnızca „1“ açıkça başka yerdeyse yeniden başlar.\nBeat'ler değişmez.",
     "analyze_none": "Media Pool'da tam olarak bir ses klibi seçin.",
     "analyze_many": "Birden fazla klip seçili – lütfen tam olarak bir ses klibi seçin.",
     "analyze_no_path": "Seçili öğenin dosyası yok (ör. Timeline veya Compound Clip).",
@@ -111,6 +111,19 @@
     "step_analysis_hint": "İptal yalnızca şimdi mümkün. Buraya kadar projede hiçbir şey değişmedi.",
     "msg_cancelled": "Analiz iptal edildi. Projede hiçbir şey değişmedi.",
     "msg_analysis_error": "Analiz başarısız: {message}. Projede hiçbir şey değişmedi.",
-    "msg_timeout": "Analiz 10 dakika sonra bitmedi ve iptal edildi. Projede hiçbir şey değişmedi."
+    "msg_timeout": "Analiz 10 dakika sonra bitmedi ve iptal edildi. Projede hiçbir şey değişmedi.",
+    "tasks_title": "Görevler",
+    "task_analyze": "Parça analiz ediliyor",
+    "task_markers": "Marker'lar ekleniyor",
+    "task_subtitle": "Subtitle oluşturuluyor",
+    "task_track": "Timeline'da Subtitle Track",
+    "wait_short": "Lütfen bekleyin …",
+    "cancel_hint": "İptal yalnızca analiz sırasında mümkün.",
+    "explain_short_present": "Subtitle Track şarkının altına gelir ({tracks}).",
+    "explain_short_absent": "Şarkı „{timeline}“ Timeline'ında değil – yalnızca Media Pool'da Subtitle.",
+    "explain_short_no_timeline": "Açık Timeline yok – yalnızca Media Pool'da Subtitle.",
+    "explain_short_off": "Timeline değişmez, Subtitle BeatAnalyzer klasöründe.",
+    "explain_short_tl_markers": "Marker'lar Timeline'daki kliplere de eklenir ({items}).",
+    "explain_present_many": "„{timeline}“ Timeline'ında şarkı {tracks} üzerinde. Bu izlerin her biri için ayrı bir Subtitle Track oluşur, ör. „{track_name}“. Resolve yalnızca bir etkin Subtitle Track'e izin verir; diğerleri kalır ama devre dışı bırakılır."
   }
 }

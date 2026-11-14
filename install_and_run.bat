@@ -220,6 +220,18 @@ if !errorlevel! neq 0 (
     pause >nul
 ) else (
     echo [OK] beat_this ist einsatzbereit.
+    echo   - Lade das Modell von beat_this vorab ^(beim ersten Mal etwa 80 MB^)...
+    !VENV_PY! backend\model_check.py
+    if !errorlevel! neq 0 (
+        color 0E
+        echo [WARNUNG] Ohne Modell rechnet BeatAnalyzer mit librosa. Ursache und Abhilfe stehen oben.
+        echo [WARNUNG] Modell von beat_this nicht geladen. >> "%LOGFILE%"
+        echo.
+        echo Druecke eine Taste, um trotzdem zu starten - oder schliesse das Fenster.
+        pause >nul
+    ) else (
+        echo [OK] Modell von beat_this bereit. >> "%LOGFILE%"
+    )
 )
 
 :: ----------------------------------------------------------------------

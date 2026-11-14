@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.1.5"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.1.6"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -64,6 +64,7 @@ local BA = {
       ["plugin.btn_ok"] = "OK",
       ["plugin.btn_remove"] = "Remove BeatAnalyzer markers",
       ["plugin.btn_remove_yes"] = "Remove",
+      ["plugin.cancel_hint"] = "Cancel works only during the analysis.",
       ["plugin.check_colors"] = "Adjust marker colours",
       ["plugin.check_timeline"] = "Create a Subtitle Track in the Timeline",
       ["plugin.choose_title"] = "BeatAnalyzer – choose marker JSON",
@@ -78,6 +79,12 @@ local BA = {
       ["plugin.explain_no_timeline"] = "No Timeline is open. Only the Subtitle in the Media Pool is created.",
       ["plugin.explain_off"] = "The Timeline stays unchanged. The Subtitle with all beats lies in the folder BeatAnalyzer in the Media Pool and can be dragged from there into any Timeline.",
       ["plugin.explain_present"] = "In the Timeline '{timeline}' the song lies on A{track} from {tc}. Below it the Subtitle Track '{track_name}' is created and made active. Resolve allows only one active Subtitle Track; the others stay but are switched off.",
+      ["plugin.explain_present_many"] = "In the Timeline '{timeline}' the song lies on {tracks}. Each of these tracks gets its own Subtitle Track, e.g. '{track_name}'. Resolve allows only one active Subtitle Track; the others stay but are disabled.",
+      ["plugin.explain_short_absent"] = "Song not in the Timeline '{timeline}' – only the Subtitle in the Media Pool.",
+      ["plugin.explain_short_no_timeline"] = "No Timeline open – only the Subtitle in the Media Pool.",
+      ["plugin.explain_short_off"] = "The Timeline stays unchanged, Subtitle in the folder BeatAnalyzer.",
+      ["plugin.explain_short_present"] = "The Subtitle Track goes under the song ({tracks}).",
+      ["plugin.explain_short_tl_markers"] = "Markers also on the clips in the Timeline ({items}).",
       ["plugin.explain_tl_markers"] = "The song's clips in this Timeline ({items}) get the markers as well.",
       ["plugin.json_none"] = "No JSON chosen.",
       ["plugin.msg_analysis_error"] = "Analysis failed: {message}. Nothing in the project has changed.",
@@ -122,7 +129,7 @@ local BA = {
       ["plugin.remove_nothing"] = "Nothing from BeatAnalyzer found on '{song}'.",
       ["plugin.smooth_label"] = "Smoothing",
       ["plugin.smooth_off"] = "off",
-      ["plugin.smooth_tip"] = "Smoothing – how even the bar grid becomes.\n0 %: off. The bars stay as beat_this hears them – including bars of only 1 to 3 beats at unsure places.\nFurther right: the even grid may move more and more of beat_this's '1's – first only unsure ones, the further right, the surer ones.\n100 %: the grid decides alone. It starts anew only where beat_this hears the '1' elsewhere over several bars (e.g. after an edit).\nDefault: 90 %. The beats themselves never change.",
+      ["plugin.smooth_tip"] = "0 % = off: bars as beat_this hears them.\nMore % = a more even grid.\n100 % = fully smoothed; starts anew only where the '1' is clearly elsewhere.\nThe beats never change.",
       ["plugin.step_analysis"] = "Analysis of '{clip}'",
       ["plugin.step_analysis_hint"] = "Cancel works only now. Up to here nothing in the project has changed.",
       ["plugin.step_analyze"] = "analysing",
@@ -132,8 +139,14 @@ local BA = {
       ["plugin.step_model"] = "loading the model",
       ["plugin.step_track"] = "Subtitle Track '{track}' in '{timeline}'",
       ["plugin.step_write"] = "writing the result",
+      ["plugin.task_analyze"] = "Analysing the track",
+      ["plugin.task_markers"] = "Setting markers",
+      ["plugin.task_subtitle"] = "Creating the Subtitle",
+      ["plugin.task_track"] = "Subtitle Track in the Timeline",
+      ["plugin.tasks_title"] = "Tasks",
       ["plugin.title"] = "BeatAnalyzer {version}",
       ["plugin.wait"] = "Please wait – the window closes only at the end.",
+      ["plugin.wait_short"] = "Please wait …",
       ["plugin.warn_length"] = "The clip's duration ({clip}) differs from the analysed file ({json}).",
       ["plugin.warn_other_file"] = "The selected clip is not '{file}' from the JSON.",
       ["plugin.way_analyze"] = "Analyse the selected clip",
@@ -646,9 +659,11 @@ local function selected_clips(media_pool)
       ignored[#ignored + 1] = tostring(key) .. "=" .. type(clip)
     end
   end
-  if #ignored > 0 then
-    log("Selection: ignored entries that are not clips:", table.concat(ignored, ", "))
+  local text = table.concat(ignored, ", ")
+  if #ignored > 0 and text ~= M.last_ignored then   -- the window checks every second: log it once
+    log("Selection: ignored entries that are not clips:", text)
   end
+  M.last_ignored = text
   return selected
 end
 M.selected_clips = selected_clips
@@ -838,7 +853,10 @@ function M.cleanup_jobs(now)
   local keep, removed = {}, 0
   for line in list:gmatch("[^\n]+") do
     local t, dir = line:match("^(%d+)\t(.+)$")
-    if t and (now or G_os.time()) - tonumber(t) > M.JOB_MAX_AGE then
+    if t and not file_exists(dir .. SEP .. "job.txt") then
+      -- gone already (removed after a successful run): forget it quietly
+    elseif t and (file_exists(dir .. SEP .. "done.txt") or (now or G_os.time()) - tonumber(t) > M.JOB_MAX_AGE) then
+      -- Python is done (also after Cancel), or the job hangs for more than a day
       M.remove_job(dir)
       removed = removed + 1
     elseif t then
@@ -927,51 +945,71 @@ end
 -- Returns the SRT text, the number of subtitles and the time of the first one (after the shift).
 local function build_srt(data, opts)
   opts = opts or {}
-  local shift, from, to = opts.shift or 0, opts.from, opts.to
-  local markers = {}
-  for _, m in ipairs(data.markers) do
-    local t = tonumber(m.time)
-    if t and (not from or t >= from - 1e-6) and (not to or t < to) then
-      markers[#markers + 1] = m
-    end
-  end
+  -- opts.segments: several parts of the song, each { shift, from, to } (one per use of the song on a track)
+  local segments = opts.segments or { { shift = opts.shift or 0, from = opts.from, to = opts.to } }
+  local intro = not opts.segments and not opts.shift and not opts.from
   local cues = {}
-  if #markers == 0 then
-    return "", 0, nil
-  end
-  local first = tonumber(markers[1].time)
-  if not opts.shift and not from and first > 0.05 then
-    cues[#cues + 1] = { 0, first, T("output.intro", { file = tostring(data.fileName or ""),
-                                                       bpm = tonumber(data.globalBpm) and fmt_num(data.globalBpm, 1) or "?",
-                                                       meter = fmt_meter(data.timeSignature or "?") }) }
-  end
-  for i, m in ipairs(markers) do
-    local t = tonumber(m.time)
-    local nxt = markers[i + 1] and tonumber(markers[i + 1].time)
-    if not nxt then
-      local prev = markers[i - 1] and tonumber(markers[i - 1].time)
-      nxt = t + (prev and math.max(0.1, t - prev) or 0.5)
-      if to and nxt > to then
-        nxt = to
+  for _, seg in ipairs(segments) do
+    local shift, from, to = seg.shift or 0, seg.from, seg.to
+    local markers = {}
+    for _, m in ipairs(data.markers) do
+      local t = tonumber(m.time)
+      if t and (not from or t >= from - 1e-6) and (not to or t < to) then
+        markers[#markers + 1] = m
       end
     end
-    local bar, beat = tonumber(m.bar) or 0, tonumber(m.beat) or 0
-    local kind = m.type == "downbeat" and T("output.kind_downbeat") or T("output.kind_beat", { beat = beat })
-    local lines = {
-      kind,
-      T("output.bar_beat", { bar = bar, beat = beat }),
-      T("output.time_bpm", { clock = clock(t), bpm = fmt_num(m.bpm, 1) }),
-      T("output.confidence", { value = fmt_pct(m.confidence) }),
-    }
-    cues[#cues + 1] = { t, nxt, table.concat(lines, "\n") }
+    if #markers > 0 then
+      local first = tonumber(markers[1].time)
+      if intro and first > 0.05 then
+        cues[#cues + 1] = { 0, first, T("output.intro", { file = tostring(data.fileName or ""),
+                                                           bpm = tonumber(data.globalBpm) and fmt_num(data.globalBpm, 1) or "?",
+                                                           meter = fmt_meter(data.timeSignature or "?") }) }
+      end
+      for i, m in ipairs(markers) do
+        local t = tonumber(m.time)
+        local nxt = markers[i + 1] and tonumber(markers[i + 1].time)
+        if not nxt then
+          local prev = markers[i - 1] and tonumber(markers[i - 1].time)
+          nxt = t + (prev and math.max(0.1, t - prev) or 0.5)
+          if to and nxt > to then
+            nxt = to
+          end
+        end
+        local bar, beat = tonumber(m.bar) or 0, tonumber(m.beat) or 0
+        local kind = m.type == "downbeat" and T("output.kind_downbeat") or T("output.kind_beat", { beat = beat })
+        local lines = {
+          kind,
+          T("output.bar_beat", { bar = bar, beat = beat }),
+          T("output.time_bpm", { clock = clock(t), bpm = fmt_num(m.bpm, 1) }),
+          T("output.confidence", { value = fmt_pct(m.confidence) }),
+        }
+        cues[#cues + 1] = { t + shift, nxt + shift, table.concat(lines, "\n") }
+      end
+    end
   end
+  if #cues == 0 then
+    return "", 0, nil
+  end
+  table.sort(cues, function(a, b) return a[1] < b[1] end)
   local out = {}
   for i, c in ipairs(cues) do
-    out[#out + 1] = string.format("%d\n%s --> %s\n%s\n", i, srt_time(c[1] + shift), srt_time(c[2] + shift), c[3])
+    out[#out + 1] = string.format("%d\n%s --> %s\n%s\n", i, srt_time(c[1]), srt_time(c[2]), c[3])
   end
-  return table.concat(out, "\n"), #cues, cues[1][1] + shift
+  return table.concat(out, "\n"), #cues, cues[1][1]
 end
 M.build_srt = build_srt
+
+-- Note of a marker: the same parts as its subtitle, e.g. "Takt 24 – Beat 2 | 106,860 s | 120,0 BPM | Confidence 75 %".
+function M.marker_note(m)
+  local parts = {
+    T("output.bar_beat", { bar = tonumber(m.bar) or 0, beat = tonumber(m.beat) or 0 }),
+    T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) }),
+  }
+  if tonumber(m.confidence) then
+    parts[#parts + 1] = T("output.confidence", { value = fmt_pct(m.confidence) })
+  end
+  return table.concat(parts, " | ")
+end
 
 -- "C:\\Downloads\\x.json" + "01. Song.flac" -> "C:\\Downloads\\01. Song.srt"
 -- "<dir>" + "01. Song.flac" -> "<dir>/01. Song.srt"; without a file name the name of the JSON.
@@ -1066,6 +1104,41 @@ function M.timeline_items(tl, clips)
   return out
 end
 
+-- Audio tracks with the song: { { track = i, items = { ... } }, ... } in track order.
+local function song_tracks(tl, clips)
+  local keys, out = {}, {}
+  for _, c in ipairs(clips or {}) do
+    keys[media_key(c)] = true
+  end
+  local n = tl and tonumber(api(tl, "GetTrackCount", "audio")) or 0
+  for i = 1, n do
+    local list = {}
+    for _, item in ipairs(api(tl, "GetItemListInTrack", "audio", i) or {}) do
+      local mpi = api(item, "GetMediaPoolItem")
+      if mpi and keys[media_key(mpi)] then
+        list[#list + 1] = item
+      end
+    end
+    if #list > 0 then
+      out[#out + 1] = { track = i, items = list }
+    end
+  end
+  return out
+end
+M.song_tracks = song_tracks
+
+-- Our subtitle track of a song: "BeatAnalyzer - <song>", "BeatAnalyzer - <song> (A<n>)" or "BeatThis - <song>".
+local function is_song_track(name, song)
+  if type(name) ~= "string" then
+    return false
+  end
+  if name == TRACK_PREFIX .. song or name == OLD_TRACK_PREFIX .. song then
+    return true
+  end
+  local prefix = TRACK_PREFIX .. song .. " (A"
+  return name:sub(1, #prefix) == prefix and name:sub(#prefix + 1):match("^%d+%)$") ~= nil
+end
+
 local function first_use(tl, clips)
   local keys = {}
   for _, c in ipairs(clips) do
@@ -1091,12 +1164,13 @@ local function subtitle_count(tl, i)
   return type(items) == "table" and #items or 0   -- # not pairs(): pairs() reports 1 on an empty track
 end
 
--- Delete the subtitle tracks with this name (from the last one, so the indexes stay valid).
-local function delete_tracks(tl, name)
+-- Delete all subtitle tracks of the song (every form of the name, see is_song_track), from the last one,
+-- so the indexes stay valid.
+local function delete_song_tracks(tl, song)
   local n = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
   local deleted = 0
   for i = n, 1, -1 do
-    if api(tl, "GetTrackName", "subtitle", i) == name and api(tl, "DeleteTrack", "subtitle", i) then
+    if is_song_track(api(tl, "GetTrackName", "subtitle", i), song) and api(tl, "DeleteTrack", "subtitle", i) then
       deleted = deleted + 1
     end
   end
@@ -1115,37 +1189,28 @@ local function activate_only(tl, target)
   return api(tl, "GetIsTrackEnabled", "subtitle", target) == true
 end
 
--- Subtitles under the first use of the song in the open timeline, on the track "BeatAnalyzer - <song>".
--- Returns a line for the result message, or nil when the song is not in the timeline.
-local function place_in_timeline(media_pool, tl, data, clips, dir, base)
-  local item = first_use(tl, clips)
-  if not item then
-    log("Timeline: the song is not on an audio track of '" .. tostring(api(tl, "GetName") or "?") .. "'")
-    return nil
-  end
-  local fps = exact_fps(parse_fps(api(tl, "GetSetting", "timelineFrameRate")) or 25)
-  local tl_start = tonumber(api(tl, "GetStartFrame")) or 0
-  local start = tonumber(api(item, "GetStart")) or tl_start
-  local left = tonumber(api(item, "GetLeftOffset")) or 0
-  local duration = tonumber(api(item, "GetDuration")) or 0
-  local from, to = left / fps, (left + duration) / fps
-  local shift = (start - tl_start - left) / fps
-  log(string.format("Timeline '%s': song at frame %d (start %d), left offset %d, duration %d, %.3f fps -> song %.3f-%.3f s, shift %.3f s",
-      tostring(api(tl, "GetName") or "?"), start, tl_start, left, duration, fps, from, to, shift))
-
-  local text, count, first = build_srt(data, { shift = shift, from = from, to = to })
+-- One subtitle track for the given parts (all uses of the song on one audio track). Returns a result line
+-- and true if a file was kept (failed import).
+-- First phase for one audio track: the SRT file. Returns prep (count, first, srt_name, srt_file, track_name) or
+-- nil, a result line and true if a file was kept.
+local function write_track_srt(data, segments, dir, base, track_no, several)
+  local text, count, first = build_srt(data, { segments = segments })
   if count == 0 then
-    return T("plugin.msg_tl_empty")
+    return nil, T("plugin.msg_tl_empty")
   end
-  local srt_name = base .. " (Timeline).srt"
+  local srt_name = base .. " (Timeline" .. (several and (" A" .. track_no) or "") .. ").srt"
   local srt_file = dir .. SEP .. srt_name
   if not write_file(srt_file, text) then
-    return T("plugin.msg_tl_write", { path = srt_file }), true
+    return nil, T("plugin.msg_tl_write", { path = srt_file }), true
   end
-  -- The old track goes first: Resolve may refuse to delete a clip that a timeline still uses, so the clip of
-  -- the last run can only be replaced once its track is gone.
-  local track_name = TRACK_PREFIX .. base
-  local deleted = delete_tracks(tl, track_name) + delete_tracks(tl, OLD_TRACK_PREFIX .. base)
+  return { count = count, first = first, srt_name = srt_name, srt_file = srt_file,
+           track_name = TRACK_PREFIX .. base .. (several and (" (A" .. track_no .. ")") or "") }
+end
+
+-- Second phase: import the SRT and put it on a new subtitle track.
+local function place_track(media_pool, tl, prep, replaced, fps, tl_start)
+  local count, first, srt_name, srt_file, track_name = prep.count, prep.first, prep.srt_name, prep.srt_file,
+                                                      prep.track_name
   local srt_item, ierr = import_subtitles(media_pool, srt_file, srt_name)
   if not srt_item then
     return T("plugin.msg_srt_import", { why = tostring(ierr), path = srt_file }), true
@@ -1180,7 +1245,7 @@ local function place_in_timeline(media_pool, tl, data, clips, dir, base)
   api(tl, "SetTrackName", "subtitle", target, track_name)
 
   local msg = T("plugin.msg_tl_ok", { n = placed, track = target, name = track_name,
-                                     replaced = deleted > 0 and T("plugin.msg_tl_replaced") or "" })
+                                     replaced = replaced and T("plugin.msg_tl_replaced") or "" })
   if placed ~= count then
     msg = msg .. "\n" .. T("plugin.msg_tl_count", { placed = placed, count = count })
   end
@@ -1197,6 +1262,52 @@ local function place_in_timeline(media_pool, tl, data, clips, dir, base)
     msg = msg .. "\n" .. T("plugin.msg_tl_offset", { actual = actual, expected = expected, diff = actual - expected })
   end
   return drop_vehicle(msg)
+end
+
+-- Subtitles under the song in the open timeline: one track per audio track with the song (user: one per track),
+-- each with all uses of the song on that track, only their visible parts. Returns the result lines, or nil when
+-- the song is not on an audio track of the timeline.
+local function place_in_timeline(media_pool, tl, data, clips, dir, base)
+  local groups = song_tracks(tl, clips)
+  if #groups == 0 then
+    log("Timeline: the song is not on an audio track of '" .. tostring(api(tl, "GetName") or "?") .. "'")
+    return nil
+  end
+  local fps = exact_fps(parse_fps(api(tl, "GetSetting", "timelineFrameRate")) or 25)
+  local tl_start = tonumber(api(tl, "GetStartFrame")) or 0
+  local lines, kept, preps = {}, false, {}
+  for _, g in ipairs(groups) do
+    local segments = {}
+    for _, item in ipairs(g.items) do
+      local start = tonumber(api(item, "GetStart")) or tl_start
+      local left = tonumber(api(item, "GetLeftOffset")) or 0
+      local duration = tonumber(api(item, "GetDuration")) or 0
+      local seg = { from = left / fps, to = (left + duration) / fps, shift = (start - tl_start - left) / fps }
+      segments[#segments + 1] = seg
+      log(string.format("Timeline '%s' A%d: song at frame %d (start %d), left offset %d, duration %d, %.3f fps -> song %.3f-%.3f s, shift %.3f s",
+          tostring(api(tl, "GetName") or "?"), g.track, start, tl_start, left, duration, fps, seg.from, seg.to,
+          seg.shift))
+    end
+    local prep, line, k = write_track_srt(data, segments, dir, base, g.track, #groups > 1)
+    if prep then
+      preps[#preps + 1] = prep
+    else
+      lines[#lines + 1] = line
+      kept = kept or k == true
+    end
+  end
+  if #preps == 0 then   -- nothing new to place: the tracks of the last run stay as they are
+    return table.concat(lines, "\n"), kept
+  end
+  -- The old tracks go before the import: Resolve may refuse to delete a clip that a timeline still uses, so the
+  -- clip of the last run can only be replaced once its track is gone. Only now, when the new files exist.
+  local replaced = delete_song_tracks(tl, base) > 0
+  for _, prep in ipairs(preps) do
+    local line, k = place_track(media_pool, tl, prep, replaced, fps, tl_start)
+    lines[#lines + 1] = line
+    kept = kept or k == true
+  end
+  return table.concat(lines, "\n"), kept
 end
 M.place_in_timeline = place_in_timeline
 
@@ -1226,8 +1337,7 @@ local function removal_targets(clips, tl)
   if tl then
     local n = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
     for i = 1, n do
-      local name = api(tl, "GetTrackName", "subtitle", i)
-      if name == TRACK_PREFIX .. song or name == OLD_TRACK_PREFIX .. song then
+      if is_song_track(api(tl, "GetTrackName", "subtitle", i), song) then
         t.tracks = t.tracks + 1
       end
     end
@@ -1268,7 +1378,7 @@ function M.remove(clips, tl)
     done.markers = done.markers + remove_own_markers(item)
   end
   if tl then
-    done.tracks = delete_tracks(tl, TRACK_PREFIX .. t.song) + delete_tracks(tl, OLD_TRACK_PREFIX .. t.song)
+    done.tracks = delete_song_tracks(tl, t.song)
   end
   if #t.srt_items > 0 and api(t.media_pool, "DeleteClips", t.srt_items) then
     done.srt_clips = #t.srt_items
@@ -1401,26 +1511,47 @@ function M.timeline_info(tl, clips)
   local name = tostring(api(tl, "GetName") or "?")
   local item, track = first_use(tl, clips or {})
   local items = #M.timeline_items(tl, clips or {})
+  local tracks = {}
+  for _, g in ipairs(song_tracks(tl, clips or {})) do
+    tracks[#tracks + 1] = "A" .. g.track
+  end
   if not item then
     return { state = "absent", name = name, items = items }
   end
   local fps = parse_fps(api(tl, "GetSetting", "timelineFrameRate")) or 25
   return { state = "present", name = name, track = track, tc = M.timecode(api(item, "GetStart"), fps),
-           items = items }
+           items = items, tracks = table.concat(tracks, ", ") }
 end
 
 -- The text under the tick box "Subtitle Track in the Timeline".
+-- Short text for the window and the long one for its tooltip (the user found the long one too much).
 function M.explanation(checked, tinfo, song)
-  local text = M.subtitle_explanation(checked, tinfo, song)
-  if (tonumber(tinfo.items) or 0) > 0 then
-    text = text .. " " .. T("plugin.explain_tl_markers", { items = tinfo.items })
+  local long = M.subtitle_explanation(checked, tinfo, song)
+  local short
+  if not checked then
+    short = T("plugin.explain_short_off")
+  elseif tinfo.state == "present" then
+    short = T("plugin.explain_short_present", { tracks = tinfo.tracks or ("A" .. tostring(tinfo.track)) })
+  elseif tinfo.state == "absent" then
+    short = T("plugin.explain_short_absent", { timeline = tinfo.name })
+  else
+    short = T("plugin.explain_short_no_timeline")
   end
-  return text
+  if (tonumber(tinfo.items) or 0) > 0 then
+    long = long .. " " .. T("plugin.explain_tl_markers", { items = tinfo.items })
+    short = short .. " " .. T("plugin.explain_short_tl_markers", { items = tinfo.items })
+  end
+  return short, long
 end
 
 function M.subtitle_explanation(checked, tinfo, song)
   if not checked then
     return T("plugin.explain_off")
+  end
+  if tinfo.state == "present" and type(tinfo.tracks) == "string" and tinfo.tracks:find(",") then
+    local first = tinfo.tracks:match("^(A%d+)")
+    return T("plugin.explain_present_many", { timeline = tinfo.name, tracks = tinfo.tracks,
+                                              track_name = TRACK_PREFIX .. tostring(song or "") .. " (" .. first .. ")" })
   end
   if tinfo.state == "present" then
     return T("plugin.explain_present", { timeline = tinfo.name, track = tinfo.track, tc = tinfo.tc,
@@ -1519,7 +1650,7 @@ function Job:mark_some()
         else
           local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
             or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
-          local note = T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) })
+          local note = M.marker_note(m)
           if api(clip, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
             c.added = c.added + 1
           else
@@ -1581,7 +1712,7 @@ function Job:mark_timeline()
         if frame >= 0 and (not c.duration or frame < c.duration) then
           local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
             or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
-          local note = T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) })
+          local note = M.marker_note(m)
           if api(item, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
             self.tl_added = self.tl_added + 1
           end
@@ -1626,12 +1757,16 @@ end
 function Job:timeline_step()
   local tl = self.timeline
   if tl and self.dir then
+    local before = api(self.project, "GetCurrentTimeline")
     api(self.project, "SetCurrentTimeline", tl)
     local line, kept = place_in_timeline(self.media_pool, tl, self.data, self.clips, self.dir, self.base)
     if line then
       self.msg = self.msg .. "\n" .. line
     end
     self.keep = self.keep or kept == true
+    if before and before ~= tl then   -- the user had opened another timeline meanwhile: show it again
+      api(self.project, "SetCurrentTimeline", before)
+    end
   end
   if self.dir and not self.keep then
     remove_dir(self.dir)
@@ -1967,8 +2102,9 @@ function M.main()
       set("Warnings", "Hidden", true)
       set("Engine", "Hidden", true)
       S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
-      local explain = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
+      local explain, explain_tip = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
       set("Explain", "Text", explain)
+      set("Explain", "ToolTip", explain_tip)
       fit("Explain", explain, 2)
       relayout()
     elseif S.json then
@@ -1989,8 +2125,9 @@ function M.main()
       fit("JsonPath", get("JsonPath", "Text"), 2)
       fit("ClipInfo", get("ClipInfo", "Text"))
       S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
-      local explain = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
+      local explain, explain_tip = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
       set("Explain", "Text", explain)
+      set("Explain", "ToolTip", explain_tip)
       fit("Explain", explain, 2)
       relayout()
     end
@@ -2015,23 +2152,17 @@ function M.main()
     local function mark(n)
       return n < now and "✓" or (n == now and "…" or "  ")
     end
-    local lines = { T("plugin.work_title") }
-    local clip = tostring(api(job.clips[1], "GetName") or "?")
-    local o = 0
+    local lines = { T("plugin.tasks_title") }
     if S.analyzed then
-      o = 1
-      lines[#lines + 1] = string.format("✓ 1. %s", T("plugin.step_analysis", { clip = clip }))
+      lines[#lines + 1] = "✓ " .. T("plugin.task_analyze")
     end
-    lines[#lines + 1] = string.format("%s %d. %s   %d / %d", mark(1), 1 + o, T("plugin.step_markers", { clip = clip }),
-                                      job.marked, job.total)
-    lines[#lines + 1] = "     " .. T("plugin.step_markers_hint")
-    lines[#lines + 1] = string.format("%s %d. %s", mark(2), 2 + o, T("plugin.step_bin", { srt = job.srt_name }))
+    lines[#lines + 1] = string.format("%s %s   %d / %d", mark(1), T("plugin.task_markers"), job.marked, job.total)
+    lines[#lines + 1] = string.format("%s %s", mark(2), T("plugin.task_subtitle"))
     if S.track_step then
-      lines[#lines + 1] = string.format("%s %d. %s", mark(3), 3 + o, T("plugin.step_track", { track = job.track_name,
-                                                                                    timeline = job.timeline_name }))
+      lines[#lines + 1] = string.format("%s %s", mark(3), T("plugin.task_track"))
     end
     lines[#lines + 1] = ""
-    lines[#lines + 1] = T("plugin.wait")
+    lines[#lines + 1] = T("plugin.wait_short")
     return table.concat(lines, "\n")
   end
 
@@ -2041,12 +2172,13 @@ function M.main()
     local a = S.analysis
     local clip = tostring(api(a.clip, "GetName") or "?")
     local secs = math.max(0, G_os.time() - a.started)
-    local lines = { T("plugin.work_title"),
-      string.format("… 1. %s   %s   %d:%02d", T("plugin.step_analysis", { clip = clip }),
-                    T("plugin.step_" .. (step or "model")), math.floor(secs / 60), secs % 60),
-      "     " .. T("plugin.step_analysis_hint"),
-      "   2. " .. T("plugin.step_markers", { clip = clip }),
-      "   3. " .. T("plugin.step_bin", { srt = S.info.song .. ".srt" }),
+    local lines = { T("plugin.tasks_title"),
+      string.format("… %s (%s)   %d:%02d", T("plugin.task_analyze"), T("plugin.step_" .. (step or "model")),
+                    math.floor(secs / 60), secs % 60),
+      "  " .. T("plugin.task_markers"),
+      "  " .. T("plugin.task_subtitle"),
+      "",
+      T("plugin.cancel_hint"),
     }
     return table.concat(lines, "\n")
   end
@@ -2302,10 +2434,18 @@ function M.main()
   colors_visibility()
   refresh()
   timer:Start()
+  local want_w, want_h = geometry[3], geometry[4]   -- numbers: the geometry table may be the window's own
   win:Show()
   local okg, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
-  log(string.format("Window: requested %dx%d, actual %s", geometry[3], geometry[4],
-      okg and type(g) == "table" and (tostring(g[3]) .. "x" .. tostring(g[4])) or "?"))
+  local actual = okg and type(g) == "table" and (tostring(g[3]) .. "x" .. tostring(g[4])) or "?"
+  local resized = ""
+  if okg and type(g) == "table" and tonumber(g[3]) and tonumber(g[3]) < want_w then
+    -- seen in Resolve: drawn narrower than requested (431 of 600), the width changed between openings
+    pcall(function() win:Resize({ want_w, want_h }) end)
+    local ok2, g2 = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
+    resized = ", resized to " .. (ok2 and type(g2) == "table" and (tostring(g2[3]) .. "x" .. tostring(g2[4])) or "?")
+  end
+  log(string.format("Window: requested %dx%d, actual %s%s", want_w, want_h, actual, resized))
   disp:RunLoop()
   timer:Stop()
   win:Hide()
