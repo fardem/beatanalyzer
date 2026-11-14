@@ -135,6 +135,35 @@ class AnalyzerTests(unittest.TestCase):
 
     # --- beat_this ---------------------------------------------------------------------------------
 
+    def test_model_load_failure_logs_the_real_cause(self):
+        # seen at the user: beat_this hides the reason of a failed download behind "Could not load the checkpoint"
+        import contextlib, io, urllib.error
+
+        def hidden():
+            try:
+                raise urllib.error.URLError("getaddrinfo failed")
+            except Exception:
+                raise ValueError("Could not load the checkpoint given the provided name", "final0")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.analyze_with_fake(init_raises=None)
+            self.analyzer.predictor_instance = None
+
+            class Failing:
+                def __init__(self, *a, **k):
+                    hidden()
+            self.analyzer.Audio2Beats = Failing
+            torch_stub = types.ModuleType("torch")
+            torch_stub.cuda = types.SimpleNamespace(is_available=lambda: False)
+            had_torch = sys.modules.get("torch")
+            sys.modules["torch"] = had_torch or torch_stub
+            try:
+                self.assertIsNone(self.analyzer.get_predictor())
+            finally:
+                if had_torch is None:
+                    sys.modules.pop("torch", None)
+        self.assertIn("getaddrinfo failed", out.getvalue())
+
     def test_beat_this_gets_decoded_signal_not_file_path(self):
         calls = {}
         result = self.analyze_with_fake(calls=calls)
