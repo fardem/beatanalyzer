@@ -63,7 +63,14 @@ function disp:AddWindow(spec, root)
   items[spec.ID] = { Geometry = spec.Geometry }
   local win = { On = auto_table(), spec = spec, shown = false }
   function win:GetItems() return items end
-  function win:Show() self.shown = true end
+  function win:Show()
+    self.shown = true
+    if UIMOCK.narrow_on_show then items[spec.ID].Geometry[3] = UIMOCK.narrow_on_show end   -- seen: 431 of 600
+  end
+  function win:Resize(size)
+    UIMOCK.resized = { size[1], size[2] }
+    items[spec.ID].Geometry[3], items[spec.ID].Geometry[4] = size[1], size[2]
+  end
   function win:Hide() self.shown = false end
   function win:RecalcLayout() end
   UIMOCK.win, UIMOCK.items = win, items
@@ -384,6 +391,16 @@ class DialogTests(unittest.TestCase):
             self.assertGreaterEqual(self.item("Engine").MinimumSize[2], 2 * 17, text)
             self.close()
         self.run_dialog(scenario)
+
+    def test_narrow_window_is_widened_after_show(self):
+        # Resolve console: "Window: requested 600x680, actual 431x680", the width changed between openings
+        self.lua.execute("UIMOCK.narrow_on_show = 431")
+
+        def scenario():
+            self.assertEqual(list(self.ui.resized.values()), [680, 680])   # the requested size (default)
+            self.close()
+        self.run_dialog(scenario)
+        self.assertTrue(any("actual 431x680" in line and "resized" in line for line in self.out), self.out)
 
     def test_settings_saved_on_close(self):
         def scenario():

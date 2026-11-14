@@ -658,9 +658,11 @@ local function selected_clips(media_pool)
       ignored[#ignored + 1] = tostring(key) .. "=" .. type(clip)
     end
   end
-  if #ignored > 0 then
-    log("Selection: ignored entries that are not clips:", table.concat(ignored, ", "))
+  local text = table.concat(ignored, ", ")
+  if #ignored > 0 and text ~= M.last_ignored then   -- the window checks every second: log it once
+    log("Selection: ignored entries that are not clips:", text)
   end
+  M.last_ignored = text
   return selected
 end
 M.selected_clips = selected_clips
@@ -850,7 +852,10 @@ function M.cleanup_jobs(now)
   local keep, removed = {}, 0
   for line in list:gmatch("[^\n]+") do
     local t, dir = line:match("^(%d+)\t(.+)$")
-    if t and (now or G_os.time()) - tonumber(t) > M.JOB_MAX_AGE then
+    if t and not file_exists(dir .. SEP .. "job.txt") then
+      -- gone already (removed after a successful run): forget it quietly
+    elseif t and (file_exists(dir .. SEP .. "done.txt") or (now or G_os.time()) - tonumber(t) > M.JOB_MAX_AGE) then
+      -- Python is done (also after Cancel), or the job hangs for more than a day
       M.remove_job(dir)
       removed = removed + 1
     elseif t then
@@ -1727,12 +1732,16 @@ end
 function Job:timeline_step()
   local tl = self.timeline
   if tl and self.dir then
+    local before = api(self.project, "GetCurrentTimeline")
     api(self.project, "SetCurrentTimeline", tl)
     local line, kept = place_in_timeline(self.media_pool, tl, self.data, self.clips, self.dir, self.base)
     if line then
       self.msg = self.msg .. "\n" .. line
     end
     self.keep = self.keep or kept == true
+    if before and before ~= tl then   -- the user had opened another timeline meanwhile: show it again
+      api(self.project, "SetCurrentTimeline", before)
+    end
   end
   if self.dir and not self.keep then
     remove_dir(self.dir)
@@ -2400,10 +2409,18 @@ function M.main()
   colors_visibility()
   refresh()
   timer:Start()
+  local want_w, want_h = geometry[3], geometry[4]   -- numbers: the geometry table may be the window's own
   win:Show()
   local okg, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
-  log(string.format("Window: requested %dx%d, actual %s", geometry[3], geometry[4],
-      okg and type(g) == "table" and (tostring(g[3]) .. "x" .. tostring(g[4])) or "?"))
+  local actual = okg and type(g) == "table" and (tostring(g[3]) .. "x" .. tostring(g[4])) or "?"
+  local resized = ""
+  if okg and type(g) == "table" and tonumber(g[3]) and tonumber(g[3]) < want_w then
+    -- seen in Resolve: drawn narrower than requested (431 of 600), the width changed between openings
+    pcall(function() win:Resize({ want_w, want_h }) end)
+    local ok2, g2 = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
+    resized = ", resized to " .. (ok2 and type(g2) == "table" and (tostring(g2[3]) .. "x" .. tostring(g2[4])) or "?")
+  end
+  log(string.format("Window: requested %dx%d, actual %s%s", want_w, want_h, actual, resized))
   disp:RunLoop()
   timer:Stop()
   win:Hide()

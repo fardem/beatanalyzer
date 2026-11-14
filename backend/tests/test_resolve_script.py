@@ -294,6 +294,13 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(len(self.markers(self.mock.song)), 0)
         self.assertIn("is not 'Müller Song.wav'", msg)
 
+    def test_ignored_selection_entries_are_logged_once(self):
+        # seen in the Resolve console: the same line every second while the window is open
+        self.mock.selected = self.lua.table_from([self.lua.eval("{}"), self.mock.song])
+        for _ in range(5):
+            self.M.selected_clips(self.mock.pool)
+        self.assertEqual(len([line for line in self.out if "ignored entries" in line]), 1, self.out)
+
     def test_selection_entries_that_are_not_clips_are_ignored(self):
         # Resolve Studio 21.2: GetSelectedClips() returned the clip plus an entry without clip methods
         not_a_clip = self.lua.eval("{}")
@@ -445,9 +452,11 @@ class ResolveScriptTests(unittest.TestCase):
         tl = self.setup_timeline()
         job, _ = self.M.start(self.write_json(resolve_marker_data(sample_result())), None)
         self.assertEqual((job.timeline_name, job.track_name), ("Timeline 1", "BeatAnalyzer - Müller Song"))
-        self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 0)")   # the user opens another timeline
+        self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 0); MOCK.other_tl = MOCK.timeline")   # user switches
         self.run_job(job)
         self.assertEqual(len(self.sub_tracks(tl)), 1)                  # track in the timeline of the start
+        # afterwards Resolve shows again the timeline that was open before the timeline step (user: ok)
+        self.assertTrue(self.lua.eval("MOCK.timeline == MOCK.other_tl"))
 
     def test_no_timeline_when_switched_off(self):
         tl = self.setup_timeline()
@@ -1044,6 +1053,26 @@ class ResolveJobScriptTests(unittest.TestCase):
             (Path(job) / name).write_text("x", encoding="utf-8")
         self.M.remove_job(job)
         self.assertFalse(Path(job).exists())
+
+    def test_cleanup_removes_finished_jobs_at_once(self):
+        # user: folders of cancelled analyses stayed; Python writes done.txt also when cancelled
+        done = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90, "now": 1000}))
+        running = self.M.new_job("/x/b.mp3", self.lua.table_from({"slider": 90, "now": 1000}))
+        (Path(done) / "cancel.txt").write_text("", encoding="utf-8")
+        (Path(done) / "done.txt").write_text("state=cancelled\n", encoding="utf-8")
+        self.M.cleanup_jobs(1000 + 60)
+        self.assertFalse(Path(done).exists())
+        self.assertTrue(Path(running).exists())                # Python may still write into it
+
+    def test_cleanup_forgets_vanished_folders_quietly(self):
+        out = []
+        self.lua.globals().print = lambda *a: out.append(" ".join(str(x) for x in a))
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90, "now": 1000}))
+        self.M.remove_job(job)
+        out.clear()
+        self.M.cleanup_jobs(1000 + 2 * 86400)
+        self.assertEqual([line for line in out if "Cannot remove" in line], [])
+        self.assertEqual((self.tmp / "resolve_temp" / "jobs.txt").read_text(encoding="utf-8"), "")
 
     def test_cleanup_removes_only_old_jobs(self):
         old = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90, "now": 1000}))
