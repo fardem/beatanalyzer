@@ -36,6 +36,7 @@ local function clip(name, file, fps, frames)
     if key == "FPS" then return self.fps end
     if key == "Frames" then return self.frames end
     if key == "Duration" then return self.duration or "" end
+    if key == "File Path" then return self.filepath or "" end
     return ""
   end
   function c:AddMarker(frame, color, name, note, duration, custom)
@@ -134,17 +135,28 @@ local function timeline_item(clip, start, left, duration)
   function it:GetStart() return self.start end
   function it:GetLeftOffset() return self.left end
   function it:GetDuration() return self.duration end
+  it.markers = {}                                 -- markers on the timeline clip, frames from the clip's start
+  local proto = MOCK.clip(nil, nil, nil, nil)
+  it.AddMarker = proto.AddMarker
+  it.GetMarkers = proto.GetMarkers
+  it.DeleteMarkerByCustomData = proto.DeleteMarkerByCustomData
   return it
 end
 MOCK.timeline_item = timeline_item
 local function new_timeline(fps, start_frame)
-  local tl = { fps = fps, start = start_frame, audio = { {} }, subs = {} }
+  local tl = { fps = fps, start = start_frame, audio = { {} }, video = {}, subs = {} }
   function tl:GetName() return "Timeline 1" end
   function tl:GetSetting(k) if k == "timelineFrameRate" then return tostring(self.fps) end end
   function tl:GetStartFrame() return self.start end
-  function tl:GetTrackCount(kind) return kind == "audio" and #self.audio or #self.subs end
+  function tl:GetTrackCount(kind)
+    if kind == "audio" then return #self.audio elseif kind == "video" then return #self.video end
+    return #self.subs
+  end
   function tl:GetItemListInTrack(kind, i)
-    local list = kind == "audio" and self.audio[i] or (self.subs[i] and self.subs[i].items)
+    local list
+    if kind == "audio" then list = self.audio[i]
+    elseif kind == "video" then list = self.video[i]
+    else list = self.subs[i] and self.subs[i].items end
     local out = {} for k, v in ipairs(list or {}) do out[k] = v end return out
   end
   function tl:AddTrack(kind)
@@ -529,14 +541,15 @@ class ResolveScriptTests(unittest.TestCase):
         self.mock.song.markers[400] = self.lua.table_from({"color": "Blue", "name": "Hand", "custom": ""})
         clips = self.lua.table_from([self.mock.song])
         r = self.M.removal(clips, tl)
-        self.assertEqual((r.markers, r.tracks, r.srt_clips, r.song), (8, 1, 1, "Müller Song"))
+        # 8 on the Media Pool clip + 6 on the clip in the timeline (Teilprojekt 3)
+        self.assertEqual((r.markers, r.tracks, r.srt_clips, r.song), (14, 1, 1, "Müller Song"))
         self.assertEqual(len(self.markers(self.mock.song)), 9)        # nothing removed yet
         done = self.M.remove(clips, tl)
-        self.assertEqual((done.markers, done.tracks, done.srt_clips), (8, 1, 1))
+        self.assertEqual((done.markers, done.tracks, done.srt_clips), (14, 1, 1))
         self.assertEqual(sorted(self.markers(self.mock.song)), [400])  # the hand marker stays
         self.assertEqual(self.sub_tracks(tl), [])
         self.assertEqual(self.bin_clips(), [])
-        self.assertTrue(done.text.startswith("Removed: 8 markers, 1 Subtitle Track(s), 1 Subtitle clip(s)."))
+        self.assertTrue(done.text.startswith("Removed: 14 markers, 1 Subtitle Track(s), 1 Subtitle clip(s)."))
 
     def test_removal_with_nothing_there(self):
         self.load_lang("de")
@@ -670,6 +683,70 @@ class ResolveScriptTests(unittest.TestCase):
             tl.audio[track][len(tl.audio[track]) + 1] = other
         return tl
 
+    # --- markers on the song's clips in the timeline (Teilprojekt 3, wish of the user) -------------------
+
+    def item_markers(self, item):
+        return sorted(int(f) for f in item.markers.keys())
+
+    def test_timeline_clip_gets_markers_relative_to_its_start(self):
+        tl = self.setup_timeline()                     # song on A1: left offset 25 frames, 75 frames long
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertTrue(ok, msg)
+        item = tl.audio[1][1]
+        # beats at 0.5 ... 4.0 s = frames 13 ... 100 of the file; visible part 25 ... 99 → item frames 0 ... 74
+        self.assertEqual(self.item_markers(item), [0, 13, 25, 38, 50, 63])
+        self.assertEqual(item.markers[0].custom, self.M.MARKER_TAG)
+        self.assertEqual(item.markers[0].color, "Cyan")           # beat 2 of bar 1 at 1.0 s
+        self.assertIn("6", msg)
+        self.assertEqual(len(self.markers(self.mock.song)), 8)    # the Media Pool clip as before
+
+    def test_every_use_of_the_song_in_the_timeline_gets_markers(self):
+        tl = self.setup_timeline(extra_items=[(2, 90000 + 1000)])
+        self.lua.execute("MOCK.timeline.video[1] = { MOCK.timeline_item(MOCK.song, 90000, 0, 500) }")
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertEqual(len(self.item_markers(tl.audio[2][1])), 8)
+        self.assertEqual(len(self.item_markers(tl.video[1][1])), 8)
+
+    def test_other_clips_in_the_timeline_get_no_markers(self):
+        tl = self.setup_timeline()
+        self.lua.execute("MOCK.timeline.audio[2] = { MOCK.timeline_item(MOCK.other, 90000, 0, 500) }")
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertEqual(self.item_markers(tl.audio[2][1]), [])
+
+    def test_timeline_markers_also_without_subtitle_track(self):
+        tl = self.setup_timeline()
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())), self.lua.table_from({"timeline": False}))
+        self.assertEqual(len(self.item_markers(tl.audio[1][1])), 6)
+        self.assertEqual(self.sub_tracks(tl), [])
+
+    def test_new_run_replaces_timeline_markers_and_keeps_own(self):
+        tl = self.setup_timeline()
+        item = tl.audio[1][1]
+        item.AddMarker(item, 70, "Green", "by hand", "", 1, "")
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertEqual(self.item_markers(item), [0, 13, 25, 38, 50, 63, 70])
+
+    def test_remove_deletes_timeline_markers_but_not_own(self):
+        tl = self.setup_timeline()
+        item = tl.audio[1][1]
+        item.AddMarker(item, 70, "Green", "by hand", "", 1, "")
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        clips = self.lua.table_from([self.mock.song])
+        self.assertEqual(self.M.removal(clips, tl).markers, 8 + 6)
+        self.M.remove(clips, tl)
+        self.assertEqual(self.item_markers(item), [70])
+
+    def test_explanation_mentions_timeline_markers(self):
+        self.load_lang("de")
+        tl = self.setup_timeline()
+        info = self.M.timeline_info(tl, self.lua.table_from([self.mock.song]))
+        self.assertEqual(info["items"], 1)
+        for checked in (True, False):
+            self.assertIn("Clips des Songs in dieser Timeline", self.M.explanation(checked, info, "Müller Song"))
+        absent = self.M.timeline_info(self.lua.globals().MOCK.new_timeline(25, 0), self.lua.table_from([self.mock.song]))
+        self.assertNotIn("Clips des Songs", self.M.explanation(True, absent, "Müller Song"))
+
     def sub_tracks(self, tl):
         return [(t.name, t.enabled, [it.GetStart() for it in t["items"].values()]) for t in tl.subs.values()]
 
@@ -771,6 +848,141 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(v["s"], 'x"ü\n')
         with self.assertRaises(Exception):
             decode('{"a": 1,}')
+
+
+
+@unittest.skipIf(luajit21 is None, "lupa not installed")
+class ResolveJobScriptTests(unittest.TestCase):
+    """Analysis job from Resolve: job.txt, start of Python, polling of progress.txt/done.txt (Teilprojekt 3)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp()) / "Bea Ünal"
+        self.tmp.mkdir()
+        (self.tmp / "venv" / "bin").mkdir(parents=True)
+        (self.tmp / "venv" / "bin" / "python").write_text("", encoding="utf-8")
+        block = resolve_plugin.render_config(self.tmp, self.tmp / "venv" / "bin" / "python", "de",
+                                             {c: i18n.texts(c) for c in i18n.LANGUAGES})
+        self.lua = luajit21.LuaRuntime(unpack_returned_tuples=True)
+        self.lua.globals().print = lambda *a: None
+        self.lua.globals().PY_READ = lambda p: Path(p).read_text(encoding="utf-8")
+        self.lua.execute(MOCK)
+        self.M = self.lua.execute(resolve_plugin.apply_config(SCRIPT, block))
+        self.mock = self.lua.globals().MOCK
+        self.spawned = []
+        self.M.spawn = lambda cmd: self.spawned.append(cmd) or True
+        # on Windows launch() starts through ShellExecuteW first: never start anything in a test
+        self.M.shell_execute = lambda python, params: self.spawned.append(python + " " + params) or True
+
+    def kv(self, path):
+        return dict(line.split("=", 1) for line in Path(path).read_text(encoding="utf-8").splitlines() if "=" in line)
+
+    def test_slider_to_protect(self):
+        self.assertEqual(self.M.slider_to_protect(90), 0.95)
+        self.assertEqual(self.M.slider_to_protect(100), 1.0)
+        self.assertEqual(self.M.slider_to_protect(1), 0.505)
+        self.assertEqual(self.M.slider_to_protect(250), 1.0)
+        self.assertEqual(self.M.slider_to_protect(-5), 0.5)
+
+    def test_new_job_writes_job_txt(self):
+        audio = str(self.tmp / "Şarkı – Müller.mp3")
+        job = self.M.new_job(audio, self.lua.table_from({"lang": "de", "slider": 90}))
+        self.assertTrue(Path(job).is_dir())
+        self.assertEqual(Path(job).parent, self.tmp / "resolve_temp")
+        kv = self.kv(Path(job) / "job.txt")
+        self.assertEqual(kv, {"format": "beatanalyzer-resolve-job/1", "audio": audio, "lang": "de",
+                              "smooth": "1", "protect": "0.95"})
+
+    def test_new_job_slider_zero_is_off(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"lang": "en", "slider": 0}))
+        self.assertEqual(self.kv(Path(job) / "job.txt")["smooth"], "0")
+
+    def test_launch_starts_resolve_job_with_the_venv_python(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90}))
+        ok = self.M.launch(job)
+        self.assertTrue(ok)
+        self.assertEqual(len(self.spawned), 1)
+        cmd = self.spawned[0]
+        self.assertIn(str(self.tmp / "venv" / "bin" / "python"), cmd)
+        self.assertIn(str(self.tmp / "backend" / "resolve_job.py"), cmd)
+        self.assertIn(job, cmd)
+
+    def test_launch_with_missing_python_file(self):
+        (self.tmp / "venv" / "bin" / "python").unlink()                  # venv deleted
+        ok, err = self.M.launch("/x/job")
+        self.assertFalse(ok)
+        self.assertIn("Python", err)
+        self.assertEqual(self.spawned, [])                                 # nothing started
+
+    def test_remove_job_also_removes_log_txt(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90}))
+        (Path(job) / "log.txt").write_text("x", encoding="utf-8")
+        self.M.remove_job(job)
+        self.assertFalse(Path(job).exists())
+
+    def test_launch_without_python_in_config(self):
+        block = resolve_plugin.render_config(self.tmp, None, "de", {c: i18n.texts(c) for c in i18n.LANGUAGES})
+        M = self.lua.execute(resolve_plugin.apply_config(SCRIPT, block))
+        ok, err = M.launch("/x/job")
+        self.assertFalse(ok)
+        self.assertTrue(err)
+
+    def poll(self, job, started, now):
+        r = self.M.poll(job, started, now)
+        return {k: r[k] for k in ("state", "step", "markers_path", "message") if r[k] is not None}
+
+    def test_poll_states(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90}))
+        self.assertEqual(self.poll(job, 1000, 1010), {"state": "running"})
+        self.assertEqual(self.poll(job, 1000, 1061)["state"], "no_start")      # 60 s without progress.txt
+        (Path(job) / "progress.txt").write_text("step=analyze\n", encoding="utf-8")
+        self.assertEqual(self.poll(job, 1000, 1061), {"state": "running", "step": "analyze"})
+        self.assertEqual(self.poll(job, 1000, 1601)["state"], "timeout")       # 10 min without done.txt
+        (Path(job) / "done.txt").write_text("state=ok\nmarkers=markers.json\n", encoding="utf-8")
+        r = self.poll(job, 1000, 1601)
+        self.assertEqual(r["state"], "ok")
+        self.assertEqual(r["markers_path"], str(Path(job) / "markers.json"))
+        (Path(job) / "done.txt").write_text("state=error\nmessage=kaputt\n", encoding="utf-8")
+        self.assertEqual(self.poll(job, 1000, 1010), {"state": "error", "message": "kaputt"})
+        (Path(job) / "done.txt").write_text("state=cancelled\n", encoding="utf-8")
+        self.assertEqual(self.poll(job, 1000, 1010)["state"], "cancelled")
+
+    def test_cancel_writes_cancel_txt(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90}))
+        self.M.cancel(job)
+        self.assertTrue((Path(job) / "cancel.txt").exists())
+
+    def test_remove_job_removes_the_folder(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90}))
+        for name in ("progress.txt", "done.txt", "markers.json", "cancel.txt"):
+            (Path(job) / name).write_text("x", encoding="utf-8")
+        self.M.remove_job(job)
+        self.assertFalse(Path(job).exists())
+
+    def test_cleanup_removes_only_old_jobs(self):
+        old = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90, "now": 1000}))
+        new = self.M.new_job("/x/b.mp3", self.lua.table_from({"slider": 90, "now": 1000 + 86400}))
+        (Path(old) / "done.txt").write_text("state=ok\n", encoding="utf-8")
+        self.M.cleanup_jobs(1000 + 86400 + 10)
+        self.assertFalse(Path(old).exists())
+        self.assertTrue(Path(new).exists())
+        self.M.cleanup_jobs(1000 + 2 * 86400 + 10)
+        self.assertFalse(Path(new).exists())
+
+    def target(self):
+        clip, reason = self.M.analysis_target(self.mock.pool)
+        return clip, reason
+
+    def test_analysis_target(self):
+        self.lua.execute("MOCK.selected = {}")
+        self.assertEqual(self.target(), (None, "none"))
+        self.lua.execute("MOCK.selected = { MOCK.song, MOCK.other }")
+        self.assertEqual(self.target(), (None, "many"))
+        self.lua.execute("MOCK.selected = { MOCK.song }")
+        self.assertEqual(self.target(), (None, "no_path"))                    # e.g. a compound clip
+        self.lua.execute("MOCK.song.filepath = '/Musik/Müller Song.wav'; MOCK.selected = { MOCK.song }")
+        clip, reason = self.target()
+        self.assertEqual(clip.GetName(clip), "Song")
+        self.assertIsNone(reason)
 
 
 if __name__ == "__main__":

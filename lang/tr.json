@@ -90,6 +90,27 @@
     "msg_no_work_dir": "Subtitle: {path} içinde çalışma klasörü oluşturulamıyor",
     "msg_tl_vehicle_left": "Timeline: '{clip}' clip'i Media Pool'dan kaldırılamadı – lütfen elle silin.",
     "engine_unknown": "Analiz programı: JSON'da belirtilmemiş (eski JSON veya tarayıcıda analiz edilmiş)",
-    "reason_analyzer_failed": "analiz modülü yüklenemedi"
+    "reason_analyzer_failed": "analiz modülü yüklenemedi",
+    "msg_job_folder": "resolve_temp içinde analiz için çalışma klasörü oluşturulamıyor.",
+    "msg_no_python": "BeatAnalyzer'ın Python'u bulunamadı. Web uygulamasında „Resolve'a yükle“ye tıklayın veya BeatAnalyzer'ı yeniden kurun.",
+    "msg_no_start": "Python başlamadı ({python}). BeatAnalyzer'ı yeniden kurun veya web uygulamasında „Resolve'a yükle“ye tıklayın.",
+    "msg_tl_markers": "Timeline „{timeline}“: şarkının {items} klibine {n} marker.",
+    "explain_tl_markers": "Şarkının bu Timeline'daki klipleri ({items}) de marker alır.",
+    "way_analyze": "Seçili klibi analiz et",
+    "way_json": "JSON yükle",
+    "smooth_label": "Düzeltme",
+    "smooth_off": "kapalı",
+    "smooth_tip": "Düzeltme – ölçü ızgarasının ne kadar düzenli olacağı.\n%0: kapalı. Ölçüler beat_this'in duyduğu gibi kalır – belirsiz yerlerde yalnızca 1–3 beat'lik ölçüler dahil.\nSağa doğru: Düzenli ızgara beat_this'in „1“lerini giderek daha çok kaydırabilir – önce yalnızca belirsiz olanları, sağa gittikçe daha kesin olanları da.\n%100: Izgara tek başına karar verir. Yalnızca beat_this „1“i birkaç ölçü boyunca başka yerde duyduğunda yeniden başlar (ör. bir kesmeden sonra).\nVarsayılan: %90. Beat'lerin kendisi hiç değişmez.",
+    "analyze_none": "Media Pool'da tam olarak bir ses klibi seçin.",
+    "analyze_many": "Birden fazla klip seçili – lütfen tam olarak bir ses klibi seçin.",
+    "analyze_no_path": "Seçili öğenin dosyası yok (ör. Timeline veya Compound Clip).",
+    "step_analysis": "„{clip}“ analizi",
+    "step_model": "model yükleniyor",
+    "step_analyze": "analiz ediliyor",
+    "step_write": "sonuç yazılıyor",
+    "step_analysis_hint": "İptal yalnızca şimdi mümkün. Buraya kadar projede hiçbir şey değişmedi.",
+    "msg_cancelled": "Analiz iptal edildi. Projede hiçbir şey değişmedi.",
+    "msg_analysis_error": "Analiz başarısız: {message}. Projede hiçbir şey değişmedi.",
+    "msg_timeout": "Analiz 10 dakika sonra bitmedi ve iptal edildi. Projede hiçbir şey değişmedi."
   }
 }

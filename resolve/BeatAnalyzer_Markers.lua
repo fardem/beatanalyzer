@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.1.4"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.1.5"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -55,6 +55,9 @@ local BA = {
       ["output.meter_suffix.4"] = "",
       ["output.meter_suffix.8"] = "",
       ["output.time_bpm"] = "{clock} – {bpm} BPM",
+      ["plugin.analyze_many"] = "Several clips selected – please select exactly one audio clip.",
+      ["plugin.analyze_no_path"] = "The selected item has no file (e.g. a Timeline or a Compound Clip).",
+      ["plugin.analyze_none"] = "Select exactly one audio clip in the Media Pool.",
       ["plugin.btn_cancel"] = "Cancel",
       ["plugin.btn_choose"] = "Choose …",
       ["plugin.btn_close"] = "Close",
@@ -75,14 +78,20 @@ local BA = {
       ["plugin.explain_no_timeline"] = "No Timeline is open. Only the Subtitle in the Media Pool is created.",
       ["plugin.explain_off"] = "The Timeline stays unchanged. The Subtitle with all beats lies in the folder BeatAnalyzer in the Media Pool and can be dragged from there into any Timeline.",
       ["plugin.explain_present"] = "In the Timeline '{timeline}' the song lies on A{track} from {tc}. Below it the Subtitle Track '{track_name}' is created and made active. Resolve allows only one active Subtitle Track; the others stay but are switched off.",
+      ["plugin.explain_tl_markers"] = "The song's clips in this Timeline ({items}) get the markers as well.",
       ["plugin.json_none"] = "No JSON chosen.",
+      ["plugin.msg_analysis_error"] = "Analysis failed: {message}. Nothing in the project has changed.",
       ["plugin.msg_bad_format"] = "Unknown format '{format}', expected '{expected}'. Export the file in BeatAnalyzer under Export -> DaVinci Resolve.",
       ["plugin.msg_bin_missing"] = "media pool bin '{bin}' not available",
+      ["plugin.msg_cancelled"] = "Analysis cancelled. Nothing in the project has changed.",
       ["plugin.msg_cannot_read"] = "Cannot read the file: {path}",
+      ["plugin.msg_job_folder"] = "Cannot create the working folder for the analysis in resolve_temp.",
       ["plugin.msg_markers"] = "{n} markers on {clips} clip(s): {names}",
       ["plugin.msg_no_clip"] = "No clip found. Select the audio clip in the media pool, or import '{file}' into the media pool.",
       ["plugin.msg_no_markers"] = "The JSON contains no markers.",
       ["plugin.msg_no_project"] = "No project is open.",
+      ["plugin.msg_no_python"] = "Python of BeatAnalyzer not found. Click 'Install in Resolve' in the web app or install BeatAnalyzer again.",
+      ["plugin.msg_no_start"] = "Python did not start ({python}). Install BeatAnalyzer again or click 'Install in Resolve' in the web app.",
       ["plugin.msg_no_work_dir"] = "Subtitles: cannot create a working folder in {path}",
       ["plugin.msg_not_imported"] = "Resolve did not import {path}",
       ["plugin.msg_not_json"] = "The file is not a BeatAnalyzer marker JSON.",
@@ -91,11 +100,13 @@ local BA = {
       ["plugin.msg_srt_import"] = "Subtitles: {why} - import {path} by hand",
       ["plugin.msg_srt_ok"] = "Subtitles: {srt} in media pool bin '{bin}'",
       ["plugin.msg_srt_write"] = "Subtitles: cannot write {path}",
+      ["plugin.msg_timeout"] = "The analysis was not finished after 10 minutes and was cancelled. Nothing in the project has changed.",
       ["plugin.msg_tl_activate"] = "Timeline: cannot activate the new subtitle track.",
       ["plugin.msg_tl_add"] = "Timeline: cannot add a subtitle track.",
       ["plugin.msg_tl_count"] = "Timeline: placed {placed} subtitles, the SRT has {count}.",
       ["plugin.msg_tl_empty"] = "Timeline: no beats in the part of the song that is in the timeline.",
       ["plugin.msg_tl_import"] = "Timeline: {why}",
+      ["plugin.msg_tl_markers"] = "Timeline '{timeline}': {n} markers on {items} clip(s) of the song.",
       ["plugin.msg_tl_none_placed"] = "Timeline: Resolve placed no subtitles.",
       ["plugin.msg_tl_offset"] = "Timeline: first subtitle at frame {actual}, expected {expected} (difference {diff} frames). Please run resolve/tools/probe_timeline.lua and send the console output.",
       ["plugin.msg_tl_ok"] = "Timeline: {n} subtitles on track ST{track} '{name}'{replaced}",
@@ -109,14 +120,24 @@ local BA = {
       ["plugin.remove_confirm"] = "Remove from '{song}': {markers} BeatAnalyzer markers, {tracks} Subtitle Track(s) in the open Timeline, {srt} Subtitle clip(s) in the folder BeatAnalyzer? Markers set by hand stay.",
       ["plugin.remove_done"] = "Removed: {markers} markers, {tracks} Subtitle Track(s), {srt} Subtitle clip(s).",
       ["plugin.remove_nothing"] = "Nothing from BeatAnalyzer found on '{song}'.",
+      ["plugin.smooth_label"] = "Smoothing",
+      ["plugin.smooth_off"] = "off",
+      ["plugin.smooth_tip"] = "Smoothing – how even the bar grid becomes.\n0 %: off. The bars stay as beat_this hears them – including bars of only 1 to 3 beats at unsure places.\nFurther right: the even grid may move more and more of beat_this's '1's – first only unsure ones, the further right, the surer ones.\n100 %: the grid decides alone. It starts anew only where beat_this hears the '1' elsewhere over several bars (e.g. after an edit).\nDefault: 90 %. The beats themselves never change.",
+      ["plugin.step_analysis"] = "Analysis of '{clip}'",
+      ["plugin.step_analysis_hint"] = "Cancel works only now. Up to here nothing in the project has changed.",
+      ["plugin.step_analyze"] = "analysing",
       ["plugin.step_bin"] = "Folder BeatAnalyzer in the Media Pool, Subtitle '{srt}'",
       ["plugin.step_markers"] = "Markers on the clip '{clip}' in the Media Pool",
       ["plugin.step_markers_hint"] = "Resolve sets every marker on its own, this takes a while.",
+      ["plugin.step_model"] = "loading the model",
       ["plugin.step_track"] = "Subtitle Track '{track}' in '{timeline}'",
+      ["plugin.step_write"] = "writing the result",
       ["plugin.title"] = "BeatAnalyzer {version}",
       ["plugin.wait"] = "Please wait – the window closes only at the end.",
       ["plugin.warn_length"] = "The clip's duration ({clip}) differs from the analysed file ({json}).",
       ["plugin.warn_other_file"] = "The selected clip is not '{file}' from the JSON.",
+      ["plugin.way_analyze"] = "Analyse the selected clip",
+      ["plugin.way_json"] = "Load JSON",
       ["plugin.work_title"] = "What happens now:",
     },
   },
@@ -647,6 +668,202 @@ local function target_clips(media_pool, file_name)
 end
 M.target_clips = target_clips
 
+-- ─── Analysis job (Teilprojekt 3) ─────────────────────────────────────────────
+-- The script writes job.txt into a new working folder, starts backend/resolve_job.py with the Python of the venv
+-- without a window and polls progress.txt / done.txt (see backend/resolve_job.py).
+
+local JOB_FORMAT = "beatanalyzer-resolve-job/1"
+local JOB_FILES = { "job.txt", "progress.txt", "progress.txt.tmp", "done.txt", "done.txt.tmp", "markers.json",
+                    "markers.json.tmp", "cancel.txt", "log.txt" }
+
+-- True if the file can be opened (non-ASCII paths on Windows through _wfopen).
+local function file_exists(path)
+  if type(G_io) == "table" and type(G_io.open) == "function" then
+    local f = G_io.open(path, "rb")
+    if f then
+      f:close()
+      return true
+    end
+  end
+  if IS_WIN then
+    local ok, f = pcall(wide_open, path, "rb")
+    if ok and f then
+      msvcrt.fclose(f)
+      return true
+    end
+  end
+  return false
+end
+M.NO_START_SECONDS, M.TIMEOUT_SECONDS, M.JOB_MAX_AGE = 60, 600, 86400
+
+-- "Glätten" 1 ... 100 % -> protection of clear "1"s 0.5 ... 1.0 (as in the web app); 0 = off
+function M.slider_to_protect(v)
+  v = math.max(0, math.min(100, tonumber(v) or 90))
+  return math.floor((0.5 + v / 200) * 1000 + 0.5) / 1000
+end
+
+local function read_kv(path)
+  local text = read_file(path)
+  if not text then
+    return nil
+  end
+  local out = {}
+  for line in (text .. "\n"):gmatch("(.-)\r?\n") do
+    local k, v = line:match("^%s*([^=]-)%s*=%s*(.-)%s*$")
+    if k and k ~= "" then
+      out[k] = v
+    end
+  end
+  return out
+end
+
+local function jobs_list()
+  return work_base() .. SEP .. "jobs.txt"
+end
+
+-- New job folder with job.txt. opts: lang, slider (0 ... 100), now (for tests). Returns the folder or nil, error.
+function M.new_job(audio_path, opts)
+  opts = opts or {}
+  local dir = M.work_dir()
+  if not dir then
+    return nil, T("plugin.msg_job_folder")
+  end
+  local slider = tonumber(opts.slider) or 90
+  local text = table.concat({
+    "format=" .. JOB_FORMAT,
+    "audio=" .. tostring(audio_path),
+    "lang=" .. tostring(opts.lang or BA.lang or "en"),
+    "smooth=" .. (slider > 0 and "1" or "0"),
+    "protect=" .. string.format("%g", M.slider_to_protect(slider > 0 and slider or 90)),
+  }, "\n") .. "\n"
+  if not write_file(dir .. SEP .. "job.txt", text) then
+    return nil, T("plugin.msg_job_folder")
+  end
+  -- remembered for cleanup_jobs: Lua cannot list a folder
+  local list = read_file(jobs_list()) or ""
+  write_file(jobs_list(), list .. tostring(opts.now or G_os.time()) .. "\t" .. dir .. "\n")
+  return dir
+end
+
+-- Start the job without a window. M.spawn is the fallback (and the hook for tests).
+function M.spawn(cmd)
+  local r = G_os.execute(cmd)
+  return r == 0 or r == true
+end
+
+local function quote(s)
+  if IS_WIN then
+    return '"' .. s .. '"'
+  end
+  return "'" .. s:gsub("'", "'\\''") .. "'"
+end
+
+local function shell_execute(python, params)
+  if not load_msvcrt() then
+    return false
+  end
+  local ok, r = pcall(function()
+    pcall(ffi_lib.cdef, [[
+      void* ShellExecuteW(void* hwnd, const wchar_t* op, const wchar_t* file, const wchar_t* params,
+                          const wchar_t* dir, int show);
+    ]])
+    local shell32 = ffi_lib.load("shell32")
+    local h = shell32.ShellExecuteW(nil, wide("open"), wide(python), wide(params), nil, 0)   -- 0 = SW_HIDE
+    return tonumber(ffi_lib.cast("intptr_t", h)) > 32
+  end)
+  if not ok then
+    log("ShellExecuteW failed:", r)
+  end
+  return ok and r
+end
+M.shell_execute = shell_execute   -- hook for tests (on Windows the first way to start Python)
+
+function M.launch(job_dir)
+  if not BA.python or not BA.home or not file_exists(BA.python) then   -- e.g. the venv was deleted
+    return false, T("plugin.msg_no_python")
+  end
+  local script = BA.home .. SEP .. "backend" .. SEP .. "resolve_job.py"
+  local params = quote(script) .. " " .. quote(job_dir)
+  log("Start:", BA.python, params)
+  if IS_WIN and M.shell_execute(BA.python, params) then
+    return true
+  end
+  local cmd = quote(BA.python) .. " " .. params
+  if IS_WIN then
+    cmd = 'start "" /b ' .. cmd
+  else
+    cmd = cmd .. " >/dev/null 2>&1 &"
+  end
+  if M.spawn(cmd) then
+    return true
+  end
+  return false, T("plugin.msg_no_start", { python = BA.python })
+end
+
+-- State of a job: running (step), ok (markers_path), error (message), cancelled, no_start, timeout.
+function M.poll(job_dir, started, now)
+  local done = read_kv(job_dir .. SEP .. "done.txt")
+  if done and done.state then
+    return { state = done.state, message = done.message,
+             markers_path = done.markers and (job_dir .. SEP .. done.markers) or nil }
+  end
+  local progress = read_kv(job_dir .. SEP .. "progress.txt")
+  local elapsed = (now or G_os.time()) - (started or 0)
+  if not progress and elapsed > M.NO_START_SECONDS then
+    return { state = "no_start" }
+  end
+  if elapsed > M.TIMEOUT_SECONDS then
+    return { state = "timeout" }
+  end
+  return { state = "running", step = progress and progress.step or nil }
+end
+
+function M.cancel(job_dir)
+  return write_file(job_dir .. SEP .. "cancel.txt", "")
+end
+
+function M.remove_job(job_dir)
+  for _, name in ipairs(JOB_FILES) do
+    remove_file(job_dir .. SEP .. name)
+  end
+  return remove_dir(job_dir)
+end
+
+-- Remove job folders older than a day (a crash or a closed Resolve leaves them behind).
+function M.cleanup_jobs(now)
+  local list = read_file(jobs_list())
+  if not list then
+    return 0
+  end
+  local keep, removed = {}, 0
+  for line in list:gmatch("[^\n]+") do
+    local t, dir = line:match("^(%d+)\t(.+)$")
+    if t and (now or G_os.time()) - tonumber(t) > M.JOB_MAX_AGE then
+      M.remove_job(dir)
+      removed = removed + 1
+    elseif t then
+      keep[#keep + 1] = line
+    end
+  end
+  write_file(jobs_list(), #keep > 0 and (table.concat(keep, "\n") .. "\n") or "")
+  return removed
+end
+
+-- The clip to analyse: exactly one selected clip with a file path. Returns clip or nil, "none"|"many"|"no_path".
+function M.analysis_target(media_pool)
+  local clips = selected_clips(media_pool)
+  if #clips == 0 then
+    return nil, "none"
+  elseif #clips > 1 then
+    return nil, "many"
+  end
+  local path = api(clips[1], "GetClipProperty", "File Path")
+  if type(path) ~= "string" or path == "" then
+    return nil, "no_path"
+  end
+  return clips[1], nil
+end
+
 local function remove_own_markers(clip)
   local removed = 0
   for _ = 1, 100000 do
@@ -826,6 +1043,29 @@ local function media_key(clip)
 end
 
 -- First use (smallest start) of one of the clips on an audio track: timeline item or nil.
+-- All clips of the song in a timeline (audio and video tracks), for the markers on the timeline clips.
+function M.timeline_items(tl, clips)
+  local keys, out = {}, {}
+  for _, c in ipairs(clips or {}) do
+    keys[media_key(c)] = true
+  end
+  if not tl then
+    return out
+  end
+  for _, kind in ipairs({ "audio", "video" }) do
+    local n = tonumber(api(tl, "GetTrackCount", kind)) or 0
+    for i = 1, n do
+      for _, item in ipairs(api(tl, "GetItemListInTrack", kind, i) or {}) do
+        local mpi = api(item, "GetMediaPoolItem")
+        if mpi and keys[media_key(mpi)] then
+          out[#out + 1] = item
+        end
+      end
+    end
+  end
+  return out
+end
+
 local function first_use(tl, clips)
   local keys = {}
   for _, c in ipairs(clips) do
@@ -976,6 +1216,13 @@ local function removal_targets(clips, tl)
       end
     end
   end
+  for _, item in ipairs(M.timeline_items(tl, clips)) do
+    for _, m in pairs(api(item, "GetMarkers") or {}) do
+      if type(m) == "table" and m.customData == MARKER_TAG then
+        t.markers = t.markers + 1
+      end
+    end
+  end
   if tl then
     local n = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
     for i = 1, n do
@@ -1016,6 +1263,9 @@ function M.remove(clips, tl)
   local done = { markers = 0, tracks = 0, srt_clips = 0 }
   for _, clip in ipairs(clips) do
     done.markers = done.markers + remove_own_markers(clip)
+  end
+  for _, item in ipairs(M.timeline_items(tl, clips)) do
+    done.markers = done.markers + remove_own_markers(item)
   end
   if tl then
     done.tracks = delete_tracks(tl, TRACK_PREFIX .. t.song) + delete_tracks(tl, OLD_TRACK_PREFIX .. t.song)
@@ -1150,15 +1400,25 @@ function M.timeline_info(tl, clips)
   end
   local name = tostring(api(tl, "GetName") or "?")
   local item, track = first_use(tl, clips or {})
+  local items = #M.timeline_items(tl, clips or {})
   if not item then
-    return { state = "absent", name = name }
+    return { state = "absent", name = name, items = items }
   end
   local fps = parse_fps(api(tl, "GetSetting", "timelineFrameRate")) or 25
-  return { state = "present", name = name, track = track, tc = M.timecode(api(item, "GetStart"), fps) }
+  return { state = "present", name = name, track = track, tc = M.timecode(api(item, "GetStart"), fps),
+           items = items }
 end
 
 -- The text under the tick box "Subtitle Track in the Timeline".
 function M.explanation(checked, tinfo, song)
+  local text = M.subtitle_explanation(checked, tinfo, song)
+  if (tonumber(tinfo.items) or 0) > 0 then
+    text = text .. " " .. T("plugin.explain_tl_markers", { items = tinfo.items })
+  end
+  return text
+end
+
+function M.subtitle_explanation(checked, tinfo, song)
   if not checked then
     return T("plugin.explain_off")
   end
@@ -1187,6 +1447,9 @@ function M.start(path, opts)
     return nil, info.error
   end
   local data, clips, how, file_name = info.data, info.clips, info.how, info.file_name
+  if opts.clips then   -- the clip analysed from Resolve, fixed at OK (the selection may have changed)
+    clips, how = opts.clips, "analysis"
+  end
   local markers = data.markers
   local pm = api(resolve, "GetProjectManager")
   local project = api(pm, "GetCurrentProject")
@@ -1217,6 +1480,15 @@ function M.start(path, opts)
     job.timeline = api(project, "GetCurrentTimeline")
   end
   job.timeline_name = job.timeline and tostring(api(job.timeline, "GetName") or "?") or nil
+  -- markers on the song's clips in the timeline: always, also without the subtitle track
+  local marker_tl = opts.marker_timeline or job.timeline
+    or (opts.timeline == false and api(project, "GetCurrentTimeline")) or nil
+  job.tl_items = M.timeline_items(marker_tl, clips)
+  job.tl_name = marker_tl and tostring(api(marker_tl, "GetName") or "?") or nil
+  job.tl_fps = exact_fps(parse_fps(marker_tl and api(marker_tl, "GetSetting", "timelineFrameRate"))
+                         or job.fallback_fps)
+  job.tl_index, job.tl_marker_index, job.tl_added = 1, 1, 0
+  job.total = job.total + (#clips > 0 and job.total / #clips or 0) * #job.tl_items
   job.step = function() return Job.step(job) end   -- works as job:step() and as job.step() (tests)
   return job, nil
 end
@@ -1278,6 +1550,51 @@ function Job:mark_some()
       end
     end
     self.msg = msg
+    self.phase = #self.tl_items > 0 and "tl_markers" or "subtitles"
+  end
+end
+
+-- Markers on the song's clips in the timeline, up to CHUNK per step. Frames count from the start of the
+-- timeline clip; a clip trimmed at the start (left offset) shows only the beats of its visible part.
+function Job:mark_timeline()
+  local budget = M.CHUNK
+  while budget > 0 and self.tl_index <= #self.tl_items do
+    local item = self.tl_items[self.tl_index]
+    if self.tl_marker_index == 1 then
+      self.tl_cur = {
+        left = tonumber(api(item, "GetLeftOffset")) or 0,
+        duration = tonumber(api(item, "GetDuration")),
+        removed = remove_own_markers(item),
+      }
+      log(string.format("Timeline clip %d: left offset %s, duration %s frames", self.tl_index,
+          tostring(self.tl_cur.left), tostring(self.tl_cur.duration)))
+    end
+    local c = self.tl_cur
+    while budget > 0 and self.tl_marker_index <= #self.markers do
+      local m = self.markers[self.tl_marker_index]
+      self.tl_marker_index = self.tl_marker_index + 1
+      local color = M.marker_color(m, self.opts.colors)
+      if color then
+        budget = budget - 1
+        self.marked = self.marked + 1
+        local frame = round((tonumber(m.time) or -1) * self.tl_fps) - c.left
+        if frame >= 0 and (not c.duration or frame < c.duration) then
+          local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
+            or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
+          local note = T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) })
+          if api(item, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
+            self.tl_added = self.tl_added + 1
+          end
+        end
+      end
+    end
+    if self.tl_marker_index > #self.markers then
+      self.tl_index, self.tl_marker_index = self.tl_index + 1, 1
+    end
+  end
+  if self.tl_index > #self.tl_items then
+    self.msg = self.msg .. "\n" .. T("plugin.msg_tl_markers", { n = self.tl_added, items = #self.tl_items,
+                                                                timeline = self.tl_name or "?" })
     self.phase = "subtitles"
   end
 end
@@ -1327,6 +1644,8 @@ end
 function Job:step()
   if self.phase == "markers" then
     self:mark_some()
+  elseif self.phase == "tl_markers" then
+    self:mark_timeline()
   elseif self.phase == "subtitles" then
     self:subtitles()
   elseif self.phase == "timeline" then
@@ -1356,7 +1675,8 @@ function M.settings_path()
 end
 
 function M.load_settings()
-  local s = { json_dir = "", timeline = true, colors_open = false, colors = {}, geometry = nil }
+  local s = { json_dir = "", timeline = true, colors_open = false, colors = {}, geometry = nil, way = "json",
+              smooth = 90 }
   for _, slot in ipairs(COLOR_SLOTS) do
     s.colors[slot] = M.DEFAULT_COLORS[slot]
   end
@@ -1370,6 +1690,10 @@ function M.load_settings()
       if value == "1" or value == "0" then
         s[key] = value == "1"
       end
+    elseif key == "way" and (value == "json" or value == "analyze") then
+      s.way = value
+    elseif key == "smooth" and tonumber(value) then
+      s.smooth = math.max(0, math.min(100, math.floor(tonumber(value))))
     elseif key == "geometry" then
       local x, y, w, h = value:match("^(-?%d+),(-?%d+),(%d+),(%d+)$")
       if x then
@@ -1394,7 +1718,9 @@ function M.save_settings(s)
   local lines = { "# BeatAnalyzer - settings of the Resolve window",
                   "json_dir=" .. tostring(s.json_dir or ""):gsub("[\r\n]", ""),
                   "timeline=" .. (s.timeline and "1" or "0"),
-                  "colors_open=" .. (s.colors_open and "1" or "0") }
+                  "colors_open=" .. (s.colors_open and "1" or "0"),
+                  "way=" .. (s.way == "analyze" and "analyze" or "json"),
+                  "smooth=" .. tostring(math.floor(tonumber(s.smooth) or 90)) }
   for _, slot in ipairs(COLOR_SLOTS) do
     lines[#lines + 1] = "color_" .. slot .. "=" .. tostring((s.colors or {})[slot] or M.DEFAULT_COLORS[slot])
   end
@@ -1453,9 +1779,20 @@ function M.main()
                                Geometry = geometry, MinimumSize = WIN_MIN },
     ui:VGroup({ Spacing = 6,
       ui:HGroup({ Weight = 0,
+        ui:CheckBox({ ID = "WayAnalyze", Text = T("plugin.way_analyze"), Checked = settings.way == "analyze",
+                      Weight = 0 }),
+        ui:CheckBox({ ID = "WayJson", Text = T("plugin.way_json"), Checked = settings.way ~= "analyze",
+                      Weight = 0 }),
+        ui:HGap(0, 1) }),
+      ui:HGroup({ Weight = 0,
         ui:Label({ ID = "JsonLabel", Text = "JSON:", Weight = 0 }),
         ui:Label({ ID = "JsonPath", Text = T("plugin.json_none"), WordWrap = true, Weight = 1, MinimumSize = { 0, 36 } }),
         ui:Button({ ID = "Choose", Text = T("plugin.btn_choose"), Weight = 0 }) }),
+      ui:HGroup({ Weight = 0,
+        ui:Label({ ID = "SmoothLabel", Text = T("plugin.smooth_label"), Weight = 0, ToolTip = T("plugin.smooth_tip") }),
+        ui:Slider({ ID = "Smooth", Minimum = 0, Maximum = 100, Value = settings.smooth, Weight = 1,
+                    ToolTip = T("plugin.smooth_tip") }),
+        ui:Label({ ID = "SmoothValue", Text = "", Weight = 0, MinimumSize = { 50, 0 } }) }),
       ui:Label({ ID = "ClipInfo", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 20 } }),
       ui:Label({ ID = "Warnings", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 36 }, Hidden = true }),
       ui:Label({ ID = "Engine", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 20 }, Hidden = true }),
@@ -1474,6 +1811,7 @@ function M.main()
         ui:Button({ ID = "Remove", Text = T("plugin.btn_remove"), Weight = 0 }),
         ui:Button({ ID = "RemoveYes", Text = T("plugin.btn_remove_yes"), Weight = 0, Hidden = true }),
         ui:HGap(0, 1),
+        ui:Button({ ID = "Cancel", Text = T("plugin.btn_cancel"), Weight = 0, Hidden = true }),
         ui:Button({ ID = "Close", Text = T("plugin.btn_close"), Weight = 0 }),
         ui:Button({ ID = "OK", Text = T("plugin.btn_ok"), Weight = 0, Enabled = false }) }) }))
   local itm = win:GetItems()
@@ -1573,11 +1911,67 @@ function M.main()
     return p and selected_clips(api(p, "GetMediaPool")) or {}
   end
 
+  local function analyze_way()
+    return get("WayAnalyze", "Checked") and true or false
+  end
+
+  local function smooth_value()
+    return math.max(0, math.min(100, math.floor(tonumber(get("Smooth", "Value")) or 90)))
+  end
+
+  local function show_way()
+    local a = analyze_way()
+    for _, id in ipairs({ "JsonLabel", "JsonPath", "Choose" }) do
+      set(id, "Hidden", a)
+    end
+    for _, id in ipairs({ "SmoothLabel", "Smooth", "SmoothValue" }) do
+      set(id, "Hidden", not a)
+    end
+    local v = smooth_value()
+    set("SmoothValue", "Text", v == 0 and T("plugin.smooth_off") or (tostring(v) .. " %"))
+  end
+
+  -- The way "analyse the selected clip": exactly one clip with a file, as in M.analysis_target.
+  local function analysis_info()
+    local info = { ok = false, warnings = {} }
+    local p = project()
+    if not p then
+      info.error = T("plugin.msg_no_project")
+      return info
+    end
+    local clip, reason = M.analysis_target(api(p, "GetMediaPool"))
+    if not clip then
+      info.error = T("plugin.analyze_" .. reason)
+      return info
+    end
+    local seconds = clip_seconds(clip, parse_fps(api(p, "GetSetting", "timelineFrameRate")))
+    info.clips, info.clip = { clip }, clip
+    info.path = api(clip, "GetClipProperty", "File Path")
+    info.song = (tostring(api(clip, "GetClipProperty", "File Name") or api(clip, "GetName") or "")
+                 :gsub("%.[^%.]*$", ""))
+    info.clip_text = T("plugin.clip_found", { names = tostring(api(clip, "GetName") or "?"),
+                                              length = seconds and M.fmt_length(seconds) or "?" })
+    info.ok = true
+    return info
+  end
+
   local function refresh()
     if S.state ~= "select" then
       return
     end
-    if S.json then
+    show_way()
+    if analyze_way() then
+      S.info = analysis_info()
+      set("ClipInfo", "Text", S.info.ok and S.info.clip_text or (S.info.error or ""))
+      fit("ClipInfo", get("ClipInfo", "Text"))
+      set("Warnings", "Hidden", true)
+      set("Engine", "Hidden", true)
+      S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
+      local explain = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
+      set("Explain", "Text", explain)
+      fit("Explain", explain, 2)
+      relayout()
+    elseif S.json then
       S.info = M.prepare(S.json)
       set("JsonPath", "Text", S.json:match("([^/\\]+)$") or S.json)   -- the file name; the path as tooltip
       set("JsonPath", "ToolTip", S.json)
@@ -1605,7 +1999,8 @@ function M.main()
   end
 
   local function lock(locked)
-    for _, id in ipairs({ "Choose", "Timeline", "Colors", "Remove", "OK", "Close" }) do
+    for _, id in ipairs({ "WayAnalyze", "WayJson", "Smooth", "Choose", "Timeline", "Colors", "Remove", "OK",
+                          "Close" }) do
       set(id, "Enabled", not locked)
     end
     for _, id in pairs(COLOR_IDS) do
@@ -1615,19 +2010,24 @@ function M.main()
 
   local function work_text()
     local job = S.job
-    local order = { markers = 1, subtitles = 2, timeline = 3, done = 4 }
+    local order = { markers = 1, tl_markers = 1, subtitles = 2, timeline = 3, done = 4 }
     local now = order[job.phase] or 4
     local function mark(n)
       return n < now and "✓" or (n == now and "…" or "  ")
     end
     local lines = { T("plugin.work_title") }
     local clip = tostring(api(job.clips[1], "GetName") or "?")
-    lines[#lines + 1] = string.format("%s 1. %s   %d / %d", mark(1), T("plugin.step_markers", { clip = clip }),
+    local o = 0
+    if S.analyzed then
+      o = 1
+      lines[#lines + 1] = string.format("✓ 1. %s", T("plugin.step_analysis", { clip = clip }))
+    end
+    lines[#lines + 1] = string.format("%s %d. %s   %d / %d", mark(1), 1 + o, T("plugin.step_markers", { clip = clip }),
                                       job.marked, job.total)
     lines[#lines + 1] = "     " .. T("plugin.step_markers_hint")
-    lines[#lines + 1] = string.format("%s 2. %s", mark(2), T("plugin.step_bin", { srt = job.srt_name }))
+    lines[#lines + 1] = string.format("%s %d. %s", mark(2), 2 + o, T("plugin.step_bin", { srt = job.srt_name }))
     if S.track_step then
-      lines[#lines + 1] = string.format("%s 3. %s", mark(3), T("plugin.step_track", { track = job.track_name,
+      lines[#lines + 1] = string.format("%s %d. %s", mark(3), 3 + o, T("plugin.step_track", { track = job.track_name,
                                                                                     timeline = job.timeline_name }))
     end
     lines[#lines + 1] = ""
@@ -1637,8 +2037,101 @@ function M.main()
 
   local save   -- defined below, used by finish()
 
+  local function analysis_text(step)
+    local a = S.analysis
+    local clip = tostring(api(a.clip, "GetName") or "?")
+    local secs = math.max(0, G_os.time() - a.started)
+    local lines = { T("plugin.work_title"),
+      string.format("… 1. %s   %s   %d:%02d", T("plugin.step_analysis", { clip = clip }),
+                    T("plugin.step_" .. (step or "model")), math.floor(secs / 60), secs % 60),
+      "     " .. T("plugin.step_analysis_hint"),
+      "   2. " .. T("plugin.step_markers", { clip = clip }),
+      "   3. " .. T("plugin.step_bin", { srt = S.info.song .. ".srt" }),
+    }
+    return table.concat(lines, "\n")
+  end
+
+  local function end_analysis(text)
+    S.state, S.analysis = "select", nil
+    set("Cancel", "Hidden", true)
+    lock(false)
+    status(text)
+    refresh()
+  end
+
+  local function start_analysis()
+    local info = S.info
+    local dir, err = M.new_job(info.path, { lang = BA.lang, slider = smooth_value() })
+    if not dir then
+      status(tostring(err))
+      return
+    end
+    local ok, lerr = M.launch(dir)
+    if not ok then
+      M.remove_job(dir)
+      status(tostring(lerr))
+      return
+    end
+    -- project, timeline and clip are fixed at OK (spec 6.2), also for the markers without a subtitle track
+    S.analysis = { dir = dir, started = G_os.time(), clip = info.clip, marker_timeline = current_timeline(),
+                   timeline = get("Timeline", "Checked") and current_timeline() or false }
+    S.state = "analyze"
+    lock(true)
+    set("Cancel", "Hidden", false)
+    set("Cancel", "Enabled", true)
+    status(analysis_text(nil))
+  end
+
+  local function cancel_analysis()
+    if S.state ~= "analyze" then
+      return
+    end
+    M.cancel(S.analysis.dir)   -- Python ends at its next step; its folder goes with cleanup_jobs
+    end_analysis(T("plugin.msg_cancelled"))
+  end
+
+  local function poll_analysis()
+    local a = S.analysis
+    local r = M.poll(a.dir, a.started, G_os.time())
+    if r.state == "running" then
+      status(analysis_text(r.step))
+      return
+    end
+    if r.state ~= "ok" then
+      local text = r.state == "error" and T("plugin.msg_analysis_error", { message = tostring(r.message or "?") })
+        or r.state == "no_start" and T("plugin.msg_no_start", { python = tostring(BA.python) })
+        or r.state == "timeout" and T("plugin.msg_timeout")
+        or T("plugin.msg_cancelled")
+      if r.state == "timeout" then
+        M.cancel(a.dir)
+      else
+        M.remove_job(a.dir)
+      end
+      end_analysis(text)
+      return
+    end
+    local job, err = M.start(r.markers_path, { colors = read_colors(), timeline = a.timeline, clips = { a.clip },
+                                               marker_timeline = a.marker_timeline })
+    if not job then
+      M.remove_job(a.dir)
+      end_analysis(tostring(err))
+      return
+    end
+    local engine = M.engine_text(job.data.engine)
+    set("Engine", "Text", engine and T("plugin.engine", { engine = engine }) or T("plugin.engine_unknown"))
+    set("Engine", "Hidden", false)
+    set("Cancel", "Hidden", true)
+    S.job, S.state, S.analyzed, S.job_dir = job, "work", true, a.dir
+    S.track_step = a.timeline and S.tinfo and S.tinfo.state == "present"
+    status(work_text())
+  end
+
   local function finish()
     S.state = "result"
+    if S.job_dir then
+      M.remove_job(S.job_dir)   -- markers.json was read: the job folder is not needed any more
+      S.job_dir = nil
+    end
     status(S.job.msg or "")   -- the analysis program stays visible in its own line above
     set("Close", "Text", T("plugin.btn_ok"))
     set("Close", "Enabled", true)
@@ -1669,6 +2162,8 @@ function M.main()
       else
         status(work_text())
       end
+    elseif S.state == "analyze" and S.ticks % REFRESH_TICKS == 0 then
+      poll_analysis()
     elseif S.state == "select" and S.ticks % REFRESH_TICKS == 0 then
       refresh()
     end
@@ -1678,6 +2173,8 @@ function M.main()
     settings.timeline = get("Timeline", "Checked") and true or false
     settings.colors_open = get("Colors", "Checked") and true or false
     settings.colors = read_colors()
+    settings.way = analyze_way() and "analyze" or "json"
+    settings.smooth = smooth_value()
     local okg, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
     if okg and type(g) == "table" and tonumber(g[1]) and tonumber(g[4]) then
       settings.geometry = { g[1], g[2], g[3], g[4] }
@@ -1686,6 +2183,9 @@ function M.main()
   end
 
   local function close()
+    if S.state == "analyze" then   -- nothing has changed in the project yet: cancel and close
+      cancel_analysis()
+    end
     if S.state == "work" then
       log("Close ignored: the work is not finished yet.")
       S.close_requested = true   -- if Resolve closes the window anyway, the loop ends after the work
@@ -1711,9 +2211,26 @@ function M.main()
     refresh()
   end
   win.On.Timeline.Clicked = function() refresh() end
+  -- the two ways work like radio buttons (the UIManager has none)
+  win.On.WayAnalyze.Clicked = function()
+    set("WayJson", "Checked", not get("WayAnalyze", "Checked"))
+    S.info = nil
+    refresh()
+  end
+  win.On.WayJson.Clicked = function()
+    set("WayAnalyze", "Checked", not get("WayJson", "Checked"))
+    S.info = nil
+    refresh()
+  end
+  win.On.Smooth.ValueChanged = function() show_way() end
+  win.On.Cancel.Clicked = function() cancel_analysis() end
   win.On.Colors.Clicked = function() colors_visibility() end
   win.On.OK.Clicked = function()
     if S.state ~= "select" or not (S.info and S.info.ok) then
+      return
+    end
+    if analyze_way() then
+      start_analysis()
       return
     end
     local tl = get("Timeline", "Checked") and current_timeline() or false
@@ -1781,6 +2298,7 @@ function M.main()
   disp.On.Timeout = on_timer
   pcall(function() disp.On.BATimer.Timeout = on_timer end)
 
+  M.cleanup_jobs()
   colors_visibility()
   refresh()
   timer:Start()

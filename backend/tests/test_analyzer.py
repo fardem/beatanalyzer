@@ -74,7 +74,8 @@ class AnalyzerTests(unittest.TestCase):
         return self.analyzer.analyze_audio_file(self.wav, "click.wav")
 
     def analyze_with_fake(self, init_raises=None, frames_raise=None, calls=None, no_downbeats=False,
-                          extra_downbeat_at=None, smooth=True, extra_logit=0.5):
+                          extra_downbeat_at=None, smooth=True, extra_logit=0.5,
+                          protect=None):
         """Analyse with FakeBeatThis (50 frames/s, 600 frames): beat logit 4.0 at every beat (0.5 s, 1.0 s, ...),
         downbeat logit 2.0 one frame after every fourth beat, -4.0 everywhere else."""
         calls = {} if calls is None else calls
@@ -126,7 +127,8 @@ class AnalyzerTests(unittest.TestCase):
         try:
             self.analyzer = load_analyzer_with_fake_beat_this(fake)
             self.assertTrue(self.analyzer.BEAT_THIS_AVAILABLE)
-            return self.analyzer.analyze_audio_file(self.wav, "click.wav", smooth=smooth)
+            kw = {} if protect is None else {"protect": protect}
+            return self.analyzer.analyze_audio_file(self.wav, "click.wav", smooth=smooth, **kw)
         finally:
             if torch_stub_needed:
                 sys.modules.pop("torch", None)
@@ -232,7 +234,9 @@ class AnalyzerTests(unittest.TestCase):
 
     def test_beat_numbers_count_on_after_a_short_bar(self):
         # a clear extra downbeat (logit 4) at 1.5 s: bars of 2 beats then 4; numbers must be 1 2 | 1 2 3 4
-        result = self.analyze_with_fake(extra_downbeat_at=1.5, extra_logit=4.0)
+        # protect 0.85: the model's own downbeats (logit 2 = 0.88) stay too; with the default 0.95 the grid may
+        # turn the first two beats into a pickup, which is not what this test is about
+        result = self.analyze_with_fake(extra_downbeat_at=1.5, extra_logit=4.0, protect=0.85)
         self.assertEqual([b["beatInBar"] for b in result["beats"][:6]], [1, 2, 1, 2, 1, 2])
         self.assertTrue(result["beats"][2]["isDownbeat"])
 
@@ -242,9 +246,10 @@ class AnalyzerTests(unittest.TestCase):
         calls = {}
         first = self.analyze_with_fake(calls=calls, extra_downbeat_at=1.5, extra_logit=4.0)
         loose = self.analyzer.analyze_audio_file(self.wav, "click.wav", protect=1.0)
-        again = self.analyzer.analyze_audio_file(self.wav, "click.wav", protect=0.85)
+        self.assertEqual(self.analyzer.PROTECT_CONF, 0.95)                    # default: "Glätten" 90 %
+        again = self.analyzer.analyze_audio_file(self.wav, "click.wav")
         self.assertEqual(calls["frames"], 1)                                  # beat_this ran once
-        self.assertEqual(first["barSmoothing"]["protect"], 0.85)
+        self.assertEqual(first["barSmoothing"]["protect"], 0.95)
         self.assertEqual(loose["barSmoothing"]["protect"], 1.0)
         self.assertNotEqual([b["isDownbeat"] for b in loose["beats"]], [b["isDownbeat"] for b in first["beats"]])
         self.assertEqual(again["beats"], first["beats"])                      # same value, same result
@@ -300,7 +305,7 @@ class AnalyzerTests(unittest.TestCase):
 
     def test_librosa_is_not_smoothed(self):
         self.assertEqual(self.analyze_without_beat_this()["barSmoothing"],
-                         {"applied": False, "meter": 4, "changedBeats": 0, "reanchors": 0, "protect": 0.85})
+                         {"applied": False, "meter": 4, "changedBeats": 0, "reanchors": 0, "protect": 0.95})
 
     # --- engineInfo --------------------------------------------------------------------------------
 

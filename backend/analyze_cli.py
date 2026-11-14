@@ -22,7 +22,7 @@ def main():
     parser.add_argument("--export-audacity", help="Optionaler Pfad für Audacity Label Track (.txt)", default=None)
     parser.add_argument("--export-csv", help="Optionaler Pfad für CSV-Datei", default=None)
     parser.add_argument("--no-smooth-bars", help="Takte nicht glätten (wie beat_this sie liefert)", action="store_true")
-    parser.add_argument("--protect", type=float, default=0.85,
+    parser.add_argument("--protect", type=float, default=0.95,
                         help="Schutz klarer 1: eine 1, die beat_this so sicher hört, bleibt (0.5 bis 1.0, 1.0 = kein Schutz)")
 
     args = parser.parse_args()

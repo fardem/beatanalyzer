@@ -43,8 +43,8 @@ class SmoothBarsTests(unittest.TestCase):
         self.assertIn(10, ones(analyzer.smooth_bars(conf, 4, protect=0.85)))
 
     def test_clamp_protect(self):
-        self.assertEqual(analyzer.clamp_protect("abc"), 0.85)
-        self.assertEqual(analyzer.clamp_protect(None), 0.85)
+        self.assertEqual(analyzer.clamp_protect("abc"), 0.95)   # default: "Glätten" 90 %
+        self.assertEqual(analyzer.clamp_protect(None), 0.95)
         self.assertEqual(analyzer.clamp_protect(5), 1.0)
         self.assertEqual(analyzer.clamp_protect(0.1), 0.5)
         self.assertEqual(analyzer.clamp_protect("0.9"), 0.9)
