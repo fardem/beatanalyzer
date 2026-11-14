@@ -94,6 +94,22 @@
     "msg_no_python": "Python of BeatAnalyzer not found. Click 'Install in Resolve' in the web app or install BeatAnalyzer again.",
     "msg_no_start": "Python did not start ({python}). Install BeatAnalyzer again or click 'Install in Resolve' in the web app.",
     "msg_tl_markers": "Timeline '{timeline}': {n} markers on {items} clip(s) of the song.",
-    "explain_tl_markers": "The song's clips in this Timeline ({items}) get the markers as well."
+    "explain_tl_markers": "The song's clips in this Timeline ({items}) get the markers as well.",
+    "way_analyze": "Analyse the selected clip",
+    "way_json": "Load JSON",
+    "smooth_label": "Smoothing",
+    "smooth_off": "off",
+    "smooth_tip": "Smoothing – how even the bar grid becomes.\n0 %: off. The bars stay as beat_this hears them – including bars of only 1 to 3 beats at unsure places.\nFurther right: the even grid may move more and more of beat_this's '1's – first only unsure ones, the further right, the surer ones.\n100 %: the grid decides alone. It starts anew only where beat_this hears the '1' elsewhere over several bars (e.g. after an edit).\nDefault: 90 %. The beats themselves never change.",
+    "analyze_none": "Select exactly one audio clip in the Media Pool.",
+    "analyze_many": "Several clips selected – please select exactly one audio clip.",
+    "analyze_no_path": "The selected item has no file (e.g. a Timeline or a Compound Clip).",
+    "step_analysis": "Analysis of '{clip}'",
+    "step_model": "loading the model",
+    "step_analyze": "analysing",
+    "step_write": "writing the result",
+    "step_analysis_hint": "Cancel works only now. Up to here nothing in the project has changed.",
+    "msg_cancelled": "Analysis cancelled. Nothing in the project has changed.",
+    "msg_analysis_error": "Analysis failed: {message}. Nothing in the project has changed.",
+    "msg_timeout": "The analysis was not finished after 10 minutes and was cancelled. Nothing in the project has changed."
   }
 }

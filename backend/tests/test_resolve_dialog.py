@@ -38,7 +38,7 @@ local function widget(kind)
     return spec
   end
 end
-for _, kind in ipairs({ "VGroup", "HGroup", "Label", "Button", "LineEdit", "ComboBox", "CheckBox" }) do
+for _, kind in ipairs({ "VGroup", "HGroup", "Label", "Button", "LineEdit", "ComboBox", "CheckBox", "Slider" }) do
   UI[kind] = widget(kind)
 end
 function UI:VGap() return { kind = "Gap" } end
@@ -85,6 +85,11 @@ end
 function UIMOCK.choose(id, index)
   UIMOCK.items[id].CurrentIndex = index
   local h = rawget(UIMOCK.win.On[id], "CurrentIndexChanged")
+  if h then h({ who = id }) end
+end
+function UIMOCK.slide(id, value)
+  UIMOCK.items[id].Value = value
+  local h = rawget(UIMOCK.win.On[id], "ValueChanged")
   if h then h({ who = id }) end
 end
 function UIMOCK.tick()
@@ -404,6 +409,160 @@ class DialogTests(unittest.TestCase):
             self.close()
         self.run_dialog(scenario)
         self.assertEqual(self.ui.requested.path, str(self.tmp))
+
+
+
+@unittest.skipIf(luajit21 is None, "lupa not installed")
+class AnalysisDialogTests(DialogTests):
+    """Way "Ausgewählten Clip analysieren" (Teilprojekt 3); Python is played by the test."""
+
+    def setUp(self):
+        super().setUp()
+        block = resolve_plugin.render_config(self.tmp, self.tmp / "venv" / "bin" / "python", "de",
+                                             {c: i18n.texts(c) for c in i18n.LANGUAGES})
+        self.M = self.lua.execute(resolve_plugin.apply_config(trs.SCRIPT, block))
+        self.spawned = []
+        self.M.spawn = lambda cmd: self.spawned.append(cmd) or True
+        self.lua.execute("MOCK.song.filepath = '/Musik/Müller Song.wav'")
+
+    def job_dir(self):
+        dirs = [d for d in (self.tmp / "resolve_temp").iterdir() if d.is_dir()]
+        self.assertEqual(len(dirs), 1)
+        return dirs[0]
+
+    def python_writes(self, step=None, done=None, markers=True):
+        d = self.job_dir()
+        if step:
+            (d / "progress.txt").write_text(f"step={step}\n", encoding="utf-8")
+        if done:
+            if done == "ok" and markers:
+                (d / "markers.json").write_text(json.dumps(resolve_marker_data(trs.sample_result()),
+                                                           ensure_ascii=False), encoding="utf-8")
+            (d / "done.txt").write_text(f"state={done}\n" + ("markers=markers.json\n" if done == "ok" else "")
+                                        + ("message=kaputt\n" if done == "error" else ""), encoding="utf-8")
+
+    def select_song(self):
+        self.lua.execute("MOCK.selected = { MOCK.song }")
+
+    def start_analysis(self, slider=None):
+        self.select_song()
+        self.check("WayAnalyze", True)
+        self.tick(20)
+        if slider is not None:
+            self.ui.slide("Smooth", slider)
+        self.click("OK")
+
+    def test_ways_exclude_each_other(self):
+        def scenario():
+            self.assertTrue(self.item("WayJson").Checked)
+            self.assertFalse(self.item("WayAnalyze").Checked)
+            self.assertTrue(self.item("Smooth").Hidden)
+            self.check("WayAnalyze", True)
+            self.assertFalse(self.item("WayJson").Checked)
+            self.assertFalse(self.item("Smooth").Hidden)
+            self.assertTrue(self.item("Choose").Hidden)
+            self.check("WayJson", True)
+            self.assertFalse(self.item("WayAnalyze").Checked)
+            self.assertFalse(self.item("Choose").Hidden)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_analyze_way_shows_the_selected_clip(self):
+        def scenario():
+            self.select_song()
+            self.check("WayAnalyze", True)
+            self.tick(20)
+            self.assertEqual(self.item("ClipInfo").Text, "Song im Media Pool · 0:20")
+            self.assertTrue(self.item("OK").Enabled)
+            self.lua.execute("MOCK.selected = {}")
+            self.tick(20)
+            self.assertEqual(self.item("ClipInfo").Text, "Im Media Pool genau einen Audio-Clip auswählen.")
+            self.assertFalse(self.item("OK").Enabled)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_smooth_slider_default_90_shown_and_saved(self):
+        def scenario():
+            self.check("WayAnalyze", True)
+            self.assertEqual(self.item("Smooth").Value, 90)
+            self.assertEqual(self.item("SmoothValue").Text, "90 %")
+            self.assertIn("0 %", self.item("Smooth").ToolTip)
+            self.ui.slide("Smooth", 0)
+            self.assertEqual(self.item("SmoothValue").Text, "aus")
+            self.close()
+        self.run_dialog(scenario)
+        text = (self.tmp / "resolve_temp" / "plugin.txt").read_text(encoding="utf-8")
+        self.assertIn("smooth=0", text)
+        self.assertIn("way=analyze", text)
+
+    def test_analysis_runs_and_sets_the_markers(self):
+        def scenario():
+            self.start_analysis(slider=100)
+            self.assertEqual(len(self.spawned), 1)
+            job = (self.job_dir() / "job.txt").read_text(encoding="utf-8")
+            self.assertIn("audio=/Musik/Müller Song.wav", job)
+            self.assertIn("protect=1", job)
+            self.assertFalse(self.item("Cancel").Hidden)
+            self.assertFalse(self.item("OK").Enabled)
+            self.python_writes(step="analyze")
+            self.tick(25)
+            self.assertIn("Analysieren", self.item("Status").Text)
+            self.lua.execute("MOCK.selected = {}")                 # the selection may change meanwhile
+            self.python_writes(done="ok")
+            self.tick(60)
+            self.assertTrue(self.item("Cancel").Hidden)
+            self.assertIn("Marker", self.item("Status").Text)
+            self.close()
+        self.run_dialog(scenario)
+        self.assertEqual(len(self.markers(self.mock.song)), 8)
+        self.assertFalse((self.tmp / "resolve_temp").exists() and any(
+            d.is_dir() for d in (self.tmp / "resolve_temp").iterdir()))   # job folder removed
+
+    def test_cancel_returns_to_the_selection(self):
+        def scenario():
+            self.start_analysis()
+            d = self.job_dir()
+            self.click("Cancel")
+            self.assertTrue((d / "cancel.txt").exists())
+            self.assertTrue(self.item("OK").Enabled)
+            self.assertTrue(self.item("Cancel").Hidden)
+            self.assertIn("abgebrochen", self.item("Status").Text)
+            self.python_writes(done="ok")                          # Python finishes anyway: ignored
+            self.tick(60)
+            self.close()
+        self.run_dialog(scenario)
+        self.assertEqual(self.markers(self.mock.song), {})
+
+    def test_error_of_the_analysis_changes_nothing(self):
+        def scenario():
+            self.start_analysis()
+            self.python_writes(done="error")
+            self.tick(25)
+            self.assertIn("kaputt", self.item("Status").Text)
+            self.assertTrue(self.item("OK").Enabled)
+            self.close()
+        self.run_dialog(scenario)
+        self.assertEqual(self.markers(self.mock.song), {})
+
+    def test_python_does_not_start(self):
+        def scenario():
+            self.start_analysis()
+            self.lua.execute("os.time = (function(t) return function() return t() + 120 end end)(os.time)")
+            self.tick(25)
+            self.assertIn("Python ist nicht gestartet", self.item("Status").Text)
+            self.assertTrue(self.item("OK").Enabled)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_window_x_during_analysis_cancels(self):
+        def scenario():
+            self.start_analysis()
+            d = self.job_dir()
+            self.close()
+            self.assertTrue((d / "cancel.txt").exists())
+            self.assertTrue(self.exited())
+        self.run_dialog(scenario)
+        self.assertEqual(self.markers(self.mock.song), {})
 
 
 if __name__ == "__main__":
