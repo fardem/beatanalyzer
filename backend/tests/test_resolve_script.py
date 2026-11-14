@@ -850,6 +850,29 @@ class ResolveScriptTests(unittest.TestCase):
         self.M.remove(clips, tl)
         self.assertEqual(self.sub_tracks(tl), [])
 
+    def test_old_tracks_stay_when_the_new_srt_cannot_be_written(self):
+        tl = self.setup_three_uses()
+        self.lua.execute("""
+            local tl = MOCK.timeline
+            tl:AddTrack("subtitle")
+            tl.subs[1].name = "BeatAnalyzer - Müller Song (A1)"
+        """)
+        data = self.lua.eval("function(t) return t end")(self.M.prepare(self.write_json(
+            resolve_marker_data(sample_result()))).data)
+        line = self.M.place_in_timeline(self.mock.pool, tl, data, self.lua.table_from([self.mock.song]),
+                                        str(self.tmp / "gibt es nicht"), "Müller Song")
+        self.assertIn("gibt es nicht", str(line))
+        self.assertEqual([n for n, _, _ in self.sub_tracks(tl)], ["BeatAnalyzer - Müller Song (A1)"])   # kept
+
+    def test_tooltip_names_the_tracks_when_the_song_is_on_several(self):
+        self.load_lang("de")
+        tl = self.setup_three_uses()
+        info = self.M.timeline_info(tl, self.lua.table_from([self.mock.song]))
+        text, tip = self.M.explanation(True, info, "Müller Song")
+        self.assertIn("A1, A2", tip)
+        self.assertIn("„BeatAnalyzer - Müller Song (A1)“", tip)
+        self.assertNotIn("„BeatAnalyzer - Müller Song“", tip)
+
     def test_song_on_one_track_keeps_the_plain_track_name(self):
         tl = self.setup_timeline()
         self.M.apply(self.write_json(resolve_marker_data(sample_result())))

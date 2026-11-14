@@ -92,6 +92,7 @@ local BA = {
       ["plugin.explain_no_timeline"] = "No Timeline is open. Only the Subtitle in the Media Pool is created.",
       ["plugin.explain_off"] = "The Timeline stays unchanged. The Subtitle with all beats lies in the folder BeatAnalyzer in the Media Pool and can be dragged from there into any Timeline.",
       ["plugin.explain_present"] = "In the Timeline '{timeline}' the song lies on A{track} from {tc}. Below it the Subtitle Track '{track_name}' is created and made active. Resolve allows only one active Subtitle Track; the others stay but are switched off.",
+      ["plugin.explain_present_many"] = "In the Timeline '{timeline}' the song lies on {tracks}. Each of these tracks gets its own Subtitle Track, e.g. '{track_name}'. Resolve allows only one active Subtitle Track; the others stay but are disabled.",
       ["plugin.explain_short_absent"] = "Song not in the Timeline '{timeline}' – only the Subtitle in the Media Pool.",
       ["plugin.explain_short_no_timeline"] = "No Timeline open – only the Subtitle in the Media Pool.",
       ["plugin.explain_short_off"] = "The Timeline stays unchanged, Subtitle in the folder BeatAnalyzer.",
@@ -1203,18 +1204,26 @@ end
 
 -- One subtitle track for the given parts (all uses of the song on one audio track). Returns a result line
 -- and true if a file was kept (failed import).
-local function place_track(media_pool, tl, data, segments, dir, base, track_no, several, replaced, fps, tl_start)
+-- First phase for one audio track: the SRT file. Returns prep (count, first, srt_name, srt_file, track_name) or
+-- nil, a result line and true if a file was kept.
+local function write_track_srt(data, segments, dir, base, track_no, several)
   local text, count, first = build_srt(data, { segments = segments })
   if count == 0 then
-    return T("plugin.msg_tl_empty")
+    return nil, T("plugin.msg_tl_empty")
   end
-  local suffix = several and (" (A" .. track_no .. ")") or ""
   local srt_name = base .. " (Timeline" .. (several and (" A" .. track_no) or "") .. ").srt"
   local srt_file = dir .. SEP .. srt_name
   if not write_file(srt_file, text) then
-    return T("plugin.msg_tl_write", { path = srt_file }), true
+    return nil, T("plugin.msg_tl_write", { path = srt_file }), true
   end
-  local track_name = TRACK_PREFIX .. base .. suffix
+  return { count = count, first = first, srt_name = srt_name, srt_file = srt_file,
+           track_name = TRACK_PREFIX .. base .. (several and (" (A" .. track_no .. ")") or "") }
+end
+
+-- Second phase: import the SRT and put it on a new subtitle track.
+local function place_track(media_pool, tl, prep, replaced, fps, tl_start)
+  local count, first, srt_name, srt_file, track_name = prep.count, prep.first, prep.srt_name, prep.srt_file,
+                                                      prep.track_name
   local srt_item, ierr = import_subtitles(media_pool, srt_file, srt_name)
   if not srt_item then
     return T("plugin.msg_srt_import", { why = tostring(ierr), path = srt_file }), true
@@ -1279,10 +1288,7 @@ local function place_in_timeline(media_pool, tl, data, clips, dir, base)
   end
   local fps = exact_fps(parse_fps(api(tl, "GetSetting", "timelineFrameRate")) or 25)
   local tl_start = tonumber(api(tl, "GetStartFrame")) or 0
-  -- The old tracks go first: Resolve may refuse to delete a clip that a timeline still uses, so the clip of
-  -- the last run can only be replaced once its track is gone.
-  local replaced = delete_song_tracks(tl, base) > 0
-  local lines, kept = {}, false
+  local lines, kept, preps = {}, false, {}
   for _, g in ipairs(groups) do
     local segments = {}
     for _, item in ipairs(g.items) do
@@ -1295,8 +1301,22 @@ local function place_in_timeline(media_pool, tl, data, clips, dir, base)
           tostring(api(tl, "GetName") or "?"), g.track, start, tl_start, left, duration, fps, seg.from, seg.to,
           seg.shift))
     end
-    local line, k = place_track(media_pool, tl, data, segments, dir, base, g.track, #groups > 1, replaced, fps,
-                                tl_start)
+    local prep, line, k = write_track_srt(data, segments, dir, base, g.track, #groups > 1)
+    if prep then
+      preps[#preps + 1] = prep
+    else
+      lines[#lines + 1] = line
+      kept = kept or k == true
+    end
+  end
+  if #preps == 0 then   -- nothing new to place: the tracks of the last run stay as they are
+    return table.concat(lines, "\\n"), kept
+  end
+  -- The old tracks go before the import: Resolve may refuse to delete a clip that a timeline still uses, so the
+  -- clip of the last run can only be replaced once its track is gone. Only now, when the new files exist.
+  local replaced = delete_song_tracks(tl, base) > 0
+  for _, prep in ipairs(preps) do
+    local line, k = place_track(media_pool, tl, prep, replaced, fps, tl_start)
     lines[#lines + 1] = line
     kept = kept or k == true
   end
@@ -1540,6 +1560,11 @@ end
 function M.subtitle_explanation(checked, tinfo, song)
   if not checked then
     return T("plugin.explain_off")
+  end
+  if tinfo.state == "present" and type(tinfo.tracks) == "string" and tinfo.tracks:find(",") then
+    local first = tinfo.tracks:match("^(A%d+)")
+    return T("plugin.explain_present_many", { timeline = tinfo.name, tracks = tinfo.tracks,
+                                              track_name = TRACK_PREFIX .. tostring(song or "") .. " (" .. first .. ")" })
   end
   if tinfo.state == "present" then
     return T("plugin.explain_present", { timeline = tinfo.name, track = tinfo.track, tc = tinfo.tc,

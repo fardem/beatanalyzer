@@ -16,15 +16,19 @@ URL = f"https://cloud.cp.jku.at/public.php/dav/files/7ik4RrBKTS273gp/{CHECKPOINT
 
 
 def cause_of(err: BaseException) -> str:
-    """The innermost exception behind err (through __cause__ / __context__), as 'Type: message'."""
-    seen = set()
-    while id(err) not in seen:
+    """The reason behind err, as 'Type: message': the first exception in the chain below err (__cause__ /
+    __context__) that is not a FileNotFoundError. beat_this downloads inside "except FileNotFoundError" (from
+    torch.load("final0")), so the innermost exception is always that one and says nothing about the download."""
+    chain, seen = [], set()
+    while err is not None and id(err) not in seen:
         seen.add(id(err))
-        nxt = err.__cause__ or err.__context__
-        if nxt is None:
-            break
-        err = nxt
-    return f"{type(err).__name__}: {err}"
+        chain.append(err)
+        err = err.__cause__ or err.__context__
+    for e in chain[1:]:
+        if not isinstance(e, FileNotFoundError):
+            return f"{type(e).__name__}: {e}"
+    e = chain[-1]
+    return f"{type(e).__name__}: {e}"
 
 
 def cache_dir() -> str:

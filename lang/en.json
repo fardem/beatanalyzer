@@ -122,6 +122,7 @@
     "explain_short_absent": "Song not in the Timeline '{timeline}' – only the Subtitle in the Media Pool.",
     "explain_short_no_timeline": "No Timeline open – only the Subtitle in the Media Pool.",
     "explain_short_off": "The Timeline stays unchanged, Subtitle in the folder BeatAnalyzer.",
-    "explain_short_tl_markers": "Markers also on the clips in the Timeline ({items})."
+    "explain_short_tl_markers": "Markers also on the clips in the Timeline ({items}).",
+    "explain_present_many": "In the Timeline '{timeline}' the song lies on {tracks}. Each of these tracks gets its own Subtitle Track, e.g. '{track_name}'. Resolve allows only one active Subtitle Track; the others stay but are disabled."
   }
 }

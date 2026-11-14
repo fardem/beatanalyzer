@@ -123,6 +123,7 @@
     "explain_short_absent": "Şarkı „{timeline}“ Timeline'ında değil – yalnızca Media Pool'da Subtitle.",
     "explain_short_no_timeline": "Açık Timeline yok – yalnızca Media Pool'da Subtitle.",
     "explain_short_off": "Timeline değişmez, Subtitle BeatAnalyzer klasöründe.",
-    "explain_short_tl_markers": "Marker'lar Timeline'daki kliplere de eklenir ({items})."
+    "explain_short_tl_markers": "Marker'lar Timeline'daki kliplere de eklenir ({items}).",
+    "explain_present_many": "„{timeline}“ Timeline'ında şarkı {tracks} üzerinde. Bu izlerin her biri için ayrı bir Subtitle Track oluşur, ör. „{track_name}“. Resolve yalnızca bir etkin Subtitle Track'e izin verir; diğerleri kalır ama devre dışı bırakılır."
   }
 }

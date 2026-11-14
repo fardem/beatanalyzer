@@ -17,6 +17,21 @@ def beat_this_style_failure():
         raise ValueError("Could not load the checkpoint given the provided name", "final0")
 
 
+
+def real_beat_this_failure():
+    """The real nesting in beat_this.inference.load_checkpoint: torch.load("final0") fails with FileNotFoundError,
+    the download runs inside that except block, its error is turned into a ValueError (reviewer, sim.py)."""
+    try:
+        raise FileNotFoundError(2, "No such file or directory", "final0")
+    except FileNotFoundError:
+        try:
+            try:
+                raise OSError("Tunnel connection failed: 403")
+            except OSError as e:
+                raise urllib.error.URLError(e)
+        except Exception:
+            raise ValueError("Could not load the checkpoint given the provided name", "final0")
+
 class ModelCheckTests(unittest.TestCase):
     def test_ok(self):
         ok, text = model_check.check(load=lambda: {"state_dict": {}})
@@ -36,6 +51,12 @@ class ModelCheckTests(unittest.TestCase):
             beat_this_style_failure()
         except ValueError as e:
             self.assertIn("URLError", model_check.cause_of(e))
+
+    def test_real_nesting_reports_the_download_error_not_the_file_name(self):
+        ok, text = model_check.check(load=real_beat_this_failure)
+        self.assertFalse(ok)
+        self.assertIn("Tunnel connection failed: 403", text)
+        self.assertNotIn("No such file or directory", text)
 
     def test_without_beat_this(self):
         def missing():

@@ -46,8 +46,12 @@ def get_predictor():
             MODEL_LOAD_FAILED, PREDICTOR_DEVICE = False, device
             print("[BeatAnalyzer Backend] Modell bereit für Inferenz.")
         except Exception as err:
-            from model_check import cause_of   # beat_this hides the real reason of a failed download
-            print(f"[BeatAnalyzer Backend] Fehler beim Laden des Modells: {err} - Ursache: {cause_of(err)}")
+            try:   # beat_this hides the real reason of a failed download; never let this stop the fallback
+                from model_check import cause_of
+                cause = cause_of(err)
+            except Exception:
+                cause = "?"
+            print(f"[BeatAnalyzer Backend] Fehler beim Laden des Modells: {err} - Ursache: {cause}")
             predictor_instance = None
             MODEL_LOAD_FAILED = True
     return predictor_instance
