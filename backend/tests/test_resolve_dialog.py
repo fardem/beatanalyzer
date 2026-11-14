@@ -63,14 +63,7 @@ function disp:AddWindow(spec, root)
   items[spec.ID] = { Geometry = spec.Geometry }
   local win = { On = auto_table(), spec = spec, shown = false }
   function win:GetItems() return items end
-  function win:Show()
-    self.shown = true
-    if UIMOCK.narrow_on_show then items[spec.ID].Geometry[3] = UIMOCK.narrow_on_show end   -- seen: 431 of 600
-  end
-  function win:Resize(size)
-    UIMOCK.resized = { size[1], size[2] }
-    items[spec.ID].Geometry[3], items[spec.ID].Geometry[4] = size[1], size[2]
-  end
+  function win:Show() self.shown = true end
   function win:Hide() self.shown = false end
   function win:RecalcLayout() end
   UIMOCK.win, UIMOCK.items = win, items
@@ -392,15 +385,13 @@ class DialogTests(unittest.TestCase):
             self.close()
         self.run_dialog(scenario)
 
-    def test_narrow_window_is_widened_after_show(self):
-        # Resolve console: "Window: requested 600x680, actual 431x680", the width changed between openings
-        self.lua.execute("UIMOCK.narrow_on_show = 431")
-
+    def test_window_has_a_fixed_minimum_width(self):
+        # Resolve ignored the requested width and Resize (0.1.6: "actual 431x640, resized to 431x640"); the width
+        # followed the content. A row with a minimum width holds the window at least that wide.
         def scenario():
-            self.assertEqual(list(self.ui.resized.values()), [680, 680])   # the requested size (default)
+            self.assertEqual(list(self.item("WidthGuard").MinimumSize.values())[0], 580)
             self.close()
         self.run_dialog(scenario)
-        self.assertTrue(any("actual 431x680" in line and "resized" in line for line in self.out), self.out)
 
     def test_settings_saved_on_close(self):
         def scenario():
@@ -558,6 +549,18 @@ class AnalysisDialogTests(DialogTests):
         self.assertEqual(len(self.markers(self.mock.song)), 8)
         self.assertFalse((self.tmp / "resolve_temp").exists() and any(
             d.is_dir() for d in (self.tmp / "resolve_temp").iterdir()))   # job folder removed
+
+    def test_engine_line_gets_its_height_after_the_analysis(self):
+        # Resolve 0.1.6: "Analysiert mit beat_this (CUDA, NVIDIA GeForce RTX 5080)" overlapped the next line
+        def scenario():
+            self.start_analysis()
+            self.python_writes(done="ok")
+            self.tick(60)
+            text = self.item("Engine").Text
+            self.assertGreater(len(text), 80, text)
+            self.assertGreaterEqual(list(self.item("Engine").MinimumSize.values())[1], 2 * 17)
+            self.close()
+        self.run_dialog(scenario)
 
     def test_cancel_returns_to_the_selection(self):
         def scenario():

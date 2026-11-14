@@ -1936,6 +1936,9 @@ function M.main()
   local win = disp:AddWindow({ ID = "BeatAnalyzerWin", WindowTitle = T("plugin.title", { version = VERSION }),
                                Geometry = geometry, MinimumSize = WIN_MIN },
     ui:VGroup({ Spacing = 6,
+      -- Resolve ignores the requested width (and Resize) and sizes the window by its content, so the width changed
+      -- with every song name. An empty row with a minimum width holds the window at least that wide.
+      ui:Label({ ID = "WidthGuard", Text = "", Weight = 0, MinimumSize = { WIN_MIN[1] - 20, 1 } }),
       ui:HGroup({ Weight = 0,
         ui:CheckBox({ ID = "WayAnalyze", Text = T("plugin.way_analyze"), Checked = settings.way == "analyze",
                       Weight = 0 }),
@@ -2273,7 +2276,9 @@ function M.main()
       return
     end
     local engine = M.engine_text(job.data.engine)
-    set("Engine", "Text", engine and T("plugin.engine", { engine = engine }) or T("plugin.engine_unknown"))
+    local engine_line = engine and T("plugin.engine", { engine = engine }) or T("plugin.engine_unknown")
+    set("Engine", "Text", engine_line)
+    fit("Engine", engine_line)   -- seen in Resolve: a two-line text overlapped the next line
     set("Engine", "Hidden", false)
     set("Cancel", "Hidden", true)
     S.job, S.state, S.analyzed, S.job_dir = job, "work", true, a.dir
@@ -2461,14 +2466,7 @@ function M.main()
   win:Show()
   local okg, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
   local actual = okg and type(g) == "table" and (tostring(g[3]) .. "x" .. tostring(g[4])) or "?"
-  local resized = ""
-  if okg and type(g) == "table" and tonumber(g[3]) and tonumber(g[3]) < want_w then
-    -- seen in Resolve: drawn narrower than requested (431 of 600), the width changed between openings
-    pcall(function() win:Resize({ want_w, want_h }) end)
-    local ok2, g2 = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
-    resized = ", resized to " .. (ok2 and type(g2) == "table" and (tostring(g2[3]) .. "x" .. tostring(g2[4])) or "?")
-  end
-  log(string.format("Window: requested %dx%d, actual %s%s", want_w, want_h, actual, resized))
+  log(string.format("Window: requested %dx%d, actual %s", want_w, want_h, actual))
   disp:RunLoop()
   timer:Stop()
   win:Hide()
