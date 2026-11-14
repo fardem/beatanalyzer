@@ -59,3 +59,9 @@ Konsole außerdem: „Selection: ignored entries that are not clips: __flags=num
 - Lizenzzeile kürzer: „Model: beat_this – Nutzung im Rahmen der MIT-Lizenz“.
 - **Marker im vorne gekürzten Timeline-Clip verschoben** (Bild: gekürzter und ungekürzter Clip übereinander). Subtitles stimmen. Folgerung: Resolve zählt die Marker-Frames eines TimelineItem ab dem Anfang der Quelle (nicht ab dem sichtbaren Anfang); das Abziehen des Left Offset war falsch.
 - 1, 2, 5 ✓.
+
+## Test 0.1.8 (Nutzer, 2026-11-14)
+
+Alle vier Punkte ✓: Marker im gekürzten und ungekürzten Timeline-Clip liegen übereinander; Fensterhöhe passt;
+„Auswählen …“ nach dem Wegwechsel sofort da; Modellzeile „Nutzung im Rahmen der MIT-Lizenz“.
+Teilprojekt 3 damit in Resolve bestätigt.
