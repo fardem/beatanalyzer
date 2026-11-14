@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.1.5** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
+**Version 0.1.6** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
 
 BeatAnalyzer erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und legt die Beats als **farbige Marker auf deinen Audio-Clip in DaVinci Resolve**. Die Erkennung läuft lokal auf deinem PC mit dem Transformer-Modell [CPJKU beat_this](https://github.com/CPJKU/beat_this). Die Oberfläche ist eine Web-App im Browser, der Server dahinter ist Python.
 

@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.1.5"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.1.6"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 

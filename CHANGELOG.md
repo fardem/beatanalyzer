@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.6] – 2026-11-14
+
+### Geändert
+- Resolve-Fenster: **kurze Texte**, die Details stehen im Tooltip. Der Fortschritt heißt „Tasks“ mit kurzen Zeilen („Track wird analysiert“, „Marker werden gesetzt“, „Subtitle wird angelegt“, „Subtitle Track in der Timeline“) ohne den Songnamen in jeder Zeile. Die Erklärung unter „Subtitle Track“ ist eine Zeile, die lange Fassung steht im Tooltip. Kürzerer Tooltip für den Regler „Glätten“ (auch in der Web-App).
+- **Marker-Notiz** mit Takt, Beat, Zeit, Tempo und Confidence, z. B. „Takt 24 – Beat 2 | 106,860 s | 120,0 BPM | Confidence 75 %“ (vorher nur Zeit und Tempo).
+- **Ein Subtitle Track je Audiospur**, in der der Song liegt („BeatAnalyzer - Song (A1)“, „… (A2)“); liegt der Song in einer Spur mehrmals, stehen alle Vorkommen auf diesem Track, jeweils unter ihrem Clip. Liegt der Song nur in einer Spur, heißt der Track wie bisher „BeatAnalyzer - Song“. Ein neuer Lauf ersetzt alle diese Tracks, „BeatAnalyzer-Marker entfernen“ entfernt sie. Vorher bekam nur der zeitlich erste Clip einen Track.
+- Nach dem Anlegen des Subtitle Tracks zeigt Resolve wieder die Timeline, die vorher offen war.
+- `install_and_run.bat` lädt das **Modell von beat_this vorab** (`backend/model_check.py`). Scheitert das, stehen dort die eigentliche Ursache, der Ordner, der Dateiname und die Download-Adresse. Auch der Server loggt beim Ladefehler die Ursache (beat_this verdeckt sie hinter „Could not load the checkpoint“).
+
+### Behoben
+- Auftragsordner abgebrochener Analysen blieben in `resolve_temp` liegen; sie werden jetzt beim nächsten Öffnen gelöscht, sobald Python fertig ist.
+- Resolve-Fenster: Zeichnet Resolve das Fenster schmaler als verlangt, wird die Größe nochmals gesetzt (Konsole: „resized to …“).
+- Resolve-Konsole: „Selection: ignored entries that are not clips“ erschien jede Sekunde; jetzt nur noch einmal.
+
 ## [0.1.5] – 2026-11-14
 
 ### Hinzugefügt
