@@ -425,6 +425,8 @@ class AnalysisDialogTests(DialogTests):
         (self.tmp / "venv" / "bin" / "python").write_text("", encoding="utf-8")
         self.spawned = []
         self.M.spawn = lambda cmd: self.spawned.append(cmd) or True
+        # on Windows launch() starts through ShellExecuteW first: never start anything in a test
+        self.M.shell_execute = lambda python, params: self.spawned.append(python + " " + params) or True
         self.lua.execute("MOCK.song.filepath = '/Musik/Müller Song.wav'")
 
     def job_dir(self):

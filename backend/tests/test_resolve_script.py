@@ -870,6 +870,8 @@ class ResolveJobScriptTests(unittest.TestCase):
         self.mock = self.lua.globals().MOCK
         self.spawned = []
         self.M.spawn = lambda cmd: self.spawned.append(cmd) or True
+        # on Windows launch() starts through ShellExecuteW first: never start anything in a test
+        self.M.shell_execute = lambda python, params: self.spawned.append(python + " " + params) or True
 
     def kv(self, path):
         return dict(line.split("=", 1) for line in Path(path).read_text(encoding="utf-8").splitlines() if "=" in line)

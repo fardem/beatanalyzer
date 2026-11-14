@@ -790,6 +790,7 @@ local function shell_execute(python, params)
   end
   return ok and r
 end
+M.shell_execute = shell_execute   -- hook for tests (on Windows the first way to start Python)
 
 function M.launch(job_dir)
   if not BA.python or not BA.home or not file_exists(BA.python) then   -- e.g. the venv was deleted
@@ -798,7 +799,7 @@ function M.launch(job_dir)
   local script = BA.home .. SEP .. "backend" .. SEP .. "resolve_job.py"
   local params = quote(script) .. " " .. quote(job_dir)
   log("Start:", BA.python, params)
-  if IS_WIN and shell_execute(BA.python, params) then
+  if IS_WIN and M.shell_execute(BA.python, params) then
     return true
   end
   local cmd = quote(BA.python) .. " " .. params
