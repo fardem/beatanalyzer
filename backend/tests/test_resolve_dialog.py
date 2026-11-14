@@ -192,9 +192,10 @@ class DialogTests(unittest.TestCase):
             self.pick_json()
             self.assertEqual(self.item("ClipInfo").Text, "Song im Media Pool · 0:20")
             self.assertTrue(self.item("OK").Enabled)
-            self.assertTrue(self.item("Explain").Text.startswith("Keine Timeline offen."))
+            self.assertEqual(self.item("Explain").Text, "Keine Timeline offen – nur Subtitle im Media Pool.")
+            self.assertTrue(self.item("Explain").ToolTip.startswith("Keine Timeline offen."))
             self.check("Timeline", False)
-            self.assertTrue(self.item("Explain").Text.startswith("Die Timeline bleibt unverändert."))
+            self.assertTrue(self.item("Explain").Text.startswith("Timeline bleibt unverändert"))
             self.close()
         self.run_dialog(scenario)
         self.assertEqual(self.ui.requested.opts.FReqS_Filter, "BeatAnalyzer JSON (*.json)|*.json")
@@ -221,7 +222,11 @@ class DialogTests(unittest.TestCase):
             self.assertFalse(self.exited())
             self.tick(1)
             self.assertIn("8 / 8", self.item("Status").Text)     # 8 beats, CHUNK 20 -> one step
-            self.assertIn("Was jetzt passiert:", self.item("Status").Text)
+            status = self.item("Status").Text
+            self.assertTrue(status.startswith("Tasks"), status)
+            self.assertIn("Marker werden gesetzt", status)
+            self.assertIn("Subtitle wird angelegt", status)
+            self.assertNotIn("Müller", status)                     # the song is named at the top, not per line
             self.tick(5)
             self.assertIn("8 Marker auf 1 Clip(s): Song", self.item("Status").Text)
             self.close()
@@ -482,6 +487,21 @@ class AnalysisDialogTests(DialogTests):
             self.tick(20)
             self.assertEqual(self.item("ClipInfo").Text, "Im Media Pool genau einen Audio-Clip auswählen.")
             self.assertFalse(self.item("OK").Enabled)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_short_texts_during_the_analysis(self):
+        def scenario():
+            self.start_analysis()
+            status = self.item("Status").Text
+            self.assertTrue(status.startswith("Tasks"), status)
+            self.assertIn("Track wird analysiert", status)
+            self.assertNotIn("Müller", status)
+            self.assertNotIn("Song", status)
+            self.assertEqual(self.item("Smooth").ToolTip,
+                             "0 % = aus: Takte wie von beat_this.\nMehr % = gleichmäßigeres Raster.\n"
+                             "100 % = voll geglättet; neu angesetzt nur bei klar anderer „1“.\n"
+                             "Die Beats bleiben unverändert.")
             self.close()
         self.run_dialog(scenario)
 

@@ -338,7 +338,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.run_apply()
         marks = self.markers(self.mock.song)
         self.assertEqual(marks[13]["name"], "Takt 1")
-        self.assertEqual(marks[13]["note"], "0,500 s | 120,0 BPM")
+        self.assertEqual(marks[13]["note"], "Takt 1 – Beat 1 | 0,500 s | 120,0 BPM | Confidence 90 %")
         self.assertEqual(marks[25]["name"], "1.2")
         self.assertEqual(self.first_beat_cue(), ["Downbeat (1)", "Takt 1 – Beat 1", "00:00.500 – 120,0 BPM",
                                                  "Confidence 90 %"])
@@ -503,16 +503,40 @@ class ResolveScriptTests(unittest.TestCase):
         clips = self.lua.table_from([self.mock.song])
         ti = self.M.timeline_info(tl, clips)
         self.assertEqual((ti.state, ti.track, ti.tc), ("present", 1, "01:00:10:00"))
-        self.assertTrue(self.M.explanation(True, ti, "Müller Song").startswith(
-            "In der Timeline „Timeline 1“ liegt der Song auf A1 ab 01:00:10:00. Darunter entsteht der Subtitle Track "
-            "„BeatAnalyzer - Müller Song“"))
-        self.assertTrue(self.M.explanation(False, ti, "Müller Song").startswith("Die Timeline bleibt unverändert."))
+        # short text in the window, the long one as tooltip (user: "zu viel Text")
+        text, tip = self.M.explanation(True, ti, "Müller Song")
+        self.assertEqual(text, "Subtitle Track kommt unter den Song (A1). Marker auch auf den Clips in der Timeline (1).")
+        self.assertTrue(tip.startswith("In der Timeline „Timeline 1“ liegt der Song auf A1 ab 01:00:10:00. Darunter "
+                                       "entsteht der Subtitle Track „BeatAnalyzer - Müller Song"))
+        self.assertIn("bekommen die Marker ebenfalls", tip)
+        text, tip = self.M.explanation(False, ti, "Müller Song")
+        self.assertEqual(text, "Timeline bleibt unverändert, Subtitle im Ordner BeatAnalyzer. "
+                               "Marker auch auf den Clips in der Timeline (1).")
+        self.assertTrue(tip.startswith("Die Timeline bleibt unverändert."))
         self.assertEqual(self.M.timeline_info(None, clips).state, "none")
-        self.assertTrue(self.M.explanation(True, self.M.timeline_info(None, clips), "x").startswith("Keine Timeline offen."))
+        text, tip = self.M.explanation(True, self.M.timeline_info(None, clips), "x")
+        self.assertEqual(text, "Keine Timeline offen – nur Subtitle im Media Pool.")
+        self.assertTrue(tip.startswith("Keine Timeline offen."))
         self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 0)")
         absent = self.M.timeline_info(self.lua.globals().MOCK.timeline, clips)
         self.assertEqual(absent.state, "absent")
-        self.assertTrue(self.M.explanation(True, absent, "x").startswith("Der Song liegt nicht in der Timeline „Timeline 1“."))
+        text, tip = self.M.explanation(True, absent, "x")
+        self.assertEqual(text, "Song nicht in der Timeline „Timeline 1“ – nur Subtitle im Media Pool.")
+        self.assertTrue(tip.startswith("Der Song liegt nicht in der Timeline „Timeline 1“."))
+
+    def test_marker_note_has_bar_beat_time_tempo_confidence(self):
+        self.load_lang("de")
+        m = self.lua.table_from({"time": 106.86, "type": "beat", "bar": 24, "beat": 2, "bpm": 120, "confidence": 0.75})
+        self.assertEqual(self.M.marker_note(m), "Takt 24 – Beat 2 | 106,860 s | 120,0 BPM | Confidence 75 %")
+        m = self.lua.table_from({"time": 0.5, "type": "downbeat", "bar": 1, "beat": 1, "bpm": 120})
+        self.assertEqual(self.M.marker_note(m), "Takt 1 – Beat 1 | 0,500 s | 120,0 BPM")      # no confidence
+
+    def test_markers_carry_the_note(self):
+        self.load_lang("de")
+        self.run_apply()
+        notes = {f: m["note"] for f, m in self.markers(self.mock.song).items()}
+        self.assertEqual(notes[13], "Takt 1 – Beat 1 | 0,500 s | 120,0 BPM | Confidence 90 %")
+        self.assertEqual(notes[25], "Takt 1 – Beat 2 | 1,000 s | 120,0 BPM | Confidence 90 %")
 
     def test_engine_text(self):
         t = lambda d: self.M.engine_text(self.lua.table_from(d))
@@ -743,9 +767,13 @@ class ResolveScriptTests(unittest.TestCase):
         info = self.M.timeline_info(tl, self.lua.table_from([self.mock.song]))
         self.assertEqual(info["items"], 1)
         for checked in (True, False):
-            self.assertIn("Clips des Songs in dieser Timeline", self.M.explanation(checked, info, "Müller Song"))
+            text, tip = self.M.explanation(checked, info, "Müller Song")
+            self.assertIn("Marker auch auf den Clips in der Timeline (1)", text)
+            self.assertIn("Clips des Songs in dieser Timeline", tip)
         absent = self.M.timeline_info(self.lua.globals().MOCK.new_timeline(25, 0), self.lua.table_from([self.mock.song]))
-        self.assertNotIn("Clips des Songs", self.M.explanation(True, absent, "Müller Song"))
+        text, tip = self.M.explanation(True, absent, "Müller Song")
+        self.assertNotIn("Clips", text)
+        self.assertNotIn("Clips des Songs", tip)
 
     def sub_tracks(self, tl):
         return [(t.name, t.enabled, [it.GetStart() for it in t["items"].values()]) for t in tl.subs.values()]

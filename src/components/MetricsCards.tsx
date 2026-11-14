@@ -16,11 +16,10 @@ interface MetricsCardsProps {
 }
 
 const SMOOTH_HELP = [
-  'Glätten – wie gleichmäßig das Taktraster wird',
-  '0 %: aus. Die Takte bleiben, wie beat_this sie hört – auch Takte mit nur 1 bis 3 Beats an unsicheren Stellen.',
-  'Weiter rechts: Das gleichmäßige Raster darf immer mehr „1“en von beat_this verschieben – zuerst nur unsichere, je weiter rechts, desto sicherere.',
-  '100 %: Das Raster entscheidet allein. Neu angesetzt wird nur, wo beat_this die „1“ über mehrere Takte an anderer Stelle hört (z. B. nach einem Edit).',
-  'Standard: 90 %. Die Beats selbst bleiben immer unverändert. Neu gerechnet wird, sobald der Regler kurz ruht.',
+  '0 % = aus: Takte wie von beat_this.',
+  'Mehr % = gleichmäßigeres Raster.',
+  '100 % = voll geglättet; neu angesetzt nur bei klar anderer „1“.',
+  'Die Beats bleiben unverändert.',
 ].join('\n');
 
 // slider 1 ... 100 % <-> protection of clear "1"s 0.5 ... 1.0 (a "1" beat_this hears at least this sure stays)

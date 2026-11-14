@@ -64,6 +64,7 @@ local BA = {
       ["plugin.btn_ok"] = "OK",
       ["plugin.btn_remove"] = "Remove BeatAnalyzer markers",
       ["plugin.btn_remove_yes"] = "Remove",
+      ["plugin.cancel_hint"] = "Cancel works only during the analysis.",
       ["plugin.check_colors"] = "Adjust marker colours",
       ["plugin.check_timeline"] = "Create a Subtitle Track in the Timeline",
       ["plugin.choose_title"] = "BeatAnalyzer – choose marker JSON",
@@ -78,6 +79,11 @@ local BA = {
       ["plugin.explain_no_timeline"] = "No Timeline is open. Only the Subtitle in the Media Pool is created.",
       ["plugin.explain_off"] = "The Timeline stays unchanged. The Subtitle with all beats lies in the folder BeatAnalyzer in the Media Pool and can be dragged from there into any Timeline.",
       ["plugin.explain_present"] = "In the Timeline '{timeline}' the song lies on A{track} from {tc}. Below it the Subtitle Track '{track_name}' is created and made active. Resolve allows only one active Subtitle Track; the others stay but are switched off.",
+      ["plugin.explain_short_absent"] = "Song not in the Timeline '{timeline}' – only the Subtitle in the Media Pool.",
+      ["plugin.explain_short_no_timeline"] = "No Timeline open – only the Subtitle in the Media Pool.",
+      ["plugin.explain_short_off"] = "The Timeline stays unchanged, Subtitle in the folder BeatAnalyzer.",
+      ["plugin.explain_short_present"] = "The Subtitle Track goes under the song ({tracks}).",
+      ["plugin.explain_short_tl_markers"] = "Markers also on the clips in the Timeline ({items}).",
       ["plugin.explain_tl_markers"] = "The song's clips in this Timeline ({items}) get the markers as well.",
       ["plugin.json_none"] = "No JSON chosen.",
       ["plugin.msg_analysis_error"] = "Analysis failed: {message}. Nothing in the project has changed.",
@@ -122,7 +128,7 @@ local BA = {
       ["plugin.remove_nothing"] = "Nothing from BeatAnalyzer found on '{song}'.",
       ["plugin.smooth_label"] = "Smoothing",
       ["plugin.smooth_off"] = "off",
-      ["plugin.smooth_tip"] = "Smoothing – how even the bar grid becomes.\n0 %: off. The bars stay as beat_this hears them – including bars of only 1 to 3 beats at unsure places.\nFurther right: the even grid may move more and more of beat_this's '1's – first only unsure ones, the further right, the surer ones.\n100 %: the grid decides alone. It starts anew only where beat_this hears the '1' elsewhere over several bars (e.g. after an edit).\nDefault: 90 %. The beats themselves never change.",
+      ["plugin.smooth_tip"] = "0 % = off: bars as beat_this hears them.\nMore % = a more even grid.\n100 % = fully smoothed; starts anew only where the '1' is clearly elsewhere.\nThe beats never change.",
       ["plugin.step_analysis"] = "Analysis of '{clip}'",
       ["plugin.step_analysis_hint"] = "Cancel works only now. Up to here nothing in the project has changed.",
       ["plugin.step_analyze"] = "analysing",
@@ -132,8 +138,14 @@ local BA = {
       ["plugin.step_model"] = "loading the model",
       ["plugin.step_track"] = "Subtitle Track '{track}' in '{timeline}'",
       ["plugin.step_write"] = "writing the result",
+      ["plugin.task_analyze"] = "Analysing the track",
+      ["plugin.task_markers"] = "Setting markers",
+      ["plugin.task_subtitle"] = "Creating the Subtitle",
+      ["plugin.task_track"] = "Subtitle Track in the Timeline",
+      ["plugin.tasks_title"] = "Tasks",
       ["plugin.title"] = "BeatAnalyzer {version}",
       ["plugin.wait"] = "Please wait – the window closes only at the end.",
+      ["plugin.wait_short"] = "Please wait …",
       ["plugin.warn_length"] = "The clip's duration ({clip}) differs from the analysed file ({json}).",
       ["plugin.warn_other_file"] = "The selected clip is not '{file}' from the JSON.",
       ["plugin.way_analyze"] = "Analyse the selected clip",
@@ -973,6 +985,18 @@ local function build_srt(data, opts)
 end
 M.build_srt = build_srt
 
+-- Note of a marker: the same parts as its subtitle, e.g. "Takt 24 – Beat 2 | 106,860 s | 120,0 BPM | Confidence 75 %".
+function M.marker_note(m)
+  local parts = {
+    T("output.bar_beat", { bar = tonumber(m.bar) or 0, beat = tonumber(m.beat) or 0 }),
+    T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) }),
+  }
+  if tonumber(m.confidence) then
+    parts[#parts + 1] = T("output.confidence", { value = fmt_pct(m.confidence) })
+  end
+  return table.concat(parts, " | ")
+end
+
 -- "C:\\Downloads\\x.json" + "01. Song.flac" -> "C:\\Downloads\\01. Song.srt"
 -- "<dir>" + "01. Song.flac" -> "<dir>/01. Song.srt"; without a file name the name of the JSON.
 local function srt_path(dir, file_name, json_path)
@@ -1410,12 +1434,24 @@ function M.timeline_info(tl, clips)
 end
 
 -- The text under the tick box "Subtitle Track in the Timeline".
+-- Short text for the window and the long one for its tooltip (the user found the long one too much).
 function M.explanation(checked, tinfo, song)
-  local text = M.subtitle_explanation(checked, tinfo, song)
-  if (tonumber(tinfo.items) or 0) > 0 then
-    text = text .. " " .. T("plugin.explain_tl_markers", { items = tinfo.items })
+  local long = M.subtitle_explanation(checked, tinfo, song)
+  local short
+  if not checked then
+    short = T("plugin.explain_short_off")
+  elseif tinfo.state == "present" then
+    short = T("plugin.explain_short_present", { tracks = "A" .. tostring(tinfo.track) })
+  elseif tinfo.state == "absent" then
+    short = T("plugin.explain_short_absent", { timeline = tinfo.name })
+  else
+    short = T("plugin.explain_short_no_timeline")
   end
-  return text
+  if (tonumber(tinfo.items) or 0) > 0 then
+    long = long .. " " .. T("plugin.explain_tl_markers", { items = tinfo.items })
+    short = short .. " " .. T("plugin.explain_short_tl_markers", { items = tinfo.items })
+  end
+  return short, long
 end
 
 function M.subtitle_explanation(checked, tinfo, song)
@@ -1519,7 +1555,7 @@ function Job:mark_some()
         else
           local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
             or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
-          local note = T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) })
+          local note = M.marker_note(m)
           if api(clip, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
             c.added = c.added + 1
           else
@@ -1581,7 +1617,7 @@ function Job:mark_timeline()
         if frame >= 0 and (not c.duration or frame < c.duration) then
           local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
             or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
-          local note = T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) })
+          local note = M.marker_note(m)
           if api(item, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
             self.tl_added = self.tl_added + 1
           end
@@ -1967,8 +2003,9 @@ function M.main()
       set("Warnings", "Hidden", true)
       set("Engine", "Hidden", true)
       S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
-      local explain = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
+      local explain, explain_tip = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
       set("Explain", "Text", explain)
+      set("Explain", "ToolTip", explain_tip)
       fit("Explain", explain, 2)
       relayout()
     elseif S.json then
@@ -1989,8 +2026,9 @@ function M.main()
       fit("JsonPath", get("JsonPath", "Text"), 2)
       fit("ClipInfo", get("ClipInfo", "Text"))
       S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
-      local explain = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
+      local explain, explain_tip = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
       set("Explain", "Text", explain)
+      set("Explain", "ToolTip", explain_tip)
       fit("Explain", explain, 2)
       relayout()
     end
@@ -2015,23 +2053,17 @@ function M.main()
     local function mark(n)
       return n < now and "✓" or (n == now and "…" or "  ")
     end
-    local lines = { T("plugin.work_title") }
-    local clip = tostring(api(job.clips[1], "GetName") or "?")
-    local o = 0
+    local lines = { T("plugin.tasks_title") }
     if S.analyzed then
-      o = 1
-      lines[#lines + 1] = string.format("✓ 1. %s", T("plugin.step_analysis", { clip = clip }))
+      lines[#lines + 1] = "✓ " .. T("plugin.task_analyze")
     end
-    lines[#lines + 1] = string.format("%s %d. %s   %d / %d", mark(1), 1 + o, T("plugin.step_markers", { clip = clip }),
-                                      job.marked, job.total)
-    lines[#lines + 1] = "     " .. T("plugin.step_markers_hint")
-    lines[#lines + 1] = string.format("%s %d. %s", mark(2), 2 + o, T("plugin.step_bin", { srt = job.srt_name }))
+    lines[#lines + 1] = string.format("%s %s   %d / %d", mark(1), T("plugin.task_markers"), job.marked, job.total)
+    lines[#lines + 1] = string.format("%s %s", mark(2), T("plugin.task_subtitle"))
     if S.track_step then
-      lines[#lines + 1] = string.format("%s %d. %s", mark(3), 3 + o, T("plugin.step_track", { track = job.track_name,
-                                                                                    timeline = job.timeline_name }))
+      lines[#lines + 1] = string.format("%s %s", mark(3), T("plugin.task_track"))
     end
     lines[#lines + 1] = ""
-    lines[#lines + 1] = T("plugin.wait")
+    lines[#lines + 1] = T("plugin.wait_short")
     return table.concat(lines, "\n")
   end
 
@@ -2041,12 +2073,13 @@ function M.main()
     local a = S.analysis
     local clip = tostring(api(a.clip, "GetName") or "?")
     local secs = math.max(0, G_os.time() - a.started)
-    local lines = { T("plugin.work_title"),
-      string.format("… 1. %s   %s   %d:%02d", T("plugin.step_analysis", { clip = clip }),
-                    T("plugin.step_" .. (step or "model")), math.floor(secs / 60), secs % 60),
-      "     " .. T("plugin.step_analysis_hint"),
-      "   2. " .. T("plugin.step_markers", { clip = clip }),
-      "   3. " .. T("plugin.step_bin", { srt = S.info.song .. ".srt" }),
+    local lines = { T("plugin.tasks_title"),
+      string.format("… %s (%s)   %d:%02d", T("plugin.task_analyze"), T("plugin.step_" .. (step or "model")),
+                    math.floor(secs / 60), secs % 60),
+      "  " .. T("plugin.task_markers"),
+      "  " .. T("plugin.task_subtitle"),
+      "",
+      T("plugin.cancel_hint"),
     }
     return table.concat(lines, "\n")
   end
