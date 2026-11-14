@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.7] – 2026-11-14
+
+### Hinzugefügt
+- **Infoblock in jedem Subtitle** (Media Pool und jedes Vorkommen in der Timeline): BeatAnalyzer, Datei, Tempo und Taktart sowie **Modell und Lizenz**, z. B. „Model: beat_this – Lizenz: MIT – Nutzung: frei, auch kommerziell“. Er steht vor dem ersten Beat, wenn dort mindestens 0,5 s Platz sind, sonst unter dem ersten Beat.
+- Die Analyse liefert Modell und Lizenz mit (`engineInfo.model`: Name, Lizenz, kommerzielle Nutzung erlaubt). Vorbereitet für spätere Modelle mit anderen Bedingungen („nicht für kommerzielle Nutzung“).
+- README: Abschnitt **Modelle und Lizenzen** (BeatAnalyzer liefert kein Modell aus, beat_this lädt es beim Anbieter, das Modell wird nicht verändert).
+
+### Behoben
+- Resolve-Fenster: Die Breite änderte sich mit dem Inhalt (Resolve ignoriert die verlangte Breite). Eine Zeile mit Mindestbreite hält das Fenster jetzt mindestens 600 px breit; der wirkungslose `Resize`-Versuch aus 0.1.6 entfällt.
+- Resolve-Fenster: Die Zeile „Analysiert mit beat_this (…)“ überlappte nach einer Analyse aus Resolve die nächste Zeile.
+
 ## [0.1.6] – 2026-11-14
 
 ### Geändert

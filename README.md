@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.1.6** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
+**Version 0.1.7** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
 
 BeatAnalyzer erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und legt die Beats als **farbige Marker auf deinen Audio-Clip in DaVinci Resolve**. Die Erkennung läuft lokal auf deinem PC mit dem Transformer-Modell [CPJKU beat_this](https://github.com/CPJKU/beat_this). Die Oberfläche ist eine Web-App im Browser, der Server dahinter ist Python.
 
@@ -23,6 +23,7 @@ BeatAnalyzer erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und
 - [Aufbau des Projekts](#aufbau-des-projekts)
 - [Entwicklung](#entwicklung)
 - [Lizenz](#lizenz)
+- [Modelle und Lizenzen](#modelle-und-lizenzen)
 - [Credits](#credits)
 
 ---
@@ -252,6 +253,31 @@ Die Tests für das Lua-Skript laufen gegen einen nachgebauten Resolve und brauch
 ## Lizenz
 
 BeatAnalyzer steht unter der [MIT-Lizenz](LICENSE).
+
+## Modelle und Lizenzen
+
+BeatAnalyzer selbst enthält **kein Modell** und bietet keins zum Download an:
+
+- `install_and_run.bat` installiert das Python-Paket **beat_this** von GitHub
+  (<https://github.com/CPJKU/beat_this>).
+- Das Modell `final0` lädt beat_this beim ersten Lauf **direkt beim Anbieter** herunter (Server der Johannes Kepler
+  Universität Linz) und legt es im Cache von PyTorch ab (`%USERPROFILE%\.cache\torch\hub\checkpoints\beat_this-final0.ckpt`).
+  `install_and_run.bat` stößt diesen Download vorab an und meldet die Ursache, wenn er scheitert.
+- BeatAnalyzer **verändert das Modell nicht**; es nutzt die Wahrscheinlichkeiten, die beat_this ausgibt, und ordnet die
+  Takte danach (Regler „Glätten“).
+
+| Modell | Lizenz | Kommerzielle Nutzung |
+|---|---|---|
+| beat_this (`final0`), Code und veröffentlichte Gewichte | MIT | erlaubt |
+| librosa (Ersatz, wenn beat_this fehlt) | ISC | erlaubt |
+
+Hinweis des Anbieters von beat_this: Einige der Trainingsdaten sind urheberrechtlich geschützt oder stehen unter
+eingeschränkten Creative-Commons-Lizenzen. Ob das deine Nutzung betrifft, musst du selbst prüfen. Diese Übersicht ist
+keine Rechtsberatung.
+
+Jeder Subtitle von BeatAnalyzer nennt am Anfang das verwendete Modell und seine Lizenz, z. B.
+„Model: beat_this – Lizenz: MIT – Nutzung: frei, auch kommerziell“. Kommt später ein Modell mit anderen Bedingungen
+dazu, steht dort dessen Lizenz und z. B. „nicht für kommerzielle Nutzung“.
 
 ## Credits
 
