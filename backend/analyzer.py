@@ -162,7 +162,7 @@ def meter_from_beats(beats_sec: List[float], downbeats_sec: List[float]) -> Tupl
 
 
 REANCHOR_PENALTY = 9.0   # cost (nats) of starting the bar grid anew: about two bars of clear contrary evidence
-PROTECT_CONF = 0.85      # default: a downbeat the model hears this clearly stays a "1"; the grid never overrules it
+PROTECT_CONF = 0.95      # default ("Glätten" 90 %): a downbeat the model hears this clearly stays a "1"; the grid never overrules it
 
 
 def clamp_protect(value: Any) -> float:

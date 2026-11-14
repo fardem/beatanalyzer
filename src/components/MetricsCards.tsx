@@ -20,7 +20,7 @@ const SMOOTH_HELP = [
   '0 %: aus. Die Takte bleiben, wie beat_this sie hört – auch Takte mit nur 1 bis 3 Beats an unsicheren Stellen.',
   'Weiter rechts: Das gleichmäßige Raster darf immer mehr „1“en von beat_this verschieben – zuerst nur unsichere, je weiter rechts, desto sicherere.',
   '100 %: Das Raster entscheidet allein. Neu angesetzt wird nur, wo beat_this die „1“ über mehrere Takte an anderer Stelle hört (z. B. nach einem Edit).',
-  'Standard: 70 %. Die Beats selbst bleiben immer unverändert. Neu gerechnet wird, sobald der Regler kurz ruht.',
+  'Standard: 90 %. Die Beats selbst bleiben immer unverändert. Neu gerechnet wird, sobald der Regler kurz ruht.',
 ].join('\n');
 
 // slider 1 ... 100 % <-> protection of clear "1"s 0.5 ... 1.0 (a "1" beat_this hears at least this sure stays)
@@ -127,7 +127,8 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             {result.timeSignature.barShare === null ? '–' : `${result.timeSignature.barShare} % der Takte`}
           </span>
         </div>
-        <div className="text-[11px] text-slate-400 mt-1 leading-snug">
+        {/* always two lines high, so the tile does not change its height while the slider is moved */}
+        <div className="text-[11px] text-slate-400 mt-1 leading-snug min-h-[2lh]">
           {!canSmooth
             ? result.timeSignature.name
             : result.barSmoothing?.applied
@@ -161,12 +162,13 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             onPointerDown={() => setDragging(true)}
           />
         </label>
-        {busy && <div className="text-[10px] text-purple-300 mt-1 truncate" title={busyText}>{busyText}</div>}
-        {!busy && error && (
-          <div className="text-[10px] text-rose-400 mt-1 break-words" title={error}>
-            Neue Analyse fehlgeschlagen: {error}
-          </div>
-        )}
+        {/* progress or error: one line of fixed height, the full text in the tooltip */}
+        <div
+          className={`text-[10px] mt-1 h-[1lh] truncate ${busy ? 'text-purple-300' : 'text-rose-400'}`}
+          title={busy ? busyText ?? '' : error ? `Neue Analyse fehlgeschlagen: ${error}` : ''}
+        >
+          {busy ? busyText : error ? `Neue Analyse fehlgeschlagen: ${error}` : ''}
+        </div>
       </div>
 
       {/* 3. Takte / Bars */}

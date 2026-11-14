@@ -20,7 +20,7 @@ export default function App() {
   const [stageText, setStageText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [smoothBars, setSmoothBars] = useState<boolean>(true);
-  const [protect, setProtect] = useState<number>(0.85); // "Schutz klarer 1" of the last successful analysis
+  const [protect, setProtect] = useState<number>(0.95); // protection of clear "1"s; 0.95 = "Glätten" 90 %
   const lastAudioRef = useRef<AudioBuffer | null>(null);
   const lastFileRef = useRef<{ file: File | Blob; name: string } | null>(null);
 
@@ -71,7 +71,7 @@ export default function App() {
     opts: { smooth?: boolean; protect?: number; reanalysis?: boolean } = {}
   ) => {
     const smooth = opts.smooth ?? true;
-    const protectValue = opts.protect ?? 0.85;
+    const protectValue = opts.protect ?? 0.95;
     if (!opts.reanalysis) lastAudioRef.current = null;
     lastFileRef.current = { file, name };
     try {

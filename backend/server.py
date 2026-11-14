@@ -41,14 +41,14 @@ except Exception as _err:   # the name of an except variable is deleted after th
     print("=" * 70)
     BEAT_THIS_AVAILABLE = False
 
-    def analyze_audio_file(p, f, smooth=True, protect=0.85):
+    def analyze_audio_file(p, f, smooth=True, protect=0.95):
         raise RuntimeError(f"Analyzer-Fehler (analyzer.py nicht geladen): {ANALYZER_ERROR}")
 
     def engine_status():
         return {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "analyzer_failed"}
 
     def clamp_protect(value):
-        return 0.85   # nothing is analysed anyway
+        return 0.95   # nothing is analysed anyway
 
 import i18n
 import resolve_plugin
