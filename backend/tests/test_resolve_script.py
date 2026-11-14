@@ -797,6 +797,62 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(sorted(self.bin_clips()), ["Müller Song.srt"])   # the timeline SRT is only on the track
         self.assertEqual(self.work_dirs(), [])
 
+    # --- one subtitle track per audio track with the song (user, answer a) ------------------------------
+
+    def setup_three_uses(self):
+        tl = self.setup_timeline(extra_items=[(1, 90000 + 1000)])     # A1: trimmed use + a second, later use
+        self.lua.execute("MOCK.timeline.audio[2] = { MOCK.timeline_item(MOCK.song, 92000, 100, 200) }")   # A2
+        return tl
+
+    def test_subtitle_track_per_audio_track(self):
+        tl = self.setup_three_uses()
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertTrue(ok, msg)
+        tracks = {name: (enabled, starts) for name, enabled, starts in self.sub_tracks(tl)}
+        self.assertEqual(sorted(tracks), ["BeatAnalyzer - Müller Song (A1)", "BeatAnalyzer - Müller Song (A2)"])
+        a1 = tracks["BeatAnalyzer - Müller Song (A1)"][1]
+        # first use as before (visible beats 1.0 ... 3.5 s), second use at 40 s: all 8 beats, nothing twice
+        self.assertEqual(a1, [90250, 90263, 90275, 90288, 90300, 90313,
+                              91013, 91025, 91038, 91050, 91063, 91075, 91088, 91100])
+        self.assertEqual(tracks["BeatAnalyzer - Müller Song (A2)"][1], [92000])   # visible part 4 ... 12 s: beat 4.0
+        self.assertEqual(sum(1 for e, _ in tracks.values() if e), 1)               # Resolve: one active track
+        self.assertIn("(A1)", msg)
+        self.assertIn("(A2)", msg)
+        self.assertEqual(sorted(self.bin_clips()), ["Müller Song.srt"])
+        self.assertEqual(self.work_dirs(), [])
+
+    def test_second_run_replaces_per_track_and_old_named_tracks(self):
+        tl = self.setup_three_uses()
+        self.lua.execute("""
+            local tl = MOCK.timeline
+            tl:AddTrack("subtitle")
+            tl.subs[1].name = "BeatAnalyzer - Müller Song"         -- track of 0.1.5 (one track, no "(A1)")
+        """)
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        names = sorted(name for name, _, _ in self.sub_tracks(tl))
+        self.assertEqual(names, ["BeatAnalyzer - Müller Song (A1)", "BeatAnalyzer - Müller Song (A2)"])
+
+    def test_remove_finds_all_tracks_per_audio_track(self):
+        tl = self.setup_three_uses()
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        clips = self.lua.table_from([self.mock.song])
+        self.assertEqual(self.M.removal(clips, tl).tracks, 2)
+        self.M.remove(clips, tl)
+        self.assertEqual(self.sub_tracks(tl), [])
+
+    def test_song_on_one_track_keeps_the_plain_track_name(self):
+        tl = self.setup_timeline()
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertEqual([n for n, _, _ in self.sub_tracks(tl)], ["BeatAnalyzer - Müller Song"])
+
+    def test_explanation_names_every_audio_track(self):
+        self.load_lang("de")
+        tl = self.setup_three_uses()
+        info = self.M.timeline_info(tl, self.lua.table_from([self.mock.song]))
+        text, tip = self.M.explanation(True, info, "Müller Song")
+        self.assertTrue(text.startswith("Subtitle Track kommt unter den Song (A1, A2)."), text)
+
     def test_timeline_second_run_replaces_track_and_keeps_other_tracks(self):
         tl = self.setup_timeline()
         self.lua.execute("""
@@ -815,12 +871,15 @@ class ResolveScriptTests(unittest.TestCase):
                          [("Dialog", False, 1), ("BeatAnalyzer - Müller Song", True, 6)])
         self.assertIn("(old track replaced)", msg)
 
-    def test_timeline_uses_first_use_of_the_song(self):
+    def test_timeline_earlier_use_on_another_track_gets_its_own_track(self):
+        # up to 0.1.5 only the first use got subtitles; now one track per audio track (user, answer a)
         tl = self.setup_timeline(extra_items=[(2, 90000 + 50)])  # earlier use on A2 at 2 s, nothing trimmed
         ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
-        starts = self.sub_tracks(tl)[0][2]
-        self.assertEqual(len(starts), 8)
-        self.assertEqual(starts[0], 90000 + 50 + 13)  # 0.5 s x 25 fps = 12.5, rounded up
+        tracks = {name: starts for name, _, starts in self.sub_tracks(tl)}
+        a2 = tracks["BeatAnalyzer - Müller Song (A2)"]
+        self.assertEqual(len(a2), 8)
+        self.assertEqual(a2[0], 90000 + 50 + 13)  # 0.5 s x 25 fps = 12.5, rounded up
+        self.assertEqual(len(tracks["BeatAnalyzer - Müller Song (A1)"]), 6)
 
     def test_no_timeline_track_when_song_is_not_in_timeline(self):
         self.lua.execute("MOCK.timeline = MOCK.new_timeline(25, 90000)")
