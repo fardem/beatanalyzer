@@ -858,6 +858,8 @@ class ResolveJobScriptTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp()) / "Bea Ünal"
         self.tmp.mkdir()
+        (self.tmp / "venv" / "bin").mkdir(parents=True)
+        (self.tmp / "venv" / "bin" / "python").write_text("", encoding="utf-8")
         block = resolve_plugin.render_config(self.tmp, self.tmp / "venv" / "bin" / "python", "de",
                                              {c: i18n.texts(c) for c in i18n.LANGUAGES})
         self.lua = luajit21.LuaRuntime(unpack_returned_tuples=True)
@@ -901,6 +903,19 @@ class ResolveJobScriptTests(unittest.TestCase):
         self.assertIn(str(self.tmp / "venv" / "bin" / "python"), cmd)
         self.assertIn(str(self.tmp / "backend" / "resolve_job.py"), cmd)
         self.assertIn(job, cmd)
+
+    def test_launch_with_missing_python_file(self):
+        (self.tmp / "venv" / "bin" / "python").unlink()                  # venv deleted
+        ok, err = self.M.launch("/x/job")
+        self.assertFalse(ok)
+        self.assertIn("Python", err)
+        self.assertEqual(self.spawned, [])                                 # nothing started
+
+    def test_remove_job_also_removes_log_txt(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"slider": 90}))
+        (Path(job) / "log.txt").write_text("x", encoding="utf-8")
+        self.M.remove_job(job)
+        self.assertFalse(Path(job).exists())
 
     def test_launch_without_python_in_config(self):
         block = resolve_plugin.render_config(self.tmp, None, "de", {c: i18n.texts(c) for c in i18n.LANGUAGES})

@@ -674,7 +674,26 @@ M.target_clips = target_clips
 
 local JOB_FORMAT = "beatanalyzer-resolve-job/1"
 local JOB_FILES = { "job.txt", "progress.txt", "progress.txt.tmp", "done.txt", "done.txt.tmp", "markers.json",
-                    "markers.json.tmp", "cancel.txt" }
+                    "markers.json.tmp", "cancel.txt", "log.txt" }
+
+-- True if the file can be opened (non-ASCII paths on Windows through _wfopen).
+local function file_exists(path)
+  if type(G_io) == "table" and type(G_io.open) == "function" then
+    local f = G_io.open(path, "rb")
+    if f then
+      f:close()
+      return true
+    end
+  end
+  if IS_WIN then
+    local ok, f = pcall(wide_open, path, "rb")
+    if ok and f then
+      msvcrt.fclose(f)
+      return true
+    end
+  end
+  return false
+end
 M.NO_START_SECONDS, M.TIMEOUT_SECONDS, M.JOB_MAX_AGE = 60, 600, 86400
 
 -- "Glätten" 1 ... 100 % -> protection of clear "1"s 0.5 ... 1.0 (as in the web app); 0 = off
@@ -759,7 +778,7 @@ local function shell_execute(python, params)
 end
 
 function M.launch(job_dir)
-  if not BA.python or not BA.home then
+  if not BA.python or not BA.home or not file_exists(BA.python) then   -- e.g. the venv was deleted
     return false, T("plugin.msg_no_python")
   end
   local script = BA.home .. SEP .. "backend" .. SEP .. "resolve_job.py"
@@ -1461,7 +1480,8 @@ function M.start(path, opts)
   end
   job.timeline_name = job.timeline and tostring(api(job.timeline, "GetName") or "?") or nil
   -- markers on the song's clips in the timeline: always, also without the subtitle track
-  local marker_tl = job.timeline or (opts.timeline == false and api(project, "GetCurrentTimeline")) or nil
+  local marker_tl = opts.marker_timeline or job.timeline
+    or (opts.timeline == false and api(project, "GetCurrentTimeline")) or nil
   job.tl_items = M.timeline_items(marker_tl, clips)
   job.tl_name = marker_tl and tostring(api(marker_tl, "GetName") or "?") or nil
   job.tl_fps = exact_fps(parse_fps(marker_tl and api(marker_tl, "GetSetting", "timelineFrameRate"))
@@ -2051,7 +2071,8 @@ function M.main()
       status(tostring(lerr))
       return
     end
-    S.analysis = { dir = dir, started = G_os.time(), clip = info.clip,
+    -- project, timeline and clip are fixed at OK (spec 6.2), also for the markers without a subtitle track
+    S.analysis = { dir = dir, started = G_os.time(), clip = info.clip, marker_timeline = current_timeline(),
                    timeline = get("Timeline", "Checked") and current_timeline() or false }
     S.state = "analyze"
     lock(true)
@@ -2088,7 +2109,8 @@ function M.main()
       end_analysis(text)
       return
     end
-    local job, err = M.start(r.markers_path, { colors = read_colors(), timeline = a.timeline, clips = { a.clip } })
+    local job, err = M.start(r.markers_path, { colors = read_colors(), timeline = a.timeline, clips = { a.clip },
+                                               marker_timeline = a.marker_timeline })
     if not job then
       M.remove_job(a.dir)
       end_analysis(tostring(err))

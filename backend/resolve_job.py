@@ -9,6 +9,7 @@ cancel.txt (written by the script) is checked between the steps.
 
 import os
 import sys
+import time
 import traceback
 from typing import Callable, Dict, Optional
 
@@ -26,15 +27,38 @@ def _read_kv(path: str) -> Dict[str, str]:
     return out
 
 
+def ensure_streams(job_dir: str) -> None:
+    """pythonw.exe has no console (sys.stdout/sys.stderr are None); libraries that print (tqdm while the
+    model is downloaded) would fail. Their output goes to <job dir>/log.txt instead."""
+    if sys.stdout is None or sys.stderr is None:
+        log = open(os.path.join(job_dir, "log.txt"), "a", encoding="utf-8", buffering=1)
+        if sys.stdout is None:
+            sys.stdout = log
+        if sys.stderr is None:
+            sys.stderr = log
+
+
 def _write_atomic(path: str, text: str) -> None:
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
-    os.replace(tmp, path)
+    # Windows refuses the rename while another program (the Resolve script polling, a virus scanner) has the
+    # file open for a moment: try again
+    for attempt in range(20):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(0.05)
 
 
 def _progress(job_dir: str, step: str) -> None:
-    _write_atomic(os.path.join(job_dir, "progress.txt"), f"step={step}\n")
+    try:   # only a display for the Resolve window: never let it fail the job
+        _write_atomic(os.path.join(job_dir, "progress.txt"), f"step={step}\n")
+    except OSError:
+        traceback.print_exc()
 
 
 def _done(job_dir: str, state: str, message: str = "", markers: str = "") -> str:
@@ -94,4 +118,5 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("usage: resolve_job.py <job dir>")
         sys.exit(2)
+    ensure_streams(sys.argv[1])
     sys.exit(0 if run_job(sys.argv[1]) == "ok" else 1)

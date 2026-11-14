@@ -121,5 +121,57 @@ class ResolveJobTests(unittest.TestCase):
         self.assertIn("Zeile 1 Zeile 2", read_kv(self.dir / "done.txt")["message"])
 
 
+class WindowsSafetyTests(ResolveJobTests):
+    def test_streams_go_to_log_txt_under_pythonw(self):
+        # pythonw.exe has no console: sys.stdout/sys.stderr are None, tqdm (model download) fails on them
+        old = sys.stdout, sys.stderr
+        sys.stdout = sys.stderr = None
+        try:
+            resolve_job.ensure_streams(str(self.dir))
+            print("hallo")
+            sys.stderr.write("fehler\n")
+            sys.stdout.flush(); sys.stderr.flush()
+        finally:
+            sys.stdout, sys.stderr = old
+        text = (self.dir / "log.txt").read_text(encoding="utf-8")
+        self.assertIn("hallo", text)
+        self.assertIn("fehler", text)
+
+    def test_streams_stay_with_a_console(self):
+        old = sys.stdout
+        resolve_job.ensure_streams(str(self.dir))
+        self.assertIs(sys.stdout, old)
+
+    def test_replace_is_retried_while_windows_holds_the_file(self):
+        calls = {"n": 0}
+        real = resolve_job.os.replace
+
+        def flaky(a, b):
+            calls["n"] += 1
+            if calls["n"] <= 2:
+                raise PermissionError(5, "Access is denied")
+            return real(a, b)
+        resolve_job.os.replace = flaky
+        try:
+            resolve_job._write_atomic(str(self.dir / "done.txt"), "state=ok\n")
+        finally:
+            resolve_job.os.replace = real
+        self.assertEqual(read_kv(self.dir / "done.txt")["state"], "ok")
+
+    def test_progress_failure_does_not_fail_the_job(self):
+        self.write_job()
+        real = resolve_job._write_atomic
+
+        def no_progress(path, text):
+            if path.endswith("progress.txt"):
+                raise PermissionError(5, "Access is denied")
+            return real(path, text)
+        resolve_job._write_atomic = no_progress
+        try:
+            self.assertEqual(resolve_job.run_job(str(self.dir), analyze=self.fake), "ok")
+        finally:
+            resolve_job._write_atomic = real
+
+
 if __name__ == "__main__":
     unittest.main()

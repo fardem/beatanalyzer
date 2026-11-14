@@ -421,6 +421,8 @@ class AnalysisDialogTests(DialogTests):
         block = resolve_plugin.render_config(self.tmp, self.tmp / "venv" / "bin" / "python", "de",
                                              {c: i18n.texts(c) for c in i18n.LANGUAGES})
         self.M = self.lua.execute(resolve_plugin.apply_config(trs.SCRIPT, block))
+        (self.tmp / "venv" / "bin").mkdir(parents=True)
+        (self.tmp / "venv" / "bin" / "python").write_text("", encoding="utf-8")
         self.spawned = []
         self.M.spawn = lambda cmd: self.spawned.append(cmd) or True
         self.lua.execute("MOCK.song.filepath = '/Musik/Müller Song.wav'")
@@ -563,6 +565,33 @@ class AnalysisDialogTests(DialogTests):
             self.assertTrue(self.exited())
         self.run_dialog(scenario)
         self.assertEqual(self.markers(self.mock.song), {})
+
+
+@unittest.skipIf(luajit21 is None, "lupa not installed")
+class AnalysisTimelineTests(AnalysisDialogTests):
+    def test_timeline_markers_go_to_the_timeline_open_at_ok(self):
+        self.lua.execute("""
+          MOCK.timeline = MOCK.new_timeline(25, 0)
+          MOCK.timeline.audio[1] = { MOCK.timeline_item(MOCK.song, 0, 0, 500) }
+          MOCK.first_tl = MOCK.timeline
+        """)
+
+        def scenario():
+            self.check("Timeline", False)                       # no subtitle track: only the markers
+            self.start_analysis()
+            self.lua.execute("""
+              MOCK.timeline = MOCK.new_timeline(25, 0)         -- the user opens another timeline meanwhile
+              MOCK.timeline.audio[1] = { MOCK.timeline_item(MOCK.song, 0, 0, 500) }
+              MOCK.second_tl = MOCK.timeline
+            """)
+            self.python_writes(done="ok")
+            self.tick(60)
+            self.close()
+        self.run_dialog(scenario)
+        first = self.lua.eval("MOCK.first_tl.audio[1][1].markers")
+        second = self.lua.eval("MOCK.second_tl.audio[1][1].markers")
+        self.assertEqual(len(list(first.keys())), 8)
+        self.assertEqual(len(list(second.keys())), 0)
 
 
 if __name__ == "__main__":

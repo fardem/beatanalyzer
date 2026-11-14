@@ -20,3 +20,9 @@ Bei ✗ die Resolve-Konsole (Workspace → Console) mitschicken.
 | 12 | Song zweimal in der Timeline (A1 und A2) | Beide Clips haben Marker |
 | 13 | „BeatAnalyzer-Marker entfernen“ | Marker auf Media-Pool-Clip **und** Timeline-Clips weg; ein von Hand gesetzter Marker bleibt |
 | 14 | Web-App: Song analysieren, Regler „Glätten“ bewegen | Regler startet bei 90 %; die Kachel Taktart springt nicht |
+| 15 | Nach einem erfolgreichen Lauf (5–6) im BeatAnalyzer-Ordner unter `resolve_temp` nachsehen | Kein Auftragsordner des Laufs mehr da (nur `plugin.txt`, `jobs.txt`) |
+| 16 | Wenn möglich: BeatAnalyzer in einen Ordner mit Umlaut oder Leerzeichen legen (z. B. `C:\Tools\Bea Ünal\BeatAnalyzer`), installieren, 5–6 wiederholen | läuft genauso |
+| 17 | Erste Analyse aus Resolve, bevor die Web-App je mit beat_this analysiert hat (Modell noch nicht geladen) | „Analysiert mit beat_this …“, **nicht** librosa; dauert beim ersten Mal länger (Download). Bei librosa: `resolve_temp\<Auftrag>\log.txt` mitschicken, falls noch da |
+| 18 | Nach einem Lauf den Song **neu** aus dem Media Pool in die Timeline ziehen | Marker erscheinen **nicht doppelt** auf dem Clip (bitte Screenshot) |
+| 19 | Weg „analysieren“, Häkchen „Subtitle Track“ aus, OK, während der Analyse eine andere Timeline öffnen | Marker landen in der Timeline, die beim OK offen war |
+| 20 | Ordner `venv` im BeatAnalyzer-Ordner umbenennen, Weg „analysieren“, OK (danach zurück umbenennen) | Meldung „Python von BeatAnalyzer nicht gefunden …“, kein schwarzes Fenster |
