@@ -135,17 +135,28 @@ local function timeline_item(clip, start, left, duration)
   function it:GetStart() return self.start end
   function it:GetLeftOffset() return self.left end
   function it:GetDuration() return self.duration end
+  it.markers = {}                                 -- markers on the timeline clip, frames from the clip's start
+  local proto = MOCK.clip(nil, nil, nil, nil)
+  it.AddMarker = proto.AddMarker
+  it.GetMarkers = proto.GetMarkers
+  it.DeleteMarkerByCustomData = proto.DeleteMarkerByCustomData
   return it
 end
 MOCK.timeline_item = timeline_item
 local function new_timeline(fps, start_frame)
-  local tl = { fps = fps, start = start_frame, audio = { {} }, subs = {} }
+  local tl = { fps = fps, start = start_frame, audio = { {} }, video = {}, subs = {} }
   function tl:GetName() return "Timeline 1" end
   function tl:GetSetting(k) if k == "timelineFrameRate" then return tostring(self.fps) end end
   function tl:GetStartFrame() return self.start end
-  function tl:GetTrackCount(kind) return kind == "audio" and #self.audio or #self.subs end
+  function tl:GetTrackCount(kind)
+    if kind == "audio" then return #self.audio elseif kind == "video" then return #self.video end
+    return #self.subs
+  end
   function tl:GetItemListInTrack(kind, i)
-    local list = kind == "audio" and self.audio[i] or (self.subs[i] and self.subs[i].items)
+    local list
+    if kind == "audio" then list = self.audio[i]
+    elseif kind == "video" then list = self.video[i]
+    else list = self.subs[i] and self.subs[i].items end
     local out = {} for k, v in ipairs(list or {}) do out[k] = v end return out
   end
   function tl:AddTrack(kind)
@@ -530,14 +541,15 @@ class ResolveScriptTests(unittest.TestCase):
         self.mock.song.markers[400] = self.lua.table_from({"color": "Blue", "name": "Hand", "custom": ""})
         clips = self.lua.table_from([self.mock.song])
         r = self.M.removal(clips, tl)
-        self.assertEqual((r.markers, r.tracks, r.srt_clips, r.song), (8, 1, 1, "Müller Song"))
+        # 8 on the Media Pool clip + 6 on the clip in the timeline (Teilprojekt 3)
+        self.assertEqual((r.markers, r.tracks, r.srt_clips, r.song), (14, 1, 1, "Müller Song"))
         self.assertEqual(len(self.markers(self.mock.song)), 9)        # nothing removed yet
         done = self.M.remove(clips, tl)
-        self.assertEqual((done.markers, done.tracks, done.srt_clips), (8, 1, 1))
+        self.assertEqual((done.markers, done.tracks, done.srt_clips), (14, 1, 1))
         self.assertEqual(sorted(self.markers(self.mock.song)), [400])  # the hand marker stays
         self.assertEqual(self.sub_tracks(tl), [])
         self.assertEqual(self.bin_clips(), [])
-        self.assertTrue(done.text.startswith("Removed: 8 markers, 1 Subtitle Track(s), 1 Subtitle clip(s)."))
+        self.assertTrue(done.text.startswith("Removed: 14 markers, 1 Subtitle Track(s), 1 Subtitle clip(s)."))
 
     def test_removal_with_nothing_there(self):
         self.load_lang("de")
@@ -670,6 +682,70 @@ class ResolveScriptTests(unittest.TestCase):
             other = self.lua.globals().MOCK.timeline_item(self.mock.song, start, 0, 500)
             tl.audio[track][len(tl.audio[track]) + 1] = other
         return tl
+
+    # --- markers on the song's clips in the timeline (Teilprojekt 3, wish of the user) -------------------
+
+    def item_markers(self, item):
+        return sorted(int(f) for f in item.markers.keys())
+
+    def test_timeline_clip_gets_markers_relative_to_its_start(self):
+        tl = self.setup_timeline()                     # song on A1: left offset 25 frames, 75 frames long
+        ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertTrue(ok, msg)
+        item = tl.audio[1][1]
+        # beats at 0.5 ... 4.0 s = frames 13 ... 100 of the file; visible part 25 ... 99 → item frames 0 ... 74
+        self.assertEqual(self.item_markers(item), [0, 13, 25, 38, 50, 63])
+        self.assertEqual(item.markers[0].custom, self.M.MARKER_TAG)
+        self.assertEqual(item.markers[0].color, "Cyan")           # beat 2 of bar 1 at 1.0 s
+        self.assertIn("6", msg)
+        self.assertEqual(len(self.markers(self.mock.song)), 8)    # the Media Pool clip as before
+
+    def test_every_use_of_the_song_in_the_timeline_gets_markers(self):
+        tl = self.setup_timeline(extra_items=[(2, 90000 + 1000)])
+        self.lua.execute("MOCK.timeline.video[1] = { MOCK.timeline_item(MOCK.song, 90000, 0, 500) }")
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertEqual(len(self.item_markers(tl.audio[2][1])), 8)
+        self.assertEqual(len(self.item_markers(tl.video[1][1])), 8)
+
+    def test_other_clips_in_the_timeline_get_no_markers(self):
+        tl = self.setup_timeline()
+        self.lua.execute("MOCK.timeline.audio[2] = { MOCK.timeline_item(MOCK.other, 90000, 0, 500) }")
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertEqual(self.item_markers(tl.audio[2][1]), [])
+
+    def test_timeline_markers_also_without_subtitle_track(self):
+        tl = self.setup_timeline()
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())), self.lua.table_from({"timeline": False}))
+        self.assertEqual(len(self.item_markers(tl.audio[1][1])), 6)
+        self.assertEqual(self.sub_tracks(tl), [])
+
+    def test_new_run_replaces_timeline_markers_and_keeps_own(self):
+        tl = self.setup_timeline()
+        item = tl.audio[1][1]
+        item.AddMarker(item, 70, "Green", "by hand", "", 1, "")
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        self.assertEqual(self.item_markers(item), [0, 13, 25, 38, 50, 63, 70])
+
+    def test_remove_deletes_timeline_markers_but_not_own(self):
+        tl = self.setup_timeline()
+        item = tl.audio[1][1]
+        item.AddMarker(item, 70, "Green", "by hand", "", 1, "")
+        self.M.apply(self.write_json(resolve_marker_data(sample_result())))
+        clips = self.lua.table_from([self.mock.song])
+        self.assertEqual(self.M.removal(clips, tl).markers, 8 + 6)
+        self.M.remove(clips, tl)
+        self.assertEqual(self.item_markers(item), [70])
+
+    def test_explanation_mentions_timeline_markers(self):
+        self.load_lang("de")
+        tl = self.setup_timeline()
+        info = self.M.timeline_info(tl, self.lua.table_from([self.mock.song]))
+        self.assertEqual(info["items"], 1)
+        for checked in (True, False):
+            self.assertIn("Clips des Songs in dieser Timeline", self.M.explanation(checked, info, "Müller Song"))
+        absent = self.M.timeline_info(self.lua.globals().MOCK.new_timeline(25, 0), self.lua.table_from([self.mock.song]))
+        self.assertNotIn("Clips des Songs", self.M.explanation(True, absent, "Müller Song"))
 
     def sub_tracks(self, tl):
         return [(t.name, t.enabled, [it.GetStart() for it in t["items"].values()]) for t in tl.subs.values()]

@@ -92,6 +92,8 @@
     "reason_analyzer_failed": "the analyzer could not be loaded",
     "msg_job_folder": "Cannot create the working folder for the analysis in resolve_temp.",
     "msg_no_python": "Python of BeatAnalyzer not found. Click 'Install in Resolve' in the web app or install BeatAnalyzer again.",
-    "msg_no_start": "Python did not start ({python}). Install BeatAnalyzer again or click 'Install in Resolve' in the web app."
+    "msg_no_start": "Python did not start ({python}). Install BeatAnalyzer again or click 'Install in Resolve' in the web app.",
+    "msg_tl_markers": "Timeline '{timeline}': {n} markers on {items} clip(s) of the song.",
+    "explain_tl_markers": "The song's clips in this Timeline ({items}) get the markers as well."
   }
 }

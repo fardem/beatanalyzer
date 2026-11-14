@@ -75,6 +75,7 @@ local BA = {
       ["plugin.explain_no_timeline"] = "No Timeline is open. Only the Subtitle in the Media Pool is created.",
       ["plugin.explain_off"] = "The Timeline stays unchanged. The Subtitle with all beats lies in the folder BeatAnalyzer in the Media Pool and can be dragged from there into any Timeline.",
       ["plugin.explain_present"] = "In the Timeline '{timeline}' the song lies on A{track} from {tc}. Below it the Subtitle Track '{track_name}' is created and made active. Resolve allows only one active Subtitle Track; the others stay but are switched off.",
+      ["plugin.explain_tl_markers"] = "The song's clips in this Timeline ({items}) get the markers as well.",
       ["plugin.json_none"] = "No JSON chosen.",
       ["plugin.msg_bad_format"] = "Unknown format '{format}', expected '{expected}'. Export the file in BeatAnalyzer under Export -> DaVinci Resolve.",
       ["plugin.msg_bin_missing"] = "media pool bin '{bin}' not available",
@@ -99,6 +100,7 @@ local BA = {
       ["plugin.msg_tl_count"] = "Timeline: placed {placed} subtitles, the SRT has {count}.",
       ["plugin.msg_tl_empty"] = "Timeline: no beats in the part of the song that is in the timeline.",
       ["plugin.msg_tl_import"] = "Timeline: {why}",
+      ["plugin.msg_tl_markers"] = "Timeline '{timeline}': {n} markers on {items} clip(s) of the song.",
       ["plugin.msg_tl_none_placed"] = "Timeline: Resolve placed no subtitles.",
       ["plugin.msg_tl_offset"] = "Timeline: first subtitle at frame {actual}, expected {expected} (difference {diff} frames). Please run resolve/tools/probe_timeline.lua and send the console output.",
       ["plugin.msg_tl_ok"] = "Timeline: {n} subtitles on track ST{track} '{name}'{replaced}",
@@ -1005,6 +1007,29 @@ local function media_key(clip)
 end
 
 -- First use (smallest start) of one of the clips on an audio track: timeline item or nil.
+-- All clips of the song in a timeline (audio and video tracks), for the markers on the timeline clips.
+function M.timeline_items(tl, clips)
+  local keys, out = {}, {}
+  for _, c in ipairs(clips or {}) do
+    keys[media_key(c)] = true
+  end
+  if not tl then
+    return out
+  end
+  for _, kind in ipairs({ "audio", "video" }) do
+    local n = tonumber(api(tl, "GetTrackCount", kind)) or 0
+    for i = 1, n do
+      for _, item in ipairs(api(tl, "GetItemListInTrack", kind, i) or {}) do
+        local mpi = api(item, "GetMediaPoolItem")
+        if mpi and keys[media_key(mpi)] then
+          out[#out + 1] = item
+        end
+      end
+    end
+  end
+  return out
+end
+
 local function first_use(tl, clips)
   local keys = {}
   for _, c in ipairs(clips) do
@@ -1155,6 +1180,13 @@ local function removal_targets(clips, tl)
       end
     end
   end
+  for _, item in ipairs(M.timeline_items(tl, clips)) do
+    for _, m in pairs(api(item, "GetMarkers") or {}) do
+      if type(m) == "table" and m.customData == MARKER_TAG then
+        t.markers = t.markers + 1
+      end
+    end
+  end
   if tl then
     local n = tonumber(api(tl, "GetTrackCount", "subtitle")) or 0
     for i = 1, n do
@@ -1195,6 +1227,9 @@ function M.remove(clips, tl)
   local done = { markers = 0, tracks = 0, srt_clips = 0 }
   for _, clip in ipairs(clips) do
     done.markers = done.markers + remove_own_markers(clip)
+  end
+  for _, item in ipairs(M.timeline_items(tl, clips)) do
+    done.markers = done.markers + remove_own_markers(item)
   end
   if tl then
     done.tracks = delete_tracks(tl, TRACK_PREFIX .. t.song) + delete_tracks(tl, OLD_TRACK_PREFIX .. t.song)
@@ -1329,15 +1364,25 @@ function M.timeline_info(tl, clips)
   end
   local name = tostring(api(tl, "GetName") or "?")
   local item, track = first_use(tl, clips or {})
+  local items = #M.timeline_items(tl, clips or {})
   if not item then
-    return { state = "absent", name = name }
+    return { state = "absent", name = name, items = items }
   end
   local fps = parse_fps(api(tl, "GetSetting", "timelineFrameRate")) or 25
-  return { state = "present", name = name, track = track, tc = M.timecode(api(item, "GetStart"), fps) }
+  return { state = "present", name = name, track = track, tc = M.timecode(api(item, "GetStart"), fps),
+           items = items }
 end
 
 -- The text under the tick box "Subtitle Track in the Timeline".
 function M.explanation(checked, tinfo, song)
+  local text = M.subtitle_explanation(checked, tinfo, song)
+  if (tonumber(tinfo.items) or 0) > 0 then
+    text = text .. " " .. T("plugin.explain_tl_markers", { items = tinfo.items })
+  end
+  return text
+end
+
+function M.subtitle_explanation(checked, tinfo, song)
   if not checked then
     return T("plugin.explain_off")
   end
@@ -1396,6 +1441,14 @@ function M.start(path, opts)
     job.timeline = api(project, "GetCurrentTimeline")
   end
   job.timeline_name = job.timeline and tostring(api(job.timeline, "GetName") or "?") or nil
+  -- markers on the song's clips in the timeline: always, also without the subtitle track
+  local marker_tl = job.timeline or (opts.timeline == false and api(project, "GetCurrentTimeline")) or nil
+  job.tl_items = M.timeline_items(marker_tl, clips)
+  job.tl_name = marker_tl and tostring(api(marker_tl, "GetName") or "?") or nil
+  job.tl_fps = exact_fps(parse_fps(marker_tl and api(marker_tl, "GetSetting", "timelineFrameRate"))
+                         or job.fallback_fps)
+  job.tl_index, job.tl_marker_index, job.tl_added = 1, 1, 0
+  job.total = job.total + (#clips > 0 and job.total / #clips or 0) * #job.tl_items
   job.step = function() return Job.step(job) end   -- works as job:step() and as job.step() (tests)
   return job, nil
 end
@@ -1457,6 +1510,51 @@ function Job:mark_some()
       end
     end
     self.msg = msg
+    self.phase = #self.tl_items > 0 and "tl_markers" or "subtitles"
+  end
+end
+
+-- Markers on the song's clips in the timeline, up to CHUNK per step. Frames count from the start of the
+-- timeline clip; a clip trimmed at the start (left offset) shows only the beats of its visible part.
+function Job:mark_timeline()
+  local budget = M.CHUNK
+  while budget > 0 and self.tl_index <= #self.tl_items do
+    local item = self.tl_items[self.tl_index]
+    if self.tl_marker_index == 1 then
+      self.tl_cur = {
+        left = tonumber(api(item, "GetLeftOffset")) or 0,
+        duration = tonumber(api(item, "GetDuration")),
+        removed = remove_own_markers(item),
+      }
+      log(string.format("Timeline clip %d: left offset %s, duration %s frames", self.tl_index,
+          tostring(self.tl_cur.left), tostring(self.tl_cur.duration)))
+    end
+    local c = self.tl_cur
+    while budget > 0 and self.tl_marker_index <= #self.markers do
+      local m = self.markers[self.tl_marker_index]
+      self.tl_marker_index = self.tl_marker_index + 1
+      local color = M.marker_color(m, self.opts.colors)
+      if color then
+        budget = budget - 1
+        self.marked = self.marked + 1
+        local frame = round((tonumber(m.time) or -1) * self.tl_fps) - c.left
+        if frame >= 0 and (not c.duration or frame < c.duration) then
+          local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
+            or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
+          local note = T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) })
+          if api(item, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
+            self.tl_added = self.tl_added + 1
+          end
+        end
+      end
+    end
+    if self.tl_marker_index > #self.markers then
+      self.tl_index, self.tl_marker_index = self.tl_index + 1, 1
+    end
+  end
+  if self.tl_index > #self.tl_items then
+    self.msg = self.msg .. "\n" .. T("plugin.msg_tl_markers", { n = self.tl_added, items = #self.tl_items,
+                                                                timeline = self.tl_name or "?" })
     self.phase = "subtitles"
   end
 end
@@ -1506,6 +1604,8 @@ end
 function Job:step()
   if self.phase == "markers" then
     self:mark_some()
+  elseif self.phase == "tl_markers" then
+    self:mark_timeline()
   elseif self.phase == "subtitles" then
     self:subtitles()
   elseif self.phase == "timeline" then

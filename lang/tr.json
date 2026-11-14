@@ -93,6 +93,8 @@
     "reason_analyzer_failed": "analiz modülü yüklenemedi",
     "msg_job_folder": "resolve_temp içinde analiz için çalışma klasörü oluşturulamıyor.",
     "msg_no_python": "BeatAnalyzer'ın Python'u bulunamadı. Web uygulamasında „Resolve'a yükle“ye tıklayın veya BeatAnalyzer'ı yeniden kurun.",
-    "msg_no_start": "Python başlamadı ({python}). BeatAnalyzer'ı yeniden kurun veya web uygulamasında „Resolve'a yükle“ye tıklayın."
+    "msg_no_start": "Python başlamadı ({python}). BeatAnalyzer'ı yeniden kurun veya web uygulamasında „Resolve'a yükle“ye tıklayın.",
+    "msg_tl_markers": "Timeline „{timeline}“: şarkının {items} klibine {n} marker.",
+    "explain_tl_markers": "Şarkının bu Timeline'daki klipleri ({items}) de marker alır."
   }
 }
