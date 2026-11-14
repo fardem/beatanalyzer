@@ -65,7 +65,7 @@ function disp:AddWindow(spec, root)
   function win:GetItems() return items end
   function win:Show() self.shown = true end
   function win:Hide() self.shown = false end
-  function win:RecalcLayout() end
+  function win:RecalcLayout() UIMOCK.recalc = (UIMOCK.recalc or 0) + 1 end
   UIMOCK.win, UIMOCK.items = win, items
   return win
 end
@@ -313,8 +313,10 @@ class DialogTests(unittest.TestCase):
 
         def scenario():
             spec = self.ui.win.spec
-            self.assertEqual(list(spec.MinimumSize.values()), [600, 640])
-            self.assertEqual(list(spec.Geometry.values()), [50, 60, 600, 640])
+            # width held by the WidthGuard; height as in the user's picture (0.1.7: 640 was too high); a saved
+            # height is not restored, only the position
+            self.assertEqual(list(spec.MinimumSize.values()), [600, 440])
+            self.assertEqual(list(spec.Geometry.values()), [50, 60, 600, 460])
             self.close()
         self.run_dialog(scenario)
 
@@ -390,6 +392,28 @@ class DialogTests(unittest.TestCase):
         # followed the content. A row with a minimum width holds the window at least that wide.
         def scenario():
             self.assertEqual(list(self.item("WidthGuard").MinimumSize.values())[0], 580)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_saved_large_height_is_not_restored(self):
+        (self.tmp / "resolve_temp").mkdir()
+        (self.tmp / "resolve_temp" / "plugin.txt").write_text("geometry=50,60,700,900\n", encoding="utf-8")
+
+        def scenario():
+            self.assertEqual(list(self.ui.win.spec.Geometry.values()), [50, 60, 600, 460])
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_switching_the_way_lays_the_window_out_again(self):
+        # Resolve 0.1.7: after "Clip analysieren" -> "JSON laden" the button "Auswählen …" was missing until the
+        # window was resized
+        def scenario():
+            before = self.ui.recalc or 0
+            self.check("WayAnalyze", True)
+            middle = self.ui.recalc
+            self.check("WayJson", True)
+            self.assertGreater(middle, before)
+            self.assertGreater(self.ui.recalc, middle)
             self.close()
         self.run_dialog(scenario)
 

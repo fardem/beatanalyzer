@@ -51,3 +51,11 @@ Konsole außerdem: „Selection: ignored entries that are not clips: __flags=num
 - Fensterbreite springt weiter: Konsole „requested 600x640, actual 431x640, resized to 431x640“ – Resolve ignoriert Breite und Resize. Engine-Zeile überlappt nach einer Analyse aus Resolve.
 - Wunsch: In jedem Subtitle vor dem ersten Beat (sonst unter dem ersten Beat) ein Infoblock „BeatAnalyzer / Datei / BPM – Taktart / Model: beat_this – Lizenz: MIT – Nutzung: frei, auch kommerziell“. Vorbereitet für spätere Modelle mit anderer Lizenz.
 - README: Abschnitt zu Modellen und Lizenzen, detaillierter: Modelle werden nicht von BeatAnalyzer ausgeliefert (Download beim Anbieter), nicht verändert.
+
+## Test 0.1.7 (Nutzer, 2026-11-14) → Runde 0.1.8
+
+- Fensterbreite ok; **zu hoch** – Höhe wie mit Inhalt (≈ 430–460 px) reicht.
+- Wechsel „Clip analysieren“ → „JSON laden“: Knopf „Auswählen …“ fehlt, bis man die Fenstergröße ändert (Layout nicht neu berechnet).
+- Lizenzzeile kürzer: „Model: beat_this – Nutzung im Rahmen der MIT-Lizenz“.
+- **Marker im vorne gekürzten Timeline-Clip verschoben** (Bild: gekürzter und ungekürzter Clip übereinander). Subtitles stimmen. Folgerung: Resolve zählt die Marker-Frames eines TimelineItem ab dem Anfang der Quelle (nicht ab dem sichtbaren Anfang); das Abziehen des Left Offset war falsch.
+- 1, 2, 5 ✓.

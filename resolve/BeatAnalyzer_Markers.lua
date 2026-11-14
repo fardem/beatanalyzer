@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.1.7"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.1.8"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -54,10 +54,8 @@ local BA = {
       ["output.meter_suffix.2"] = "",
       ["output.meter_suffix.4"] = "",
       ["output.meter_suffix.8"] = "",
-      ["output.model_line"] = "Model: {name} – Licence: {license} – Use: {usage}",
+      ["output.model_line"] = "Model: {name} – use under the {license} licence",
       ["output.time_bpm"] = "{clock} – {bpm} BPM",
-      ["output.usage_commercial"] = "free, also commercial",
-      ["output.usage_noncommercial"] = "not for commercial use",
       ["plugin.analyze_many"] = "Several clips selected – please select exactly one audio clip.",
       ["plugin.analyze_no_path"] = "The selected item has no file (e.g. a Timeline or a Compound Clip).",
       ["plugin.analyze_none"] = "Select exactly one audio clip in the Media Pool.",
@@ -944,9 +942,8 @@ function M.info_lines(data)
                                    meter = fmt_meter(data.timeSignature or "?") })
   local model = type(data.engine) == "table" and type(data.engine.model) == "table" and data.engine.model or nil
   if model and model.name then
-    text = text .. "\n" .. T("output.model_line", {
-      name = tostring(model.name), license = tostring(model.license or "?"),
-      usage = model.commercial == false and T("output.usage_noncommercial") or T("output.usage_commercial") })
+    text = text .. "\n" .. T("output.model_line", { name = tostring(model.name),
+                                                     license = tostring(model.license or "?") })
   end
   return text
 end
@@ -1737,8 +1734,10 @@ function Job:mark_timeline()
       if color then
         budget = budget - 1
         self.marked = self.marked + 1
-        local frame = round((tonumber(m.time) or -1) * self.tl_fps) - c.left
-        if frame >= 0 and (not c.duration or frame < c.duration) then
+        -- Resolve counts the markers of a timeline clip from the start of the source file (test 0.1.7: subtracting
+        -- the left offset shifted them on a trimmed clip); only the visible part gets markers
+        local frame = round((tonumber(m.time) or -1) * self.tl_fps)
+        if frame >= c.left and (not c.duration or frame < c.left + c.duration) then
           local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
             or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
           local note = M.marker_note(m)
@@ -1902,7 +1901,8 @@ end
 -- about once a second, in "work" one job step runs per tick.
 
 local TICK_MS = 50
-local WIN_MIN = { 600, 640 }   -- smaller windows wrap every line (seen in Resolve)
+local WIN_MIN = { 600, 440 }   -- smaller windows wrap every line (seen in Resolve)
+local WIN_HEIGHT = 460         -- as the user found right (0.1.7: 640 was too high); a saved height is not restored
 local LINE_PX, CHAR_PX = 17, 8   -- height of a text line, mean width of a character (for wrapped labels;
                                  -- 7 was too small: a 600 px window wraps after about 70 characters)
 local REFRESH_TICKS = 20
@@ -1937,8 +1937,10 @@ function M.main()
       ui:ComboBox({ ID = COLOR_IDS[slot], Weight = 1 }) })
   end
 
-  local geometry = settings.geometry or { 300, 150, 680, 680 }
-  geometry = { geometry[1], geometry[2], math.max(geometry[3], WIN_MIN[1]), math.max(geometry[4], WIN_MIN[2]) }
+  -- only the position is restored: Resolve sizes the width by the content (WidthGuard holds it), and an old
+  -- saved height (680/640 up to 0.1.7) was too high
+  local saved = settings.geometry or { 300, 150 }
+  local geometry = { saved[1], saved[2], WIN_MIN[1], WIN_HEIGHT }
   local win = disp:AddWindow({ ID = "BeatAnalyzerWin", WindowTitle = T("plugin.title", { version = VERSION }),
                                Geometry = geometry, MinimumSize = WIN_MIN },
     ui:VGroup({ Spacing = 6,
@@ -2378,15 +2380,18 @@ function M.main()
   end
   win.On.Timeline.Clicked = function() refresh() end
   -- the two ways work like radio buttons (the UIManager has none)
+  -- after showing/hiding rows the window must be laid out again (0.1.7: "Auswählen …" missing until resized)
   win.On.WayAnalyze.Clicked = function()
     set("WayJson", "Checked", not get("WayAnalyze", "Checked"))
     S.info = nil
     refresh()
+    relayout()
   end
   win.On.WayJson.Clicked = function()
     set("WayAnalyze", "Checked", not get("WayJson", "Checked"))
     S.info = nil
     refresh()
+    relayout()
   end
   win.On.Smooth.ValueChanged = function() show_way() end
   win.On.Cancel.Clicked = function() cancel_analysis() end

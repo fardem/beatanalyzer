@@ -26,9 +26,7 @@
       "8": "'lik",
       "16": "'lık"
     },
-    "model_line": "Model: {name} – Lisans: {license} – Kullanım: {usage}",
-    "usage_commercial": "serbest, ticari kullanım dahil",
-    "usage_noncommercial": "ticari kullanım için değil"
+    "model_line": "Model: {name} – {license} lisansı kapsamında kullanım"
   },
   "plugin": {
     "msg_not_json": "Dosya bir BeatAnalyzer marker JSON'u değil.",
