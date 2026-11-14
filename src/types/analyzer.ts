@@ -29,6 +29,7 @@ export interface EngineInfo {
   device: 'cuda' | 'cpu' | null;
   gpu: string | null;
   fallbackReason: 'not_installed' | 'model_load_failed' | 'inference_failed' | 'analyzer_failed' | null;
+  model?: { name: string; license: string; commercial: boolean } | null; // model and licence for the subtitles
 }
 
 export interface BarSmoothing {
