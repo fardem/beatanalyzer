@@ -275,7 +275,8 @@ Hinweis des Anbieters von beat_this: Einige der Trainingsdaten sind urheberrecht
 eingeschränkten Creative-Commons-Lizenzen. Ob das deine Nutzung betrifft, musst du selbst prüfen. Diese Übersicht ist
 keine Rechtsberatung.
 
-Jeder Subtitle von BeatAnalyzer nennt am Anfang das verwendete Modell und seine Lizenz, z. B.
+Jeder Subtitle von BeatAnalyzer nennt das verwendete Modell und seine Lizenz – vor dem ersten Beat, oder unter dem
+ersten Beat, wenn davor kein Platz ist –, z. B.
 „Model: beat_this – Lizenz: MIT – Nutzung: frei, auch kommerziell“. Kommt später ein Modell mit anderen Bedingungen
 dazu, steht dort dessen Lizenz und z. B. „nicht für kommerzielle Nutzung“.
 

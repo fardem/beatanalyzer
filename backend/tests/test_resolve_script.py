@@ -876,10 +876,22 @@ class ResolveScriptTests(unittest.TestCase):
     def test_info_block_under_the_first_beat_without_room(self):
         self.load_lang("de")
         self.M.apply(self.write_json(self.data_with_model(first_beat=0.2)))
-        first = self.srt_text().split("\n\n")[0].splitlines()
-        self.assertEqual(first[1], "00:00:00,200 --> 00:00:00,700")              # the first beat itself
-        self.assertEqual(first[2:6], ["Downbeat (1)", "Takt 1 – Beat 1", "00:00.200 – 120,0 BPM", "Confidence 90 %"])
-        self.assertEqual(first[6:], ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
+        cues = [c.splitlines() for c in self.srt_text().split("\n\n")]
+        # media-pool SRT: a cue from 0 s keeps the timing when the SRT is placed at the clip start (reviewer)
+        self.assertEqual(cues[0][1], "00:00:00,000 --> 00:00:00,200")
+        self.assertEqual(cues[0][2:], ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
+        # only 0.2 s: the info block is also under the first beat, so it can be read
+        self.assertEqual(cues[1][1], "00:00:00,200 --> 00:00:00,700")              # the first beat itself
+        self.assertEqual(cues[1][2:6], ["Downbeat (1)", "Takt 1 – Beat 1", "00:00.200 – 120,0 BPM", "Confidence 90 %"])
+        self.assertEqual(cues[1][6:], ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
+
+    def test_media_pool_srt_starting_on_the_first_beat_needs_no_anchor(self):
+        self.load_lang("de")
+        self.M.apply(self.write_json(self.data_with_model(first_beat=0.0)))
+        cues = [c.splitlines() for c in self.srt_text().split("\n\n")]
+        self.assertEqual(cues[0][1], "00:00:00,000 --> 00:00:00,500")
+        self.assertEqual(cues[0][2], "Downbeat (1)")
+        self.assertIn(self.MODEL_LINE, cues[0])
 
     def test_info_block_for_every_use_in_the_timeline(self):
         self.load_lang("de")

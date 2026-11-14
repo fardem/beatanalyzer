@@ -3,7 +3,7 @@
 ## [0.1.7] – 2026-11-14
 
 ### Hinzugefügt
-- **Infoblock in jedem Subtitle** (Media Pool und jedes Vorkommen in der Timeline): BeatAnalyzer, Datei, Tempo und Taktart sowie **Modell und Lizenz**, z. B. „Model: beat_this – Lizenz: MIT – Nutzung: frei, auch kommerziell“. Er steht vor dem ersten Beat, wenn dort mindestens 0,5 s Platz sind, sonst unter dem ersten Beat.
+- **Infoblock in jedem Subtitle** (Media Pool und jedes Vorkommen in der Timeline): BeatAnalyzer, Datei, Tempo und Taktart sowie **Modell und Lizenz**, z. B. „Model: beat_this – Lizenz: MIT – Nutzung: frei, auch kommerziell“. Er steht vor dem ersten Beat, wenn dort mindestens 0,5 s Platz sind, sonst unter dem ersten Beat. Der Subtitle im Media Pool beginnt weiterhin bei 0 s, damit das Timing beim Anlegen an den Clipanfang stimmt.
 - Die Analyse liefert Modell und Lizenz mit (`engineInfo.model`: Name, Lizenz, kommerzielle Nutzung erlaubt). Vorbereitet für spätere Modelle mit anderen Bedingungen („nicht für kommerzielle Nutzung“).
 - README: Abschnitt **Modelle und Lizenzen** (BeatAnalyzer liefert kein Modell aus, beat_this lädt es beim Anbieter, das Modell wird nicht verändert).
 

@@ -935,17 +935,6 @@ local function clock(sec)
   return string.format("%02d:%02d.%03d", math.floor(ms / 60000), math.floor(ms / 1000) % 60, ms % 1000)
 end
 
--- SRT with one subtitle per marker, shown until the next one. Four lines per subtitle, in the language of
--- BA.lang (English here):
---   Downbeat (1) | Beat 2
---   Bar 24 – Beat 1
---   01:02.880 – 89.6 BPM
---   Confidence 75%
--- Without opts: times from the start of the audio file, and a first subtitle from 0 s to the first
--- beat keeps the timing when the SRT is placed at the clip start.
--- opts.from / opts.to: only beats in this part of the song (seconds), the last subtitle ends at "to".
--- opts.shift: seconds added to every time (position of song second 0 in the timeline).
--- Returns the SRT text, the number of subtitles and the time of the first one (after the shift).
 M.INFO_GAP = 0.5   -- seconds before the first beat needed for an own info subtitle; else it goes under that beat
 
 -- Info block of every subtitle: BeatAnalyzer, file, tempo and meter, model with licence (if the JSON has one).
@@ -962,6 +951,19 @@ function M.info_lines(data)
   return text
 end
 
+-- SRT with one subtitle per marker, shown until the next one. Four lines per beat, in the language of
+-- BA.lang (English here):
+--   Downbeat (1) | Beat 2
+--   Bar 24 – Beat 1
+--   01:02.880 – 89.6 BPM
+--   Confidence 75%
+-- Plus the info block (M.info_lines) per part of the song: its own subtitle before the first beat when there are
+-- at least M.INFO_GAP seconds, else under the lines of the first beat. Without opts (media-pool SRT) a first
+-- subtitle from 0 s to the first beat keeps the timing when the SRT is placed at the clip start.
+-- opts.from / opts.to: only beats in this part of the song (seconds), the last subtitle ends at "to".
+-- opts.shift: seconds added to every time (position of song second 0 in the timeline).
+-- opts.segments: several such parts { shift, from, to } (every use of the song on one audio track).
+-- Returns the SRT text, the number of subtitles and the time of the first one (after the shift).
 local function build_srt(data, opts)
   opts = opts or {}
   -- opts.segments: several parts of the song, each { shift, from, to } (one per use of the song on a track)
@@ -984,6 +986,10 @@ local function build_srt(data, opts)
       local info_under = first - start < M.INFO_GAP
       if not info_under then
         cues[#cues + 1] = { start + shift, first + shift, info }
+      elseif not from and first > 0.05 then
+        -- media-pool SRT: a cue from 0 s keeps the timing when the SRT is placed at the clip start, even when the
+        -- room is too short to read the info block there (it is also under the first beat then)
+        cues[#cues + 1] = { shift, first + shift, info }
       end
       for i, m in ipairs(markers) do
         local t = tonumber(m.time)
