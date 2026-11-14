@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.1.6"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.1.7"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -54,7 +54,10 @@ local BA = {
       ["output.meter_suffix.2"] = "",
       ["output.meter_suffix.4"] = "",
       ["output.meter_suffix.8"] = "",
+      ["output.model_line"] = "Model: {name} – Licence: {license} – Use: {usage}",
       ["output.time_bpm"] = "{clock} – {bpm} BPM",
+      ["output.usage_commercial"] = "free, also commercial",
+      ["output.usage_noncommercial"] = "not for commercial use",
       ["plugin.analyze_many"] = "Several clips selected – please select exactly one audio clip.",
       ["plugin.analyze_no_path"] = "The selected item has no file (e.g. a Timeline or a Compound Clip).",
       ["plugin.analyze_none"] = "Select exactly one audio clip in the Media Pool.",
@@ -932,22 +935,40 @@ local function clock(sec)
   return string.format("%02d:%02d.%03d", math.floor(ms / 60000), math.floor(ms / 1000) % 60, ms % 1000)
 end
 
--- SRT with one subtitle per marker, shown until the next one. Four lines per subtitle, in the language of
+M.INFO_GAP = 0.5   -- seconds before the first beat needed for an own info subtitle; else it goes under that beat
+
+-- Info block of every subtitle: BeatAnalyzer, file, tempo and meter, model with licence (if the JSON has one).
+function M.info_lines(data)
+  local text = T("output.intro", { file = tostring(data.fileName or ""),
+                                   bpm = tonumber(data.globalBpm) and fmt_num(data.globalBpm, 1) or "?",
+                                   meter = fmt_meter(data.timeSignature or "?") })
+  local model = type(data.engine) == "table" and type(data.engine.model) == "table" and data.engine.model or nil
+  if model and model.name then
+    text = text .. "\n" .. T("output.model_line", {
+      name = tostring(model.name), license = tostring(model.license or "?"),
+      usage = model.commercial == false and T("output.usage_noncommercial") or T("output.usage_commercial") })
+  end
+  return text
+end
+
+-- SRT with one subtitle per marker, shown until the next one. Four lines per beat, in the language of
 -- BA.lang (English here):
 --   Downbeat (1) | Beat 2
 --   Bar 24 – Beat 1
 --   01:02.880 – 89.6 BPM
 --   Confidence 75%
--- Without opts: times from the start of the audio file, and a first subtitle from 0 s to the first
--- beat keeps the timing when the SRT is placed at the clip start.
+-- Plus the info block (M.info_lines) per part of the song: its own subtitle before the first beat when there are
+-- at least M.INFO_GAP seconds, else under the lines of the first beat. Without opts (media-pool SRT) a first
+-- subtitle from 0 s to the first beat keeps the timing when the SRT is placed at the clip start.
 -- opts.from / opts.to: only beats in this part of the song (seconds), the last subtitle ends at "to".
 -- opts.shift: seconds added to every time (position of song second 0 in the timeline).
+-- opts.segments: several such parts { shift, from, to } (every use of the song on one audio track).
 -- Returns the SRT text, the number of subtitles and the time of the first one (after the shift).
 local function build_srt(data, opts)
   opts = opts or {}
   -- opts.segments: several parts of the song, each { shift, from, to } (one per use of the song on a track)
   local segments = opts.segments or { { shift = opts.shift or 0, from = opts.from, to = opts.to } }
-  local intro = not opts.segments and not opts.shift and not opts.from
+  local info = M.info_lines(data)
   local cues = {}
   for _, seg in ipairs(segments) do
     local shift, from, to = seg.shift or 0, seg.from, seg.to
@@ -960,10 +981,15 @@ local function build_srt(data, opts)
     end
     if #markers > 0 then
       local first = tonumber(markers[1].time)
-      if intro and first > 0.05 then
-        cues[#cues + 1] = { 0, first, T("output.intro", { file = tostring(data.fileName or ""),
-                                                           bpm = tonumber(data.globalBpm) and fmt_num(data.globalBpm, 1) or "?",
-                                                           meter = fmt_meter(data.timeSignature or "?") }) }
+      local start = from or 0
+      -- info block before the first beat of this part, or under the first beat when there is no room
+      local info_under = first - start < M.INFO_GAP
+      if not info_under then
+        cues[#cues + 1] = { start + shift, first + shift, info }
+      elseif not from and first > 0.05 then
+        -- media-pool SRT: a cue from 0 s keeps the timing when the SRT is placed at the clip start, even when the
+        -- room is too short to read the info block there (it is also under the first beat then)
+        cues[#cues + 1] = { shift, first + shift, info }
       end
       for i, m in ipairs(markers) do
         local t = tonumber(m.time)
@@ -983,6 +1009,9 @@ local function build_srt(data, opts)
           T("output.time_bpm", { clock = clock(t), bpm = fmt_num(m.bpm, 1) }),
           T("output.confidence", { value = fmt_pct(m.confidence) }),
         }
+        if i == 1 and info_under then
+          lines[#lines + 1] = info   -- no empty line: in an SRT it would end the subtitle
+        end
         cues[#cues + 1] = { t + shift, nxt + shift, table.concat(lines, "\n") }
       end
     end
@@ -1913,6 +1942,9 @@ function M.main()
   local win = disp:AddWindow({ ID = "BeatAnalyzerWin", WindowTitle = T("plugin.title", { version = VERSION }),
                                Geometry = geometry, MinimumSize = WIN_MIN },
     ui:VGroup({ Spacing = 6,
+      -- Resolve ignores the requested width (and Resize) and sizes the window by its content, so the width changed
+      -- with every song name. An empty row with a minimum width holds the window at least that wide.
+      ui:Label({ ID = "WidthGuard", Text = "", Weight = 0, MinimumSize = { WIN_MIN[1] - 20, 1 } }),
       ui:HGroup({ Weight = 0,
         ui:CheckBox({ ID = "WayAnalyze", Text = T("plugin.way_analyze"), Checked = settings.way == "analyze",
                       Weight = 0 }),
@@ -2250,7 +2282,9 @@ function M.main()
       return
     end
     local engine = M.engine_text(job.data.engine)
-    set("Engine", "Text", engine and T("plugin.engine", { engine = engine }) or T("plugin.engine_unknown"))
+    local engine_line = engine and T("plugin.engine", { engine = engine }) or T("plugin.engine_unknown")
+    set("Engine", "Text", engine_line)
+    fit("Engine", engine_line)   -- seen in Resolve: a two-line text overlapped the next line
     set("Engine", "Hidden", false)
     set("Cancel", "Hidden", true)
     S.job, S.state, S.analyzed, S.job_dir = job, "work", true, a.dir
@@ -2438,14 +2472,7 @@ function M.main()
   win:Show()
   local okg, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
   local actual = okg and type(g) == "table" and (tostring(g[3]) .. "x" .. tostring(g[4])) or "?"
-  local resized = ""
-  if okg and type(g) == "table" and tonumber(g[3]) and tonumber(g[3]) < want_w then
-    -- seen in Resolve: drawn narrower than requested (431 of 600), the width changed between openings
-    pcall(function() win:Resize({ want_w, want_h }) end)
-    local ok2, g2 = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
-    resized = ", resized to " .. (ok2 and type(g2) == "table" and (tostring(g2[3]) .. "x" .. tostring(g2[4])) or "?")
-  end
-  log(string.format("Window: requested %dx%d, actual %s%s", want_w, want_h, actual, resized))
+  log(string.format("Window: requested %dx%d, actual %s", want_w, want_h, actual))
   disp:RunLoop()
   timer:Stop()
   win:Hide()

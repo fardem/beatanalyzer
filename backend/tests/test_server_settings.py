@@ -105,7 +105,7 @@ class ServerSettingsTests(unittest.TestCase):
     def test_health_has_engine_info(self):
         status, data = self.request("/api/health")
         self.assertEqual(status, 200)
-        self.assertEqual(set(data["engineInfo"]), {"id", "device", "gpu", "fallbackReason"})
+        self.assertEqual(set(data["engineInfo"]), {"id", "device", "gpu", "fallbackReason", "model"})
 
 
 if __name__ == "__main__":

@@ -45,7 +45,7 @@ except Exception as _err:   # the name of an except variable is deleted after th
         raise RuntimeError(f"Analyzer-Fehler (analyzer.py nicht geladen): {ANALYZER_ERROR}")
 
     def engine_status():
-        return {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "analyzer_failed"}
+        return {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "analyzer_failed", "model": None}
 
     def clamp_protect(value):
         return 0.95   # nothing is analysed anyway

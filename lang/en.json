@@ -24,7 +24,10 @@
       "4": "",
       "8": "",
       "16": ""
-    }
+    },
+    "model_line": "Model: {name} – Licence: {license} – Use: {usage}",
+    "usage_commercial": "free, also commercial",
+    "usage_noncommercial": "not for commercial use"
   },
   "plugin": {
     "msg_not_json": "The file is not a BeatAnalyzer marker JSON.",

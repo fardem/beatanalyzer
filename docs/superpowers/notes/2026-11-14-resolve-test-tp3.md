@@ -45,3 +45,9 @@ Konsole außerdem: „Selection: ignored entries that are not clips: __flags=num
     „Modell nicht geladen: <Ursache>“.
 - Bestätigt: Kurze Texte (Tooltip für Details), „Tasks“ statt „Was jetzt passiert“, Marker-Notiz mit Takt/Beat/
   Zeit/BPM/Confidence, Auftragsordner abgebrochener Läufe aufräumen, feste Fensterbreite, Konsolenrauschen weg.
+
+## Runde 0.1.7 (Nutzer, 2026-11-14)
+
+- Fensterbreite springt weiter: Konsole „requested 600x640, actual 431x640, resized to 431x640“ – Resolve ignoriert Breite und Resize. Engine-Zeile überlappt nach einer Analyse aus Resolve.
+- Wunsch: In jedem Subtitle vor dem ersten Beat (sonst unter dem ersten Beat) ein Infoblock „BeatAnalyzer / Datei / BPM – Taktart / Model: beat_this – Lizenz: MIT – Nutzung: frei, auch kommerziell“. Vorbereitet für spätere Modelle mit anderer Lizenz.
+- README: Abschnitt zu Modellen und Lizenzen, detaillierter: Modelle werden nicht von BeatAnalyzer ausgeliefert (Download beim Anbieter), nicht verändert.

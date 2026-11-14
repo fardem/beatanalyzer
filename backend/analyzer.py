@@ -69,13 +69,23 @@ def _gpu_name() -> Optional[str]:
         return None
 
 
+# Model and licence per engine, shown in the subtitles. beat_this: code and published weights under MIT (README of
+# CPJKU/beat_this); librosa: ISC. A later model with other terms sets "commercial": False.
+MODELS = {
+    "beat_this": {"name": "beat_this", "license": "MIT", "commercial": True},
+    "librosa": {"name": "librosa", "license": "ISC", "commercial": True},
+}
+
+
 def engine_info(engine_id: str, fallback_reason: Optional[str] = None, device: Optional[str] = None) -> Dict[str, Any]:
-    """What computed (or would compute) the beats: engine, device, graphics card and why librosa took over."""
+    """What computed (or would compute) the beats: engine, device, graphics card, why librosa took over and the
+    model with its licence."""
     return {
         "id": engine_id,
         "device": device,
         "gpu": _gpu_name() if device == "cuda" else None,
         "fallbackReason": fallback_reason,
+        "model": dict(MODELS[engine_id]) if engine_id in MODELS else None,
     }
 
 

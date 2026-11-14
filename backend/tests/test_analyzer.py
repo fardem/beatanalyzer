@@ -261,7 +261,7 @@ class AnalyzerTests(unittest.TestCase):
             fake.Audio2Beats = object
             analyzer = load_analyzer_with_fake_beat_this(fake)
             self.assertEqual(analyzer.engine_status(), {"id": "beat_this", "device": "cuda", "gpu": None,
-                                                        "fallbackReason": None})
+                                                        "fallbackReason": None, "model": analyzer.MODELS["beat_this"]})
             self.assertEqual(calls, [])
             torch_stub.cuda.is_initialized = lambda: True
             self.assertEqual(analyzer.engine_status()["gpu"], "RTX Test")
@@ -364,12 +364,14 @@ class AnalyzerTests(unittest.TestCase):
     def test_engine_info_without_beat_this(self):
         result = self.analyze_without_beat_this()
         self.assertEqual(result["engineInfo"],
-                         {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "not_installed"})
+                         {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "not_installed",
+                          "model": {"name": "librosa", "license": "ISC", "commercial": True}})
         self.assertEqual(self.analyzer.engine_status()["fallbackReason"], "not_installed")
 
     def test_engine_info_beat_this_on_cpu(self):
         result = self.analyze_with_fake()      # torch-Stub: cuda.is_available() -> False
-        self.assertEqual(result["engineInfo"], {"id": "beat_this", "device": "cpu", "gpu": None, "fallbackReason": None})
+        self.assertEqual(result["engineInfo"], {"id": "beat_this", "device": "cpu", "gpu": None, "fallbackReason": None,
+                                                "model": {"name": "beat_this", "license": "MIT", "commercial": True}})
         self.assertEqual(result["engine"], "CPJKU beat_this Transformer")
 
     def test_model_load_failed(self):
@@ -386,6 +388,7 @@ class AnalyzerTests(unittest.TestCase):
     def test_marker_json_carries_engine(self):
         result = self.analyze_with_fake()
         self.assertEqual(self.analyzer.resolve_marker_data(result)["engine"], result["engineInfo"])
+        self.assertEqual(self.analyzer.resolve_marker_data(result)["engine"]["model"]["license"], "MIT")
         del result["engineInfo"]
         self.assertNotIn("engine", self.analyzer.resolve_marker_data(result))
 
