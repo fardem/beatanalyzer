@@ -721,15 +721,17 @@ class ResolveScriptTests(unittest.TestCase):
     def item_markers(self, item):
         return sorted(int(f) for f in item.markers.keys())
 
-    def test_timeline_clip_gets_markers_relative_to_its_start(self):
+    def test_timeline_clip_markers_count_from_the_start_of_the_file(self):
+        # Resolve 0.1.7 test: on a clip trimmed at the start the markers were shifted. TimelineItem marker frames
+        # count from the start of the source file, not from the visible start (no left offset to subtract).
         tl = self.setup_timeline()                     # song on A1: left offset 25 frames, 75 frames long
         ok, msg = self.M.apply(self.write_json(resolve_marker_data(sample_result())))
         self.assertTrue(ok, msg)
         item = tl.audio[1][1]
-        # beats at 0.5 ... 4.0 s = frames 13 ... 100 of the file; visible part 25 ... 99 → item frames 0 ... 74
-        self.assertEqual(self.item_markers(item), [0, 13, 25, 38, 50, 63])
-        self.assertEqual(item.markers[0].custom, self.M.MARKER_TAG)
-        self.assertEqual(item.markers[0].color, "Cyan")           # beat 2 of bar 1 at 1.0 s
+        # beats at 0.5 ... 4.0 s = frames 13 ... 100 of the file; only the visible part 25 ... 99 gets markers
+        self.assertEqual(self.item_markers(item), [25, 38, 50, 63, 75, 88])
+        self.assertEqual(item.markers[25].custom, self.M.MARKER_TAG)
+        self.assertEqual(item.markers[25].color, "Cyan")          # beat 2 of bar 1 at 1.0 s
         self.assertIn("6", msg)
         self.assertEqual(len(self.markers(self.mock.song)), 8)    # the Media Pool clip as before
 
@@ -758,7 +760,7 @@ class ResolveScriptTests(unittest.TestCase):
         item.AddMarker(item, 70, "Green", "by hand", "", 1, "")
         self.M.apply(self.write_json(resolve_marker_data(sample_result())))
         self.M.apply(self.write_json(resolve_marker_data(sample_result())))
-        self.assertEqual(self.item_markers(item), [0, 13, 25, 38, 50, 63, 70])
+        self.assertEqual(self.item_markers(item), [25, 38, 50, 63, 70, 75, 88])
 
     def test_remove_deletes_timeline_markers_but_not_own(self):
         tl = self.setup_timeline()
@@ -863,7 +865,7 @@ class ResolveScriptTests(unittest.TestCase):
                                     "model": {"name": "beat_this", "license": "MIT", "commercial": commercial}}
         return resolve_marker_data(result)
 
-    MODEL_LINE = "Model: beat_this – Lizenz: MIT – Nutzung: frei, auch kommerziell"
+    MODEL_LINE = "Model: beat_this – Nutzung im Rahmen der MIT-Lizenz"   # user, 0.1.8
 
     def test_info_block_before_the_first_beat_with_model_and_licence(self):
         self.load_lang("de")
@@ -908,10 +910,12 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(len(info), 1)
         self.assertEqual(info[0][2:], ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
 
-    def test_model_line_for_a_non_commercial_model_and_without_model(self):
+    def test_model_line_for_another_licence_and_without_model(self):
         self.load_lang("de")
-        self.M.apply(self.write_json(self.data_with_model(commercial=False)))
-        self.assertIn("Nutzung: nicht für kommerzielle Nutzung", self.srt_text())
+        data = self.data_with_model(commercial=False)
+        data["engine"]["model"]["license"] = "CC BY-NC 4.0"
+        self.M.apply(self.write_json(data))
+        self.assertIn("Model: beat_this – Nutzung im Rahmen der CC BY-NC 4.0-Lizenz", self.srt_text())
         self.M.apply(self.write_json(self.data_with_model(model=False)))
         srt = self.srt_text()
         self.assertNotIn("Model:", srt)

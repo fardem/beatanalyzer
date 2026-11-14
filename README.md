@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.1.7** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
+**Version 0.1.8** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
 
 BeatAnalyzer erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und legt die Beats als **farbige Marker auf deinen Audio-Clip in DaVinci Resolve**. Die Erkennung läuft lokal auf deinem PC mit dem Transformer-Modell [CPJKU beat_this](https://github.com/CPJKU/beat_this). Die Oberfläche ist eine Web-App im Browser, der Server dahinter ist Python.
 
@@ -277,8 +277,8 @@ keine Rechtsberatung.
 
 Jeder Subtitle von BeatAnalyzer nennt das verwendete Modell und seine Lizenz – vor dem ersten Beat, oder unter dem
 ersten Beat, wenn davor kein Platz ist –, z. B.
-„Model: beat_this – Lizenz: MIT – Nutzung: frei, auch kommerziell“. Kommt später ein Modell mit anderen Bedingungen
-dazu, steht dort dessen Lizenz und z. B. „nicht für kommerzielle Nutzung“.
+„Model: beat_this – Nutzung im Rahmen der MIT-Lizenz“. Kommt später ein Modell mit anderen Bedingungen dazu, steht
+dort dessen Lizenz.
 
 ## Credits
 

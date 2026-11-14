@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.8] – 2026-11-14
+
+### Behoben
+- **Marker im vorne gekürzten Timeline-Clip lagen verschoben.** Resolve zählt die Marker eines Timeline-Clips ab dem Anfang der Datei, nicht ab dem sichtbaren Anfang; der abgeschnittene Teil wird nicht mehr abgezogen. Die Subtitles waren richtig.
+- Resolve-Fenster: Nach dem Wechsel von „Ausgewählten Clip analysieren“ zu „JSON laden“ fehlte der Knopf „Auswählen …“, bis man die Fenstergröße änderte. Das Fenster wird nach jedem Wechsel neu angeordnet.
+
+### Geändert
+- Resolve-Fenster: niedriger (460 px statt 640 px); eine gespeicherte Höhe wird nicht mehr übernommen, nur die Position.
+- Modellzeile im Subtitle kürzer: „Model: beat_this – Nutzung im Rahmen der MIT-Lizenz“.
+
 ## [0.1.7] – 2026-11-14
 
 ### Hinzugefügt
