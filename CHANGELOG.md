@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.5] – 2026-11-14
+
+### Hinzugefügt
+- **Analyse direkt aus Resolve:** Im Resolve-Fenster gibt es oben zwei Wege, „Ausgewählten Clip analysieren“ und „JSON laden“. Beim Analysieren startet das Skript Python unsichtbar (`backend/resolve_job.py`, ohne Server und ohne Web-App), zeigt den Fortschritt und setzt danach Marker und Subtitles wie beim JSON-Weg. **Abbrechen** geht nur während der Analyse; bis dahin ist im Projekt nichts verändert. Fehler, Python startet nicht (60 s) und Zeitgrenze (10 min) werden gemeldet, ohne das Projekt zu ändern.
+- Resolve-Fenster: Regler **„Glätten“** 0–100 % (0 % = aus, 100 % = voll geglättet, Standard 90 %) für die Analyse aus Resolve; Weg und Wert werden gemerkt.
+- **Marker auch auf den Clips des Songs in der Timeline**, nicht nur auf dem Clip im Media Pool: Liegt der Song in der beim OK offenen Timeline (Audio- oder Videospur, auch mehrfach), bekommt jeder dieser Clips die Marker, beim vorne getrimmten Clip nur im sichtbaren Teil. „BeatAnalyzer-Marker entfernen“ entfernt sie mit; Marker von Hand bleiben.
+
+### Geändert
+- **Standard „Glätten“ 90 %** überall (Web-App, Resolve-Fenster, Server `protect`, Kommandozeile `--protect`); bisher 70 %.
+- Web-App: Die Kachel Taktart behält ihre Höhe beim Verstellen des Reglers (Infobereich immer zwei Zeilen, Fortschritt und Fehler in einer Zeile, voller Text im Tooltip).
+
 ## [0.1.4] – 2026-11-13
 
 ### Geändert
