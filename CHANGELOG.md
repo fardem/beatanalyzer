@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.6] – 2026-11-15
+
+Teilprojekt 4 (Web-App), Schritt 1. Plan: `docs/superpowers/plans/2026-11-15-teilprojekt-4-web-app.md`.
+
+### Geändert
+- **Wellenform mit echten Details:** Hauptansicht und Lupe zeichnen die Wellenform aus den dekodierten Audiodaten, eine Säule je Bildschirmspalte (Spitze und RMS), wie in DaVinci Resolve. Bisher kam die Hüllkurve aus 2400 Spitzen für den ganzen Song (bei 3:30 eine je ≈ 90 ms) – beim Hineinzoomen waren die Anschläge nicht zu sehen. Die Übersicht bleibt unverändert.
+- **Keine Überlappung mehr** bei Takt-Beschriftungen und Zeitachse: Es wird nur jeder n-te Takt beschriftet, die Zeitachse wählt einen passenden Schritt; Beat-Nummern nur, wenn Platz ist.
+- **Kopfzeile zeigt das Analyse-Programm** (z. B. „beat_this · CUDA (RTX 5080)“, „librosa (Ersatz) – beat_this nicht installiert“, „Browser-Analyse (Ersatz) – kein Server“), vor der Analyse aus dem Server, danach aus dem Ergebnis; die Lizenz steht im Tooltip.
+- Export „DaVinci Resolve“: Auswahl „Nur Downbeats“ und Farbhinweis entfallen (Farben stellt das Resolve-Fenster ein). Die Kommandozeile behält `--only-downbeats`.
+- Die Web-App wartet bis zu 3 s auf den Server (bisher 0,8 s), damit ein beschäftigter Server nicht durch die Browser-Analyse ersetzt wird.
+
 ## [0.2.5] – 2026-11-15
 
 Rückmeldungen aus dem Test von 0.2.4 (MP3-Ausgleich in Resolve bestätigt: Marker der MP3 liegen auf dem Beat).

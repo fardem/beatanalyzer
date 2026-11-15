@@ -26,6 +26,8 @@ export default function App() {
   const [progress, setProgress] = useState<number>(0);
   const [stageText, setStageText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  // the decoded audio, for a detailed waveform (the peaks in the result are too coarse when zoomed in)
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [smoothBars, setSmoothBars] = useState<boolean>(true);
   const [protect, setProtect] = useState<number>(0.95); // protection of clear "1"s; 0.95 = "Glätten" 90 %
   const lastAudioRef = useRef<AudioBuffer | null>(null);
@@ -115,6 +117,7 @@ export default function App() {
       );
 
       lastAudioRef.current = audioBuffer;
+      setAudioBuffer(audioBuffer);
       setResult(analysisResult);
       setSmoothBars(smooth); // only now: a failed re-analysis leaves box and slider as they were
       setProtect(protectValue);
@@ -200,6 +203,7 @@ export default function App() {
       <Header
         result={result}
         selectedModel={selectedModel}
+        serverEngine={backendHealth ? backendHealth.models?.[selectedModel] ?? backendHealth.engineInfo ?? null : null}
         onReset={handleReset}
         onOpenExport={() => setShowExportModal(true)}
         onOpenModelInfo={() => setShowModelInfoModal(true)}
@@ -273,6 +277,7 @@ export default function App() {
             <div className="p-4 sm:p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
               <WaveformBeatVisualizer
                 result={result}
+                audioBuffer={audioBuffer}
                 currentTime={currentTime}
                 onSeek={handleSeek}
                 activeBeat={activeBeat}

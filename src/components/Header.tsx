@@ -1,11 +1,13 @@
 import React from 'react';
 import { Activity, BookOpen, Download, RefreshCw, ExternalLink, Terminal } from 'lucide-react';
-import { AnalysisModel, AnalysisResult } from '../types/analyzer';
+import { AnalysisModel, AnalysisResult, EngineInfo } from '../types/analyzer';
 import { UpdateBadge } from './UpdateBadge';
 
 interface HeaderProps {
   result: AnalysisResult | null;
   selectedModel: AnalysisModel;
+  // what the server would use for the next analysis (null: no server, the browser analyses)
+  serverEngine?: EngineInfo | null;
   onReset: () => void;
   onOpenExport: () => void;
   onOpenModelInfo: () => void;
@@ -15,12 +17,14 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   result,
   selectedModel,
+  serverEngine,
   onReset,
   onOpenExport,
   onOpenModelInfo,
   onOpenLocalSetup,
 }) => {
   const activeModel = result?.selectedModel ?? selectedModel;
+  const engine = engineLabel(result, serverEngine ?? null, activeModel);
 
   return (
     <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3.5 transition-all">
@@ -34,15 +38,19 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
                 BeatAnalyzer
-                {activeModel === 'md_beat_this' ? (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-950/90 text-amber-300 border border-amber-700/80">
-                    md_beat_this · Non-Commercial
-                  </span>
-                ) : (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-cyan-950 text-cyan-300 border border-cyan-800/80">
-                    CPJKU Transformer
-                  </span>
-                )}
+                {/* analysis program (concept section 8): of the shown result, else of the next analysis */}
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                    engine.tone === 'ok'
+                      ? 'bg-cyan-950 text-cyan-300 border-cyan-800/80'
+                      : engine.tone === 'nc'
+                      ? 'bg-amber-950/90 text-amber-300 border-amber-700/80'
+                      : 'bg-rose-950/80 text-rose-300 border-rose-800/80'
+                  }`}
+                  title={engine.tip}
+                >
+                  {engine.text}
+                </span>
               </h1>
             </div>
             <div className="flex flex-wrap items-center gap-x-3">
@@ -110,3 +118,36 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
+const REASONS: Record<string, string> = {
+  not_installed: 'nicht installiert',
+  model_load_failed: 'Modell nicht geladen',
+  inference_failed: 'Analyse gescheitert',
+  analyzer_failed: 'Analyzer nicht geladen',
+};
+
+// "beat_this · CUDA (RTX 5080)", "md_beat_this · CPU", "librosa (Ersatz) – beat_this nicht installiert",
+// "Browser-Analyse (Ersatz) – kein Server"
+function engineLabel(
+  result: AnalysisResult | null,
+  serverEngine: EngineInfo | null,
+  model: AnalysisModel
+): { text: string; tip: string; tone: 'ok' | 'nc' | 'fallback' } {
+  if (result && result.engine?.startsWith('Browser')) {
+    return { text: 'Browser-Analyse (Ersatz) – kein Server', tip: 'Ohne lokalen Server rechnet der Browser grob nach.', tone: 'fallback' };
+  }
+  const info = result ? result.engineInfo ?? null : serverEngine;
+  if (!info) {
+    return result
+      ? { text: result.engine || 'unbekannt', tip: '', tone: 'ok' }
+      : { text: 'kein Server – Browser-Analyse', tip: 'Ohne lokalen Server rechnet der Browser grob nach (start.bat starten).', tone: 'fallback' };
+  }
+  if (info.id === 'librosa') {
+    const reason = info.fallbackReason ? REASONS[info.fallbackReason] ?? info.fallbackReason : '';
+    const what = info.fallbackReason === 'not_installed' ? `${model} ${reason}` : reason;
+    return { text: `librosa (Ersatz)${what ? ` – ${what}` : ''}`, tip: 'librosa erkennt keine Downbeats: jeder 4. Beat gilt als „1“.', tone: 'fallback' };
+  }
+  const dev = info.device ? info.device.toUpperCase() + (info.gpu ? ` (${info.gpu.replace(/^NVIDIA (GeForce )?/, '')})` : '') : '';
+  const licence = info.model ? `${info.model.name}: Lizenz ${info.model.license}${info.model.commercial ? '' : ' – nur nicht-kommerziell'}` : '';
+  return { text: `${info.id}${dev ? ` · ${dev}` : ''}`, tip: licence, tone: info.id === 'md_beat_this' ? 'nc' : 'ok' };
+}

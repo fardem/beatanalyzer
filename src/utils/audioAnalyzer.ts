@@ -56,7 +56,7 @@ export async function analyzeAudioFile(
   // (test 0.2.3: an m4a failed on the server and the browser silently computed a much worse result)
   let serverError: Error | null = null;
   try {
-    const healthCheck = await fetch('/api/health', { signal: AbortSignal.timeout(800) });
+    const healthCheck = await fetch('/api/health', { signal: AbortSignal.timeout(3000) });
     if (healthCheck.ok) {
       onProgress?.(40, `Verbinde mit lokaler Python ${modelLabel} Engine...`);
       const formData = new FormData();
