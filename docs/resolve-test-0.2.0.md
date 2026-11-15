@@ -1,4 +1,4 @@
-# Test in DaVinci Resolve – Version 0.1.9
+# Test in DaVinci Resolve – Version 0.2.0
 
 Vorher: Branch holen, `start.bat`, in der Web-App **In Resolve aktualisieren**, Resolve neu starten.
 

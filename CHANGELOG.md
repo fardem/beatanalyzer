@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.9] – 2026-11-15
+## [0.2.0] – 2026-11-15
 
 Zusammenführung mit der parallelen Entwicklung aus Google AI Studio (`fardem/BeatAnalyzer_test`, Basis 0.1.4;
 Protokoll in `docs/gemini weiterentwicklung 0.1.4.md`). Der Stand 0.1.8 bleibt vollständig erhalten.
