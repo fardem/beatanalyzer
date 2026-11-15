@@ -193,6 +193,8 @@ export function generateResolveMarkerJson(
       confidence: b.confidence,
     })),
     ...(result.engineInfo ? { engine: result.engineInfo } : {}),
+    // seconds Resolve plays this MP3 later (Xing frame + encoder delay); the script moves the markers
+    ...(result.resolveOffset ? { resolveOffset: result.resolveOffset } : {}),
     ...(isMdBeatThis
       ? {
           license: result.license ?? 'CC BY-NC 4.0',

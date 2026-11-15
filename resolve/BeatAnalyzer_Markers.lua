@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.2.3"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.2.4"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -102,6 +102,7 @@ local BA = {
       ["plugin.msg_cannot_read"] = "Cannot read the file: {path}",
       ["plugin.msg_job_folder"] = "Cannot create the working folder for the analysis in resolve_temp.",
       ["plugin.msg_markers"] = "{n} markers on {clips} clip(s): {names}",
+      ["plugin.msg_mp3_shift"] = "MP3: markers moved by {ms} ms (Resolve plays MP3 that much later).",
       ["plugin.msg_no_clip"] = "No clip found. Select the audio clip in the media pool, or import '{file}' into the media pool.",
       ["plugin.msg_no_markers"] = "The JSON contains no markers.",
       ["plugin.msg_no_project"] = "No project is open.",
@@ -128,6 +129,7 @@ local BA = {
       ["plugin.msg_tl_replaced"] = " (old track replaced)",
       ["plugin.msg_tl_vehicle_left"] = "Timeline: the clip '{clip}' could not be removed from the Media Pool - delete it by hand.",
       ["plugin.msg_tl_write"] = "Timeline: cannot write {path}",
+      ["plugin.note_mp3"] = "MP3: Resolve plays MP3 files about 50 ms later; BeatAnalyzer moves the markers to match.",
       ["plugin.reason_analyzer_failed"] = "the analyzer could not be loaded",
       ["plugin.reason_inference_failed"] = "analysis with beat_this failed",
       ["plugin.reason_md_not_installed"] = "md_beat_this not installed",
@@ -157,7 +159,7 @@ local BA = {
       ["plugin.wait"] = "Please wait – the window closes only at the end.",
       ["plugin.wait_short"] = "Please wait …",
       ["plugin.warn_length"] = "The clip's duration ({clip}) differs from the analysed file ({json}).",
-      ["plugin.warn_mp3"] = "MP3: Resolve plays MP3 files about 50 ms later than BeatAnalyzer analyses them; the markers lie that much before the beat. For exact markers use the song as WAV or FLAC.",
+      ["plugin.warn_mp3"] = "MP3: Resolve plays MP3 files about 50 ms later than BeatAnalyzer analyses them. This JSON has no correction (older JSON or analysed in the browser): the markers lie that much before the beat. Analyse again with the server or use the song as WAV or FLAC.",
       ["plugin.warn_other_file"] = "The selected clip is not '{file}' from the JSON.",
       ["plugin.way_analyze"] = "Analyse the selected clip",
       ["plugin.way_json"] = "Load JSON",
@@ -1549,8 +1551,8 @@ function M.prepare(path)
     end
   end
   for _, clip in ipairs(clips) do
-    if M.is_mp3(api(clip, "GetClipProperty", "File Name")) then
-      info.warnings[#info.warnings + 1] = T("plugin.warn_mp3")
+    if M.is_mp3(api(clip, "GetClipProperty", "File Name")) and not tonumber(data.resolveOffset) then
+      info.warnings[#info.warnings + 1] = T("plugin.warn_mp3")   -- older JSON or browser analysis: no offset
       break
     end
   end
@@ -1647,10 +1649,21 @@ function M.start(path, opts)
   local project = api(pm, "GetCurrentProject")
   local media_pool = api(project, "GetMediaPool")
   log(string.format("%d clip(s) by %s, %d markers in %s", #clips, how, #markers, path))
+  -- MP3: Resolve plays the Xing frame and the encoder delay first, the analysis dropped them: move every beat
+  -- by resolveOffset (markers and subtitles), only when the clip really is an MP3
+  local shift = tonumber(data.resolveOffset) or 0
+  if shift > 0 and shift < 0.5 and clips[1] and M.is_mp3(api(clips[1], "GetClipProperty", "File Name") or file_name) then
+    for _, m in ipairs(markers) do
+      m.time = (tonumber(m.time) or 0) + shift
+    end
+    log(string.format("MP3: markers moved by %.1f ms", shift * 1000))
+  else
+    shift = 0
+  end
 
   local job = setmetatable({
     path = path, opts = opts, data = data, markers = markers, project = project, media_pool = media_pool,
-    file_name = file_name, clips = clips, how = how, phase = "markers", marked = 0, total = 0,
+    file_name = file_name, clips = clips, how = how, phase = "markers", marked = 0, total = 0, mp3_shift = shift,
     clip_index = 1, marker_index = 1, added = 0, skipped = 0, names = {},
     fallback_fps = parse_fps(api(project, "GetSetting", "timelineFrameRate")) or 25,
   }, Job)
@@ -1730,6 +1743,9 @@ function Job:mark_some()
   end
   if self.clip_index > #self.clips then
     local msg = T("plugin.msg_markers", { n = self.added, clips = #self.clips, names = table.concat(self.names, ", ") })
+    if (self.mp3_shift or 0) > 0 then
+      msg = msg .. "\n" .. T("plugin.msg_mp3_shift", { ms = fmt_num(self.mp3_shift * 1000, 0) })
+    end
     if self.skipped > 0 then
       msg = msg .. "\n" .. T("plugin.msg_skipped", { n = self.skipped })
     end
@@ -2208,7 +2224,7 @@ function M.main()
       set("ClipInfo", "Text", clip_text)
       fit("ClipInfo", clip_text)
       local mp3 = S.info.ok and M.is_mp3(S.info.path)
-      local warn = mp3 and ("⚠ " .. T("plugin.warn_mp3")) or ""
+      local warn = mp3 and T("plugin.note_mp3") or ""
       set("Warnings", "Text", warn)
       fit("Warnings", warn)
       set("Warnings", "Hidden", not mp3)

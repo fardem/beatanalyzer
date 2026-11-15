@@ -133,6 +133,8 @@
     "md_confirm": "Ich nutze md_beat_this nur für nicht-kommerzielle Zwecke (CC BY-NC 4.0)",
     "md_confirm_needed": "Für md_beat_this das Lizenz-Häkchen setzen.",
     "reason_md_not_installed": "md_beat_this nicht installiert",
-    "warn_mp3": "MP3: Resolve spielt MP3-Dateien etwa 50 ms später ab, als BeatAnalyzer sie analysiert; die Marker liegen so viel vor dem Beat. Für genaue Marker den Song als WAV oder FLAC verwenden."
+    "warn_mp3": "MP3: Resolve spielt MP3-Dateien etwa 50 ms später ab, als BeatAnalyzer sie analysiert. Diese JSON enthält keinen Ausgleich (ältere JSON oder im Browser analysiert): Die Marker liegen so viel vor dem Beat. Mit dem Server neu analysieren oder den Song als WAV oder FLAC verwenden.",
+    "note_mp3": "MP3: Resolve spielt MP3-Dateien etwa 50 ms später ab; BeatAnalyzer setzt die Marker entsprechend später.",
+    "msg_mp3_shift": "MP3: Marker um {ms} ms nach hinten gesetzt (so viel später spielt Resolve MP3 ab)."
   }
 }

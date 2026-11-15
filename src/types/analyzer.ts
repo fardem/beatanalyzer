@@ -48,6 +48,7 @@ export interface AnalysisResult {
   selectedModel?: AnalysisModel;
   license?: string;
   attribution?: string;
+  resolveOffset?: number; // seconds Resolve plays this MP3 later than it was analysed (from the server)
   barSmoothing?: BarSmoothing;
   activationSource?: 'beat_this' | 'md_beat_this' | 'onset'; // model probabilities or librosa/browser onset strength
   metadata: AudioMetadata;

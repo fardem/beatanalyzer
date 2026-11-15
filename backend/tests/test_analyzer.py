@@ -122,6 +122,14 @@ class AnalyzerTests(unittest.TestCase):
             sys.modules.pop("av", None)
         self.assertIn("pip install av", str(ctx.exception))
 
+    def test_resolve_offset_goes_into_the_marker_json(self):
+        from analyzer import resolve_marker_data
+        result = {"metadata": {"fileName": "a.mp3", "duration": 1.0}, "globalBpm": 120.0,
+                  "timeSignature": {"name": "4/4"}, "beats": [], "resolveOffset": 0.05118}
+        self.assertEqual(resolve_marker_data(result)["resolveOffset"], 0.05118)
+        del result["resolveOffset"]
+        self.assertNotIn("resolveOffset", resolve_marker_data(result))
+
     def test_fallback_without_beat_this(self):
         sys.modules["beat_this"] = None  # erzwingt ImportError
         sys.modules.pop("analyzer", None)

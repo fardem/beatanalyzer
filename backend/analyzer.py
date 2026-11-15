@@ -13,6 +13,7 @@ import soundfile as sf
 import librosa
 from typing import Any, Dict, List, Optional, Tuple
 import ffmpeg_utils
+import mp3_offset
 import settings
 
 BEAT_THIS_AVAILABLE = False
@@ -583,6 +584,11 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
         "waveformPeaks": waveform_peaks,
         "waveformDuration": round(duration, 3)
     }
+    # Resolve plays MP3 without dropping the Xing frame and the encoder delay: markers must move by this much
+    if original_filename.lower().endswith(".mp3"):
+        offset = mp3_offset.resolve_offset(file_path)
+        if offset > 0:
+            analysis_result["resolveOffset"] = round(offset, 5)
     if info["id"] == "md_beat_this":
         analysis_result["license"] = "CC BY-NC 4.0"
         analysis_result["attribution"] = MD_BEAT_THIS_ATTRIBUTION
@@ -649,6 +655,8 @@ def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) ->
         data["engine"] = dict(result["engineInfo"])
         if result.get("selectedModel") == "md_beat_this" and data["engine"].get("id") != "md_beat_this":
             data["engine"]["requestedModel"] = "md_beat_this"   # librosa stood in for md_beat_this
+    if result.get("resolveOffset"):
+        data["resolveOffset"] = result["resolveOffset"]   # seconds; the script moves markers on MP3 clips
     if (result.get("engineInfo") or {}).get("id") == "md_beat_this":
         data["license"] = result.get("license") or "CC BY-NC 4.0"
         data["attribution"] = result.get("attribution") or MD_BEAT_THIS_ATTRIBUTION

@@ -340,6 +340,22 @@ class ResolveScriptTests(unittest.TestCase):
         self.run_apply()
         self.assertEqual(self.intro_cue(), ["BeatAnalyzer", "Müller Song.wav", "120.0 BPM – 4/4"])
 
+    def test_mp3_markers_and_subtitles_move_by_the_resolve_offset(self):
+        # test 0.2.2: Resolve plays an MP3 about 51 ms later than it was analysed
+        self.load_lang("de")
+        self.lua.execute("MOCK.song.file = 'Müller Song.mp3'")
+        msg = self.run_apply(json_overrides={"fileName": "Müller Song.mp3", "resolveOffset": 0.05118})
+        marks = self.markers(self.mock.song)
+        self.assertIn(14, marks)                         # 0.5 s + 51 ms at 25 fps (13 without the offset)
+        self.assertNotIn(13, marks)
+        self.assertEqual(self.srt_cues()[1].split("\n")[1].split(" --> ")[0], "00:00:00,551")
+        self.assertIn("Marker um 51 ms nach hinten gesetzt", msg)
+
+    def test_offset_is_not_used_for_a_wav_clip(self):
+        msg = self.run_apply(json_overrides={"resolveOffset": 0.05118})   # clip "Müller Song.wav"
+        self.assertIn(13, self.markers(self.mock.song))
+        self.assertNotIn("MP3", msg)
+
     def test_german_output(self):
         self.load_lang("de")
         self.run_apply()

@@ -38,14 +38,11 @@
 - Noch zu prüfen: Texte der Web-App aus dem Gemini-Zweig sind nur deutsch (gehört zu Teilprojekt 4, Sprachen);
   `md_beat_this` selbst ist hier nicht installiert und nur mit nachgestellten Modulen getestet.
 
-- **Beats vor der Wellenform bei MP3 in Resolve (Test 0.2.1/0.2.2, „Küçük Sevgilim“):** gemessen am MP3 (LAME,
-  128 kbit/s, 44,1 kHz) und der WAV des Nutzers: soundfile, librosa, ffmpeg und PyAV rechnen die Encoder-Verzögerung
-  heraus (0 ms zur WAV); ohne Gapless-Info sind es 25,06 ms (1105 Samples), dazu kommt bei Decodern, die den
-  Xing/Info-Rahmen als Stille ausgeben, ein Rahmen (1152 Samples = 26,1 ms) → ≈ 51 ms. Im Bildschirmfoto aus Resolve
-  liegt die MP3-Wellenform ≈ 48 ms hinter der WAV → **Resolve rechnet die Verzögerung nicht heraus**, unsere Marker
-  liegen dort zu früh. Vorschlag: Server liest den LAME-Kopf, schreibt den Versatz in die Marker-JSON, das Skript
-  verschiebt Marker/Subtitles bei MP3-Clips; erst nach Nutzerentscheid und mit Test in Resolve. m4a/AAC (Priming
-  2112 Samples, Edit-Liste) in Resolve ebenso zu prüfen.
+- **MP3 in Resolve (0.2.4 umgesetzt):** Resolve spielt Xing/Info-Rahmen und Encoder-Verzögerung mit ab (gemessen
+  ≈ 48 ms im Bildschirmfoto, berechnet 51,18 ms = 1152 + 576 + 529 Samples bei 44,1 kHz). `backend/mp3_offset.py`
+  liest den Wert aus dem MP3-Kopf → `resolveOffset` in Analyse und Marker-JSON → Skript verschiebt Marker/Subtitles
+  auf MP3-Clips. Annahme „Resolve spielt den Xing-Rahmen als Stille“ ist durch den Test in Resolve zu bestätigen
+  (`docs/resolve-test-0.2.4.md`). m4a/AAC (Priming 2112 Samples, Edit-Liste) in Resolve noch zu prüfen.
 
 ## 1. Teilprojekt 4 – Web-App (Gesamtkonzept Abschnitt 9)
 
