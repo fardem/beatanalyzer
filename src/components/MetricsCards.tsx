@@ -126,11 +126,11 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             {result.timeSignature.barShare === null ? '–' : t('web.metrics.bar_share', { share: pctValue(result.timeSignature.barShare) })}
           </span>
         </div>
-        {/* always two lines high, so the tile does not change its height while the slider is moved */}
+        {/* only with smoothing; without it nothing (test 0.2.9: the time signature stood here a second time).
+            Always two lines high, so the tile does not change its height while the slider is moved */}
+        {canSmooth && (
         <div className="text-[11px] text-slate-400 mt-1 leading-snug min-h-[2lh]">
-          {!canSmooth
-            ? meter(result.timeSignature.name)
-            : result.barSmoothing?.applied
+          {result.barSmoothing?.applied
             ? (
               <>
                 <span className="block">{t('web.metrics.changed_beats', { n: result.barSmoothing.changedBeats })}</span>
@@ -139,6 +139,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             )
             : t('web.metrics.not_smoothed')}
         </div>
+        )}
         {canSmooth && (
           <label
             className={`mt-2 block text-[11px] ${sliderOff ? 'text-slate-600' : 'text-slate-300'}`}

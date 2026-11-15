@@ -236,8 +236,8 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
         {/* Metronome Sound & Speed Controls */}
         <div className="flex flex-wrap items-center gap-4">
-          {/* volume of the song */}
-          <div className="flex items-center gap-2 bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-1.5">
+          {/* volume of the song; song, metronome and speed are all h-10 (test 0.2.9: different heights) */}
+          <div className="flex items-center gap-2 h-10 bg-slate-950/60 border border-slate-800 rounded-xl px-3">
             <Music className="w-4 h-4 text-indigo-300" />
             <span className="text-xs font-medium text-slate-300 hidden sm:inline">{t('web.player.song')}</span>
             <input
@@ -254,7 +254,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           </div>
 
           {/* Metronome toggle & volume */}
-          <div className="flex items-center gap-2 bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-1.5">
+          <div className="flex items-center gap-2 h-10 bg-slate-950/60 border border-slate-800 rounded-xl px-3">
             <button
               onClick={onToggleMetronome}
               className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
@@ -288,14 +288,14 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
           {/* Speed: one field instead of five buttons, so the player stays one row */}
           <label
-            className="flex items-center gap-1.5 bg-slate-950/60 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300"
+            className="flex items-center gap-1.5 h-10 shrink-0 bg-slate-950/60 border border-slate-800 rounded-xl pl-3 pr-2 text-xs text-slate-300"
             title={t('web.player.speed')}
           >
             <Gauge className="w-4 h-4 text-indigo-300" />
             <select
               value={playbackSpeed}
               onChange={(e) => onSetPlaybackSpeed(parseFloat(e.target.value) as PlaybackSpeed)}
-              className="bg-transparent font-mono text-slate-200 focus:outline-none cursor-pointer"
+              className="bg-transparent font-mono text-slate-200 focus:outline-none cursor-pointer min-w-[4.25rem] h-full"
               aria-label={t('web.player.speed')}
             >
               {speeds.map((sp) => (
