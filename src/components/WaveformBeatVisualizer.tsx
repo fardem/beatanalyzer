@@ -6,6 +6,10 @@ import { useI18n } from '../i18n';
 interface WaveformBeatVisualizerProps {
   result: AnalysisResult;
   audioBuffer?: AudioBuffer | null;
+  /** looped range in seconds, marked in the waveform */
+  loopRange?: { start: number; end: number } | null;
+  /** the section the waveform shows (for the loop "section") */
+  onViewChange?: (start: number, end: number) => void;
   currentTime: number;
   onSeek: (time: number) => void;
   activeBeat: BeatItem | null;
@@ -115,6 +119,8 @@ function formatLoupeTime(seconds: number): string {
 export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   result,
   audioBuffer,
+  loopRange,
+  onViewChange,
   currentTime,
   onSeek,
   activeBeat,
@@ -157,6 +163,9 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   // the smallest quick window (5 s) must stay reachable on long songs
   const maxZoom = Math.max(16.0, duration / QUICK_WINDOWS_SEC[0]);
   const visibleDuration = duration / zoom;
+  useEffect(() => {
+    onViewChange?.(scrollOffsetSec, Math.min(duration, scrollOffsetSec + visibleDuration));
+  }, [scrollOffsetSec, visibleDuration, duration, onViewChange]);
   const activeQuickWindow =
     QUICK_WINDOWS_SEC.find((sec) => duration > sec && Math.abs(visibleDuration - sec) < 0.25) ?? null;
 
@@ -436,6 +445,25 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       ctx.setLineDash([]);
     }
 
+    // 4b. Loop: dim outside the looped range, amber edges
+    if (loopRange) {
+      const lx = ((loopRange.start - scrollOffsetSec) / visibleDuration) * width;
+      const rx = ((loopRange.end - scrollOffsetSec) / visibleDuration) * width;
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.55)';
+      if (lx > 0) ctx.fillRect(0, 0, Math.min(width, lx), height);
+      if (rx < width) ctx.fillRect(Math.max(0, rx), 0, width - Math.max(0, rx), height);
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.9)';
+      ctx.lineWidth = 2;
+      for (const x of [lx, rx]) {
+        if (x >= 0 && x <= width) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+      }
+    }
+
     // 5. Playhead Cursor
     if (currentTime >= scrollOffsetSec && currentTime <= scrollOffsetSec + visibleDuration) {
       const playX = ((currentTime - scrollOffsetSec) / visibleDuration) * width;
@@ -469,6 +497,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     result,
     detail,
     t,
+    loopRange,
     currentTime,
     zoom,
     scrollOffsetSec,
@@ -517,6 +546,12 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       ctx.fillRect(x, 0, 1.5, height);
     });
 
+    // Loop range in the overview
+    if (loopRange) {
+      ctx.fillStyle = 'rgba(251, 191, 36, 0.18)';
+      ctx.fillRect((loopRange.start / duration) * width, 0, ((loopRange.end - loopRange.start) / duration) * width, height);
+    }
+
     // Viewport window overlay
     const viewLeft = (scrollOffsetSec / duration) * width;
     const viewWidth = (visibleDuration / duration) * width;
@@ -540,7 +575,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     const playX = (currentTime / duration) * width;
     ctx.fillStyle = '#fbbf24';
     ctx.fillRect(playX - 1, 0, 2, height);
-  }, [result, duration, scrollOffsetSec, visibleDuration, currentTime, zoom, isHoveringViewportBox, minimapDragMode]);
+  }, [result, duration, scrollOffsetSec, visibleDuration, currentTime, zoom, isHoveringViewportBox, minimapDragMode, loopRange]);
 
   // Floating HiDPI Loupe Canvas Rendering
   const drawLoupeCanvas = useCallback(() => {

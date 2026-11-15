@@ -8,6 +8,8 @@ import {
   FastForward,
   Rewind,
   Fingerprint,
+  Repeat,
+  Music,
 } from 'lucide-react';
 import { BeatItem, PlaybackSpeed } from '../types/analyzer';
 import { useI18n } from '../i18n';
@@ -27,6 +29,12 @@ interface PlayerControlsProps {
   onSetPlaybackSpeed: (speed: PlaybackSpeed) => void;
   onToggleMetronome: () => void;
   onSetMetronomeVolume: (vol: number) => void;
+  /** volume of the song 0 ... 1 */
+  musicVolume: number;
+  onSetMusicVolume: (vol: number) => void;
+  /** off, the section shown in the waveform, or the whole song; a click goes to the next mode */
+  loopMode: 'off' | 'view' | 'song';
+  onCycleLoop: () => void;
 }
 
 export const PlayerControls: React.FC<PlayerControlsProps> = ({
@@ -44,6 +52,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   onSetPlaybackSpeed,
   onToggleMetronome,
   onSetMetronomeVolume,
+  musicVolume,
+  onSetMusicVolume,
+  loopMode,
+  onCycleLoop,
 }) => {
   const { t, num, pctValue } = useI18n();
   // Tap tempo state
@@ -152,6 +164,21 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             <FastForward className="w-4 h-4" />
           </button>
 
+          {/* Loop: off -> section of the waveform -> whole song -> off */}
+          <button
+            onClick={onCycleLoop}
+            aria-pressed={loopMode !== 'off'}
+            className={`flex items-center gap-1 px-2 py-1.5 rounded-xl text-[11px] font-semibold transition-colors cursor-pointer ${
+              loopMode === 'off'
+                ? 'text-slate-400 hover:text-white hover:bg-slate-800'
+                : 'text-amber-200 bg-amber-950/60 border border-amber-700/70'
+            }`}
+            title={t(`web.player.loop_${loopMode}_tip`)}
+          >
+            <Repeat className="w-4 h-4" />
+            {loopMode !== 'off' && <span>{t(`web.player.loop_${loopMode}`)}</span>}
+          </button>
+
           {/* Time Display */}
           <div className="font-mono text-xs sm:text-sm text-slate-300 ml-2">
             <span className="text-white font-semibold">{formatTime(currentTime)}</span>
@@ -204,6 +231,23 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
         {/* Metronome Sound & Speed Controls */}
         <div className="flex flex-wrap items-center gap-4">
+          {/* volume of the song */}
+          <div className="flex items-center gap-2 bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-1.5">
+            <Music className="w-4 h-4 text-indigo-300" />
+            <span className="text-xs font-medium text-slate-300 hidden sm:inline">{t('web.player.song')}</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={musicVolume}
+              onChange={(e) => onSetMusicVolume(parseFloat(e.target.value))}
+              className="w-16 accent-indigo-400 cursor-pointer"
+              title={t('web.player.song_volume')}
+              aria-label={t('web.player.song_volume')}
+            />
+          </div>
+
           {/* Metronome toggle & volume */}
           <div className="flex items-center gap-2 bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-1.5">
             <button

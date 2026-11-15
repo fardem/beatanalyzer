@@ -316,7 +316,14 @@
       "tap_hint": "Tippe im Rhythmus, um das erkannte Tempo zu vergleichen",
       "tap_tip": "Im Takt mitklicken, um das Tempo zu prüfen",
       "to_start": "Zum Anfang",
-      "your_tap": "Dein Tap:"
+      "your_tap": "Dein Tap:",
+      "song": "Song",
+      "song_volume": "Lautstärke des Songs",
+      "loop_off_tip": "Loop: Klick wiederholt den sichtbaren Ausschnitt, noch ein Klick den ganzen Song",
+      "loop_view": "Ausschnitt",
+      "loop_view_tip": "Loop: sichtbarer Ausschnitt – Klick: ganzer Song",
+      "loop_song": "Ganzer Song",
+      "loop_song_tip": "Loop: ganzer Song – Klick: Loop aus"
     },
     "progress": {
       "browser_activation": "Browser-Analyse: BAF und DAF …",

@@ -316,7 +316,14 @@
       "tap_hint": "Tap along to compare with the detected tempo",
       "tap_tip": "Click along with the beat to check the tempo",
       "to_start": "To the start",
-      "your_tap": "Your tap:"
+      "your_tap": "Your tap:",
+      "song": "Song",
+      "song_volume": "Song volume",
+      "loop_off_tip": "Loop: a click repeats the visible section, another click the whole song",
+      "loop_view": "Section",
+      "loop_view_tip": "Loop: visible section – click: whole song",
+      "loop_song": "Whole song",
+      "loop_song_tip": "Loop: whole song – click: loop off"
     },
     "progress": {
       "browser_activation": "Browser analysis: BAF and DAF …",
