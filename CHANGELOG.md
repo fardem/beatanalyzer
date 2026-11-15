@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.10] – 2026-11-15
+
+Rückmeldungen aus dem Test von 0.2.9 (alle Punkte bestanden).
+
+### Behoben
+- Player: **Song, Metronom und Geschwindigkeit gleich hoch** (40 px); das Auswahlfeld der Geschwindigkeit wurde abgeschnitten.
+- Kachel Taktart: Ohne „Glätten“ (librosa, md_beat_this, Browser) stand die Taktart ein zweites Mal klein darunter. Dort steht jetzt nichts; mit beat_this wie bisher „n Beats neu eingeteilt / k Neuansätze“.
+
 ## [0.2.9] – 2026-11-15
 
 Rückmeldungen aus dem Test von 0.2.8.
