@@ -4,7 +4,7 @@
 
 ## Stand
 
-- **main = 0.1.8** (bleibt so; 0.2.0 = Zusammenführung auf `claude/sharp-cannon-8l5zqr`, PR fardem/beatanalyzer#19), CI grün (Backend Windows/Ubuntu, Frontend mit `dist/`-Prüfung). Entwicklungs-Branch war
+- **main = 0.2.0** (Zusammenführung, PR fardem/beatanalyzer#19; Release 0.1.8 bleibt); 0.2.1 = Schnellauswahl 5/15/30/60 s, Release 0.2.0 entfällt (Release Notes 0.2.1 decken 0.1.5–0.2.1 ab), CI grün (Backend Windows/Ubuntu, Frontend mit `dist/`-Prüfung). Entwicklungs-Branch war
   `claude/nifty-curie-vagvn5`.
 - **Fertig und in Resolve getestet:**
   - Teilprojekt 1 (Grundlage: Sprachdateien, `settings.json`, Analyse-Programm, echte Confidence/Kurven).
