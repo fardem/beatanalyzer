@@ -75,7 +75,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   const dafTooltip = hasDafCurve
     ? 'Downbeat Activation Function (DAF) umschalten'
     : isMdModel
-    ? 'DAF unter md_beat_this nicht verfügbar: Das Masked-Diffusion-Modell liefert nur diskrete Beat-/Takteintritts-Zeitpunkte ohne fortlaufende Downbeat-Wahrscheinlichkeitskurve.'
+    ? 'DAF unter md_beat_this nicht verfügbar: Das Masked-Diffusion-Modell liefert nur einzelne Beat- und Downbeat-Zeitpunkte ohne fortlaufende Downbeat-Wahrscheinlichkeitskurve.'
     : 'DAF in diesem Analyse-Modus nicht verfügbar: Keine fortlaufende Downbeat-Wahrscheinlichkeitskurve vorhanden.';
   const bafTooltip =
     result.activationSource === 'onset'
@@ -845,8 +845,8 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
               }`}
             >
               {activeBeat.isDownbeat
-                ? `TAKTEINTRITT: Takt ${activeBeat.barIndex}`
-                : `Beat ${activeBeat.beatInBar} (Takt ${activeBeat.barIndex})`}
+                ? `Takt ${activeBeat.barIndex} · Downbeat`
+                : `Takt ${activeBeat.barIndex} · Beat ${activeBeat.beatInBar}`}
             </span>
           )}
         </div>

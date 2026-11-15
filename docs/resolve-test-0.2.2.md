@@ -14,6 +14,7 @@ Nachtest zu 0.2.1. Vorher: main holen, `start.bat`, in der Web-App **In Resolve 
 |---|---|---|
 | 4 | Song analysieren | Kopfzeile „Wellenform & Beat Grid · <Songname> · <Länge>“ |
 | 5 | Song mit langem Namen, Fenster schmal ziehen | Name gekürzt mit „…“, voller Name im Tooltip, nichts überlappt |
+| 6 | Abspielen, auf einem Downbeat und einem Beat 2 anhalten | über der Wellenform „Takt 7 · Downbeat“ bzw. „Takt 7 · Beat 2“; im Player „Takt 7 • Downbeat (Beat 1)“ bzw. „Takt 7 • Beat 2“ |
 
 ## Für später (aus dem Test 0.2.1)
 

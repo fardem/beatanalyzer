@@ -183,12 +183,14 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                   Takt {activeBeat.barIndex}
                 </span>
                 <span className="text-slate-500">•</span>
+                {/* glossary: Downbeat stays English; the downbeat is beat 1 of the bar */}
                 <span className="text-slate-200 font-mono">
-                  Beat {activeBeat.beatInBar}
-                  {activeBeat.isDownbeat && (
-                    <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold">
-                      EINS
-                    </span>
+                  {activeBeat.isDownbeat ? (
+                    <>
+                      <span className="text-rose-300 font-bold">Downbeat</span> (Beat {activeBeat.beatInBar})
+                    </>
+                  ) : (
+                    <>Beat {activeBeat.beatInBar}</>
                   )}
                 </span>
               </div>

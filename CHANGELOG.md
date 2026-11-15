@@ -10,6 +10,9 @@ Rückmeldungen aus dem Test von 0.2.1.
 ### Hinzugefügt
 - Web-App: **Songname** in der Kopfzeile der Wellenform („Wellenform & Beat Grid · Song.mp3 · 4:55“); lange Namen werden gekürzt, der volle Name steht im Tooltip.
 
+### Geändert
+- Web-App: Begriffe nach Glossar – „Takteintritt“ und „EINS“ heißen jetzt **Downbeat**. Anzeige über der Wellenform „Takt 7 · Downbeat“ bzw. „Takt 7 · Beat 2“, im Player „Takt 7 • Downbeat (Beat 1)“.
+
 ## [0.2.1] – 2026-11-15
 
 ### Geändert
