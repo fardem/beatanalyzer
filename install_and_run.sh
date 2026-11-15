@@ -7,24 +7,24 @@ echo "         BeatAnalyzer - CPJKU beat_this Setup (Linux / macOS)"
 echo "======================================================================"
 
 if ! command -v python3 &> /dev/null; then
-    echo "[FEHLER] python3 wurde nicht gefunden. Bitte installiere Python 3.9+."
+    echo "[ERROR] python3 not found. Please install Python 3.9 or newer."
     exit 1
 fi
 
 if [ ! -d "venv" ]; then
-    echo "[1/4] Erstelle isolierte Python-Umgebung in venv/ ..."
+    echo "[1/4] Creating the Python environment in venv/ ..."
     python3 -m venv venv
 fi
 
-echo "[2/4] Aktiviere venv..."
+echo "[2/4] Activating venv..."
 source venv/bin/activate
 
-echo "[3/4] Installiere Dependencies..."
+echo "[3/4] Installing dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt || pip install fastapi uvicorn[standard] python-multipart pydantic numpy scipy librosa soundfile torch torchaudio
 
 if [ ! -f "dist/index.html" ] && command -v npm &> /dev/null; then
-    echo "[4/4] Baue Frontend..."
+    echo "[4/4] Building the frontend..."
     npm install
     npm run build
 fi
@@ -32,7 +32,7 @@ fi
 python3 backend/resolve_plugin.py auto || true
 
 echo "======================================================================"
-echo " Starte Server auf http://localhost:8000 ..."
+echo " Starting the server on http://localhost:8000 ..."
 echo "======================================================================"
 
 # Open browser if possible

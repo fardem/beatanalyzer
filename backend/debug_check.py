@@ -35,7 +35,7 @@ for name, mod in modules_to_test:
 try:
     import torch
     print("\n--- PyTorch Hardware ---")
-    print(f"CUDA verfügbar: {torch.cuda.is_available()}")
+    print(f"CUDA available: {torch.cuda.is_available()}")
     if torch.cuda.is_available():
         print(f"GPU Name:       {torch.cuda.get_device_name(0)}")
 except Exception:

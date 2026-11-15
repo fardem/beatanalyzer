@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.2.11** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
+**Version 0.2.12** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
 
 BeatAnalyzer erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und legt die Beats als **farbige Marker auf deinen Audio-Clip in DaVinci Resolve**. Die Erkennung läuft lokal auf deinem PC mit dem Transformer-Modell [CPJKU beat_this](https://github.com/CPJKU/beat_this). Die Oberfläche ist eine Web-App im Browser, der Server dahinter ist Python.
 
@@ -204,7 +204,7 @@ Unter Windows heißt der Python-Pfad `venv\Scripts\python.exe`.
 | `BeatAnalyzer_Markers` fehlt unter *Workspace → Scripts* | Resolve wurde nach der Installation nicht neu gestartet | Resolve neu starten; sonst in BeatAnalyzer *In Resolve installieren* |
 | Skript meldet „No clip found“ | Kein Clip ausgewählt und kein Clip mit dem Dateinamen im Media Pool | Clip im Media Pool auswählen |
 | Skript meldet „Cannot read the file“ | Kostenlose Resolve-Version oder Zugriff verweigert | Resolve Studio verwenden |
-| Update meldet „Kein Release gefunden“ | Es gibt noch kein Release, oder das Repository ist privat | Bei privatem Repository die Umgebungsvariable `BEATANALYZER_GITHUB_TOKEN` mit einem Lese-Token setzen |
+| Update meldet „No release found“ | Es gibt noch kein Release, oder das Repository ist privat | Bei privatem Repository die Umgebungsvariable `BEATANALYZER_GITHUB_TOKEN` mit einem Lese-Token setzen |
 
 `debug_system.bat` schreibt einen Diagnosebericht nach `debug_report.txt` (Python, Pakete, Grafikkarte).
 

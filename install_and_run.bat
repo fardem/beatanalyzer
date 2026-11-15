@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
-title BeatAnalyzer - Installation ^& Start mit Logging (Windows)
+title BeatAnalyzer - Installation ^& start with log (Windows)
 color 0B
 
 set "LOGFILE=%~dp0install_log.txt"
@@ -9,28 +9,28 @@ set "LOGFILE=%~dp0install_log.txt"
 :: Initialisiere Log-Datei mit Zeitstempel
 echo ====================================================================== > "%LOGFILE%"
 echo  BeatAnalyzer Windows Installation Log >> "%LOGFILE%"
-echo  Startzeit: %DATE% %TIME% >> "%LOGFILE%"
-echo  Ordner:    %~dp0 >> "%LOGFILE%"
+echo  Started: %DATE% %TIME% >> "%LOGFILE%"
+echo  Folder:  %~dp0 >> "%LOGFILE%"
 echo ====================================================================== >> "%LOGFILE%"
 echo. >> "%LOGFILE%"
 
 echo ======================================================================
-echo          BeatAnalyzer - CPJKU beat_this Lokale Installation
-echo          Beat- ^& Downbeat-Erkennung in isolierter Python-Umgebung
+echo          BeatAnalyzer - CPJKU beat_this local installation
+echo          Beat ^& downbeat detection in its own Python environment
 echo ======================================================================
-echo  Ein ausfuehrliches Protokoll wird gespeichert in:
+echo  A detailed log is saved to:
 echo  install_log.txt
 echo.
-echo  Bitte vorher alle laufenden BeatAnalyzer-Fenster schliessen: Ein laufender
-echo  Server sperrt Dateien in venv, und ein Update von NumPy bleibt dann halb liegen.
+echo  Please close all running BeatAnalyzer windows first: a running
+echo  server locks files in venv, and an update of NumPy would stop half way.
 echo ======================================================================
 echo.
 
 :: ----------------------------------------------------------------------
 :: 1. PRÜFE PYTHON INSTALLATION
 :: ----------------------------------------------------------------------
-echo [1/6] Suche nach installierter Python-Version...
-echo [1/6] Suche nach Python... >> "%LOGFILE%"
+echo [1/6] Looking for an installed Python...
+echo [1/6] Looking for Python... >> "%LOGFILE%"
 
 set "PY_CMD="
 
@@ -67,67 +67,67 @@ if exist "C:\Python310\python.exe" set "PY_CMD=C:\Python310\python.exe" & goto :
 color 0C
 echo.
 echo ======================================================================
-echo [FEHLER] Python wurde auf deinem PC nicht gefunden!
+echo [ERROR] Python was not found on this PC.
 echo ======================================================================
-echo [FEHLER] Python nicht im PATH oder in Standardpfaden gefunden. >> "%LOGFILE%"
+echo [ERROR] Python not found in PATH or the usual folders. >> "%LOGFILE%"
 echo.
-echo Bitte installiere Python:
-echo 1. Lade Python 3.10, 3.11 oder 3.12 herunter: https://www.python.org/downloads/
-echo 2. WICHTIG: Setze beim Start des Installers unbedingt den Haken bei:
-echo    "Add python.exe to PATH" (unten im Installationsfenster)
-echo 3. Starte danach diese install_and_run.bat erneut.
+echo Please install Python:
+echo 1. Download Python 3.10 or newer: https://www.python.org/downloads/
+echo 2. IMPORTANT: at the start of the installer, tick:
+echo    "Add python.exe to PATH" (at the bottom of the installer window)
+echo 3. Then run this install_and_run.bat again.
 echo.
-echo Das Logfile wurde geschrieben: "%LOGFILE%"
+echo The log was written to: "%LOGFILE%"
 echo ======================================================================
-echo Dieses Fenster schliesst sich NICHT automatisch. Druecke eine Taste zum Beenden.
+echo This window does NOT close by itself. Press any key to exit.
 pause
 exit /b 1
 
 :python_found
 for /f "tokens=*" %%v in ('!PY_CMD! --version 2^>^&1') do set "PY_VER=%%v"
-echo [OK] Python gefunden: !PY_VER!
-echo [OK] Verwendeter Befehl: !PY_CMD!
-echo Python Befehl: !PY_CMD! (!PY_VER!) >> "%LOGFILE%"
+echo [OK] Python found: !PY_VER!
+echo [OK] Command used: !PY_CMD!
+echo Python command: !PY_CMD! (!PY_VER!) >> "%LOGFILE%"
 
 :: ----------------------------------------------------------------------
 :: 2. ISOLIERTE UMGEBUNG (VENV) ERSTELLEN
 :: ----------------------------------------------------------------------
 echo.
-echo [2/6] Richte isolierte virtuelle Umgebung (venv) ein...
-echo [2/6] Virtuelle Umgebung venv pruefen/erstellen... >> "%LOGFILE%"
+echo [2/6] Setting up the Python environment (venv)...
+echo [2/6] Checking/creating venv... >> "%LOGFILE%"
 
 if not exist "venv\Scripts\activate.bat" (
-    echo Erstelle neuen Ordner "venv"... ^(bitte kurz warten^)
-    echo Fuehre aus: !PY_CMD! -m venv venv >> "%LOGFILE%"
+    echo Creating the folder "venv"... ^(please wait^)
+    echo Running: !PY_CMD! -m venv venv >> "%LOGFILE%"
     !PY_CMD! -m venv venv >> "%LOGFILE%" 2>&1
     if !errorlevel! neq 0 (
         color 0C
-        echo [FEHLER] Konnte venv nicht erstellen!
-        echo Details siehe install_log.txt:
+        echo [ERROR] Could not create venv.
+        echo Details in install_log.txt:
         type "%LOGFILE%"
         echo.
-        echo Druecke eine Taste zum Beenden.
+        echo Press any key to exit.
         pause
         exit /b 1
     )
-    echo [OK] Isolierte Umgebung "venv" erfolgreich angelegt.
-    echo [OK] venv erfolgreich angelegt. >> "%LOGFILE%"
+    echo [OK] Environment "venv" created.
+    echo [OK] venv created. >> "%LOGFILE%"
 ) else (
-    echo [OK] Bereits existierende isolierte Umgebung "venv" gefunden.
-    echo [OK] venv bereits vorhanden. >> "%LOGFILE%"
+    echo [OK] Existing environment "venv" found.
+    echo [OK] venv already there. >> "%LOGFILE%"
 )
 
 :: ----------------------------------------------------------------------
 :: 3. VENV AKTIVIEREN & PIP AKTUALISIEREN
 :: ----------------------------------------------------------------------
 echo.
-echo [3/6] Aktiviere venv und aktualisiere pip...
-echo [3/6] Aktiviere venv... >> "%LOGFILE%"
+echo [3/6] Activating venv and updating pip...
+echo [3/6] Activating venv... >> "%LOGFILE%"
 
 if not exist "venv\Scripts\python.exe" (
     color 0C
-    echo [FEHLER] venv\Scripts\python.exe existiert nicht!
-    echo Bitte loesche den Ordner "venv" und fuehre die Datei erneut aus.
+    echo [ERROR] venv\Scripts\python.exe does not exist.
+    echo Please delete the folder "venv" and run this file again.
     pause
     exit /b 1
 )
@@ -135,110 +135,110 @@ if not exist "venv\Scripts\python.exe" (
 set "VENV_PY=venv\Scripts\python.exe"
 set "VENV_PIP=venv\Scripts\pip.exe"
 
-echo Aktualisiere pip in venv...
+echo Updating pip in venv...
 !VENV_PY! -m pip install --upgrade pip >> "%LOGFILE%" 2>&1
-echo [OK] Pip ist aktuell.
-echo [OK] Pip aktualisiert. >> "%LOGFILE%"
+echo [OK] pip is up to date.
+echo [OK] pip updated. >> "%LOGFILE%"
 
 :: ----------------------------------------------------------------------
 :: 4. ABHÄNGIGKEITEN INSTALLIEREN (SCHRITTWEISE FÜR MAXIMALE STABILITÄT)
 :: ----------------------------------------------------------------------
 echo.
-echo [4/6] Installiere Audio-, PyTorch- und Server-Pakete...
-echo (Der erste Download von PyTorch kann je nach Internetverbindung 1-3 Minuten dauern)
-echo [4/6] Starte Paketinstallation... >> "%LOGFILE%"
+echo [4/6] Installing audio, PyTorch and server packages...
+echo (The first download of PyTorch can take 1-3 minutes, depending on the connection)
+echo [4/6] Installing packages... >> "%LOGFILE%"
 
-echo   - Webserver: Nutzt nativen Python HTTP-Server (keine externen Web-Frameworks noetig)
+echo   - Web server: built-in Python HTTP server (no web framework needed)
 
-echo   - Installiere Audio-Signalverarbeitung (NumPy, SciPy, Librosa, SoundFile)...
+echo   - Installing audio processing (NumPy, SciPy, librosa, SoundFile)...
 !VENV_PIP! install "numpy>=1.24" "scipy>=1.10.0" "librosa>=0.10.0" "soundfile>=0.12.1" >> "%LOGFILE%" 2>&1
 if !errorlevel! neq 0 (
-    echo   [WARNUNG] Problem bei Audio-Installation, siehe install_log.txt
+    echo   [WARNING] Problem installing the audio packages, see install_log.txt
 ) else (
-    echo   [OK] Audio-Pakete installiert.
+    echo   [OK] Audio packages installed.
 )
 
-echo   - Installiere PyAV (liest m4a/AAC, ALAC, Opus ... ohne eigenes ffmpeg)...
+echo   - Installing PyAV (reads m4a/AAC, ALAC, Opus ... without an own ffmpeg)...
 !VENV_PIP! install "av>=12.0" >> "%LOGFILE%" 2>&1
 if !errorlevel! neq 0 (
-    echo   [HINWEIS] PyAV nicht installiert: m4a/AAC nur mit eingerichtetem ffmpeg, siehe install_log.txt
+    echo   [NOTE] PyAV not installed: m4a/AAC only with ffmpeg set up, see install_log.txt
 ) else (
-    echo   [OK] PyAV installiert.
+    echo   [OK] PyAV installed.
 )
 
-echo   - Installiere Deep-Learning Engine (PyTorch ^& Torchaudio)...
+echo   - Installing PyTorch ^& torchaudio...
 !VENV_PIP! install "torch>=2.0.0" "torchaudio>=2.0.0" >> "%LOGFILE%" 2>&1
 if !errorlevel! neq 0 (
-    echo   [WARNUNG] PyTorch Standard-Install fehlgeschlagen, versuche CPU-Version...
+    echo   [WARNING] Standard PyTorch install failed, trying the CPU version...
     !VENV_PIP! install torch torchaudio --index-url https://download.pytorch.org/whl/cpu >> "%LOGFILE%" 2>&1
 )
-echo   [OK] PyTorch bereit.
+echo   [OK] PyTorch ready.
 
-echo   - Pruefe Git und CPJKU beat_this Transformer...
+echo   - Checking Git and CPJKU beat_this...
 where git >nul 2>&1
 if !errorlevel! equ 0 (
-    echo   Git gefunden! Installiere CPJKU beat_this von GitHub...
+    echo   Git found. Installing CPJKU beat_this from GitHub...
     !VENV_PIP! install "git+https://github.com/CPJKU/beat_this.git" >> "%LOGFILE%" 2>&1
     if !errorlevel! equ 0 (
-        echo   [OK] CPJKU beat_this Transformer erfolgreich installiert!
-        echo   [OK] beat_this von GitHub installiert. >> "%LOGFILE%"
+        echo   [OK] CPJKU beat_this installed.
+        echo   [OK] beat_this installed from GitHub. >> "%LOGFILE%"
     ) else (
-        echo   [WARNUNG] beat_this konnte nicht installiert werden, siehe install_log.txt.
-        echo   [WARNUNG] beat_this Pip-Install fehlgeschlagen. >> "%LOGFILE%"
+        echo   [WARNING] beat_this could not be installed, see install_log.txt.
+        echo   [WARNING] pip install of beat_this failed. >> "%LOGFILE%"
     )
 ) else (
-    echo   [WARNUNG] Git nicht gefunden - beat_this kann nicht installiert werden.
-    echo   [WARNUNG] Git installieren: https://git-scm.com/download/win und danach diese Datei erneut starten.
-    echo   [WARNUNG] Git nicht installiert, beat_this fehlt. >> "%LOGFILE%"
+    echo   [WARNING] Git not found - beat_this cannot be installed.
+    echo   [WARNING] Install Git: https://git-scm.com/download/win and then run this file again.
+    echo   [WARNING] Git not installed, beat_this missing. >> "%LOGFILE%"
 )
 
 :: ----------------------------------------------------------------------
 :: 5. FUNKTIONSTEST DER UMGEBUNG
 :: ----------------------------------------------------------------------
 echo.
-echo [5/6] Pruefe Python-Umgebung...
-echo [5/6] Teste Imports in Python... >> "%LOGFILE%"
+echo [5/6] Checking the Python environment...
+echo [5/6] Testing imports in Python... >> "%LOGFILE%"
 
 !VENV_PY! -c "import numpy, scipy, librosa, soundfile; print('Audio-Module OK, numpy', numpy.__version__)" >> "%LOGFILE%" 2>&1
 if !errorlevel! neq 0 (
     color 0C
     echo.
-    echo [FEHLER] Die Audio-Module ^(NumPy, SciPy, librosa, soundfile^) lassen sich nicht laden.
-    echo          Die Umgebung venv ist beschaedigt. So geht es weiter:
-    echo          1. Alle BeatAnalyzer-Fenster schliessen.
-    echo          2. Den Ordner "venv" im BeatAnalyzer-Ordner loeschen.
-    echo          3. install_and_run.bat erneut starten.
-    echo          Details stehen in install_log.txt.
-    echo [FEHLER] Audio-Module nicht ladbar, venv beschaedigt. >> "%LOGFILE%"
+    echo [ERROR] The audio modules ^(NumPy, SciPy, librosa, soundfile^) cannot be loaded.
+    echo          The environment venv is broken. What to do:
+    echo          1. Close all BeatAnalyzer windows.
+    echo          2. Delete the folder "venv" in the BeatAnalyzer folder.
+    echo          3. Run install_and_run.bat again.
+    echo          Details are in install_log.txt.
+    echo [ERROR] Audio modules cannot be loaded, venv broken. >> "%LOGFILE%"
     pause
     exit /b 1
 )
-echo [OK] Audio-Module funktionieren.
+echo [OK] Audio modules work.
 
 !VENV_PY! -c "import torch, beat_this.inference; print('beat_this OK, CUDA:', torch.cuda.is_available())" >> "%LOGFILE%" 2>&1
 if !errorlevel! neq 0 (
     color 0E
     echo.
-    echo [WARNUNG] beat_this ist NICHT verfuegbar. BeatAnalyzer rechnet dann mit librosa - ungenauer,
-    echo           ohne Confidence. Haeufige Ursachen: Git fehlt, keine Internetverbindung, oder ein
-    echo           BeatAnalyzer-Server lief waehrend der Installation. Details in install_log.txt.
-    echo [WARNUNG] beat_this nicht ladbar. >> "%LOGFILE%"
+    echo [WARNING] beat_this is NOT available. BeatAnalyzer then uses librosa - less exact,
+    echo           without confidence. Common causes: Git missing, no internet connection, or a
+    echo           BeatAnalyzer server ran during the installation. Details in install_log.txt.
+    echo [WARNING] beat_this cannot be loaded. >> "%LOGFILE%"
     echo.
-    echo Druecke eine Taste, um trotzdem mit librosa zu starten - oder schliesse das Fenster.
+    echo Press any key to start anyway with librosa - or close the window.
     pause >nul
 ) else (
-    echo [OK] beat_this ist einsatzbereit.
-    echo   - Lade das Modell von beat_this vorab ^(beim ersten Mal etwa 80 MB^)...
+    echo [OK] beat_this is ready.
+    echo   - Downloading the beat_this model in advance ^(about 80 MB the first time^)...
     !VENV_PY! backend\model_check.py
     if !errorlevel! neq 0 (
         color 0E
-        echo [WARNUNG] Ohne Modell rechnet BeatAnalyzer mit librosa. Ursache und Abhilfe stehen oben.
-        echo [WARNUNG] Modell von beat_this nicht geladen. >> "%LOGFILE%"
+        echo [WARNING] Without the model BeatAnalyzer uses librosa. Cause and remedy are shown above.
+        echo [WARNING] beat_this model not loaded. >> "%LOGFILE%"
         echo.
-        echo Druecke eine Taste, um trotzdem zu starten - oder schliesse das Fenster.
+        echo Press any key to start anyway - or close the window.
         pause >nul
     ) else (
-        echo [OK] Modell von beat_this bereit. >> "%LOGFILE%"
+        echo [OK] beat_this model ready. >> "%LOGFILE%"
     )
 )
 
@@ -246,33 +246,33 @@ if !errorlevel! neq 0 (
 :: DAVINCI RESOLVE SKRIPT (nur wenn Resolve installiert ist)
 :: ----------------------------------------------------------------------
 echo.
-echo Pruefe DaVinci Resolve und installiere/aktualisiere BeatAnalyzer_Markers.lua...
+echo Checking DaVinci Resolve and installing/updating BeatAnalyzer_Markers.lua...
 !VENV_PY! backend\resolve_plugin.py auto
 
 :: ----------------------------------------------------------------------
 :: 6. SERVER STARTEN UND BROWSER ÖFFNEN
 :: ----------------------------------------------------------------------
 echo.
-echo [6/6] Starte BeatAnalyzer Server...
+echo [6/6] Starting the BeatAnalyzer server...
 echo ======================================================================
-echo  Serveradresse: http://localhost:8000
-echo  Web-Oberflaeche oeffnet sich automatisch in deinem Standard-Browser!
+echo  Server address: http://localhost:8000
+echo  The web app opens in your default browser.
 echo.
-echo  Zum Beenden druecke STRG + C in diesem Konsolenfenster.
+echo  To stop, press CTRL + C in this console window.
 echo ======================================================================
 echo.
 
 :: Oeffne Browser mit kleiner Verzoegerung
 start "" http://localhost:8000
 
-echo Starte backend\server.py ... >> "%LOGFILE%"
+echo Starting backend\server.py ... >> "%LOGFILE%"
 !VENV_PY! backend\server.py
 
 :: Falls der Server abstuerzt oder beendet wird:
 echo.
 echo ======================================================================
-echo Der Server wurde beendet.
-echo Protokoll wurde gespeichert unter: "%LOGFILE%"
+echo The server stopped.
+echo The log was saved to: "%LOGFILE%"
 echo ======================================================================
-echo Druecke eine beliebige Taste zum Schliessen des Fensters...
+echo Press any key to close the window...
 pause

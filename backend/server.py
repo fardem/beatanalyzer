@@ -43,15 +43,15 @@ try:
 except Exception as _err:   # the name of an except variable is deleted after the block: keep the text
     ANALYZER_ERROR = str(_err) or type(_err).__name__
     print("=" * 70)
-    print(f"[FEHLER] analyzer.py laesst sich nicht laden: {ANALYZER_ERROR}")
-    print("[FEHLER] Analysen sind nicht moeglich. Meist ist venv beschaedigt: alle BeatAnalyzer-Fenster")
-    print("[FEHLER] schliessen, den Ordner venv loeschen und install_and_run.bat erneut starten.")
+    print(f"[ERROR] analyzer.py cannot be loaded: {ANALYZER_ERROR}")
+    print("[ERROR] No analysis possible. Usually the venv is broken: close all BeatAnalyzer windows,")
+    print("[ERROR] delete the folder venv and run install_and_run.bat again.")
     print("=" * 70)
     BEAT_THIS_AVAILABLE = False
     MD_BEAT_THIS_AVAILABLE = False
 
     def analyze_audio_file(p, f, smooth=True, protect=0.95, model="beat_this"):
-        raise RuntimeError(f"Analyzer-Fehler (analyzer.py nicht geladen): {ANALYZER_ERROR}")
+        raise RuntimeError(f"Analyzer error (analyzer.py not loaded): {ANALYZER_ERROR}")
 
     def engine_status(model="beat_this"):
         return {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "analyzer_failed", "model": None}
@@ -159,7 +159,7 @@ def extract_uploaded_file(headers, rfile):
 
 # Autarke, vollständige Web-Benutzeroberfläche (funktioniert auch wenn dist/ nicht gebaut wurde!)
 STANDALONE_HTML = """<!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -219,7 +219,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
                     <h1>BeatAnalyzer <span>CPJKU Transformer</span></h1>
                 </div>
             </div>
-            <div class="badge-engine" id="engineBadge">Python Server aktiv</div>
+            <div class="badge-engine" id="engineBadge">Python server active</div>
         </header>
 
         <!-- Dropzone -->
@@ -227,8 +227,8 @@ STANDALONE_HTML = """<!DOCTYPE html>
             <input type="file" id="fileInput" accept=".mp3,.wav,.aac,.flac,.ogg,.m4a,audio/*" style="display:none">
             <div id="dropPrompt">
                 <div style="font-size: 32px; margin-bottom: 8px;">📂</div>
-                <h3>Musikdatei hier ablegen oder klicken</h3>
-                <p>Unterstützt MP3, WAV, AAC und FLAC für automatische Beat- und Downbeat-Erkennung</p>
+                <h3>Drop a music file here or click</h3>
+                <p>Supports MP3, WAV, AAC and FLAC for beat and downbeat detection</p>
                 <div class="formats">
                     <span class="format-tag">MP3</span>
                     <span class="format-tag">WAV</span>
@@ -238,8 +238,8 @@ STANDALONE_HTML = """<!DOCTYPE html>
             </div>
             <div id="loadingState" class="hidden">
                 <div class="spinner"></div>
-                <h3 id="loadingText">Audiodatei wird analysiert...</h3>
-                <p>CPJKU beat_this Transformer berechnet Beats & Downbeats...</p>
+                <h3 id="loadingText">Analysing the audio file...</h3>
+                <p>CPJKU beat_this computes beats and downbeats...</p>
             </div>
         </div>
 
@@ -248,27 +248,27 @@ STANDALONE_HTML = """<!DOCTYPE html>
             <!-- Metrics -->
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="title">Globales Tempo</div>
+                    <div class="title">Tempo</div>
                     <div class="val" id="valBpm">--</div>
                     <div class="sub">BPM (Beats per Minute)</div>
                 </div>
                 <div class="metric-card">
-                    <div class="title">Taktart (Meter)</div>
+                    <div class="title">Time signature</div>
                     <div class="val" id="valMeter">4/4</div>
                     <div class="sub" id="valMeterName">Common Time</div>
                 </div>
                 <div class="metric-card">
-                    <div class="title">Takte (Downbeats)</div>
+                    <div class="title">Bars</div>
                     <div class="val" id="valBars" style="color:#f43f5e;">--</div>
-                    <div class="sub" id="valTotalBeats">-- Beats gesamt</div>
+                    <div class="sub" id="valTotalBeats">-- beats in total</div>
                 </div>
                 <div class="metric-card">
-                    <div class="title">Tempo-Stabilität</div>
+                    <div class="title">Tempo stability</div>
                     <div class="val" id="valStability">--%</div>
-                    <div class="sub">Präzision</div>
+                    <div class="sub">steadiness</div>
                 </div>
                 <div class="metric-card">
-                    <div class="title">Audiodatei</div>
+                    <div class="title">Audio file</div>
                     <div class="val" id="valDuration" style="font-size:1.3rem;">--</div>
                     <div class="sub" id="valFormat">AUDIO</div>
                 </div>
@@ -277,7 +277,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
             <!-- Waveform Canvas -->
             <div class="canvas-card">
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.75rem; color:#94a3b8;">
-                    <span>Wellenform & Beat Grid (Rot = Taktanfang / Eins, Cyan = Beats)</span>
+                    <span>Waveform & beat grid (red = downbeat, cyan = beats)</span>
                     <span id="hoverTime">00:00.0</span>
                 </div>
                 <canvas id="waveCanvas"></canvas>
@@ -293,11 +293,11 @@ STANDALONE_HTML = """<!DOCTYPE html>
 
                 <div class="beat-led">
                     <div class="led-dot" id="ledDot"></div>
-                    <span id="ledLabel">Bereit</span>
+                    <span id="ledLabel">Ready</span>
                 </div>
 
                 <div style="display:flex; align-items:center; gap:8px; font-size:0.8rem; color:#94a3b8;">
-                    <label><input type="checkbox" id="chkMetronome" checked> Metronom-Klick</label>
+                    <label><input type="checkbox" id="chkMetronome" checked> Metronome click</label>
                     <input type="range" id="volMetronome" min="0" max="1" step="0.05" value="0.7" style="width:70px;">
                 </div>
             </div>
@@ -307,9 +307,9 @@ STANDALONE_HTML = """<!DOCTYPE html>
                 <div class="export-header">
                     <div>
                         <h3 style="font-size:1rem; color:#fff; display:flex; align-items:center; gap:8px;">
-                            🎬 Export für DaVinci Resolve & DAWs
+                            🎬 Export for DaVinci Resolve & DAWs
                         </h3>
-                        <p style="font-size:0.75rem; color:#94a3b8;">Marker als Clip-Marker im Media Pool</p>
+                        <p style="font-size:0.75rem; color:#94a3b8;">Markers on the clip in the Media Pool</p>
                     </div>
                 </div>
 
@@ -318,16 +318,16 @@ STANDALONE_HTML = """<!DOCTYPE html>
                     <div class="export-box" style="border-color:#be123c;">
                         <div>
                             <h4><span style="color:#f43f5e;">🔴</span> DaVinci Resolve Marker (JSON)</h4>
-                            <p>Fuer das Skript <em>BeatAnalyzer_Markers.lua</em>: Clip im Media Pool waehlen, dann <em>Workspace → Scripts → BeatAnalyzer_Markers</em>.</p>
+                            <p>For the script <em>BeatAnalyzer_Markers.lua</em>: select the clip in the Media Pool, then <em>Workspace → Scripts → BeatAnalyzer_Markers</em>.</p>
                         </div>
-                        <button class="btn-dl" id="btnDlResolve">Resolve Marker-JSON (.json)</button>
+                        <button class="btn-dl" id="btnDlResolve">Resolve marker JSON (.json)</button>
                     </div>
 
                     <!-- Audacity Labels -->
                     <div class="export-box">
                         <div>
-                            <h4>📄 Audacity Textspur</h4>
-                            <p>In Audacity: <em>Spuren → Textspuren importieren</em>.</p>
+                            <h4>📄 Audacity label track</h4>
+                            <p>In Audacity: <em>File → Import → Labels</em>.</p>
                         </div>
                         <button class="btn-dl btn-dl-cyan" id="btnDlAudacity">Audacity Labels (.txt)</button>
                     </div>
@@ -336,9 +336,9 @@ STANDALONE_HTML = """<!DOCTYPE html>
                     <div class="export-box">
                         <div>
                             <h4>💻 CPJKU beat_this JSON</h4>
-                            <p>Vollständige strukturierte Beats, Downbeats und BPM.</p>
+                            <p>All beats, downbeats and BPM.</p>
                         </div>
-                        <button class="btn-dl btn-dl-cyan" id="btnDlJson">JSON Daten (.json)</button>
+                        <button class="btn-dl btn-dl-cyan" id="btnDlJson">JSON data (.json)</button>
                     </div>
                 </div>
             </div>
@@ -385,7 +385,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
                 formData.append('audio', file, file.name);
 
                 const res = await fetch('/api/analyze', { method: 'POST', body: formData });
-                if (!res.ok) throw new Error("Server-Analysefehler: " + res.statusText);
+                if (!res.ok) throw new Error("Server analysis error: " + res.statusText);
                 currentResult = await res.json();
 
                 // Dekodiere Audio im Browser für Player
@@ -395,7 +395,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
 
                 displayResults(currentResult);
             } catch (err) {
-                alert("Fehler bei der Analyse: " + err.message);
+                alert("Analysis failed: " + err.message);
                 dropPrompt.classList.remove('hidden');
                 loadingState.classList.add('hidden');
             }
@@ -409,7 +409,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
             document.getElementById('valMeter').innerText = data.timeSignature.numerator + "/" + data.timeSignature.denominator;
             document.getElementById('valMeterName').innerText = data.timeSignature.name;
             document.getElementById('valBars').innerText = data.totalBars;
-            document.getElementById('valTotalBeats').innerText = data.totalBeats + " Beats gesamt";
+            document.getElementById('valTotalBeats').innerText = data.totalBeats + " beats in total";
             document.getElementById('valStability').innerText = data.tempoStability + "%";
 
             const dur = data.metadata.duration;
@@ -607,11 +607,11 @@ STANDALONE_HTML = """<!DOCTYPE html>
 
             if (beat.isDownbeat) {
                 led.className = 'led-dot flash-down';
-                label.innerText = 'Takt ' + beat.barIndex + ' (EINS)';
+                label.innerText = 'Bar ' + beat.barIndex + ' · Downbeat';
                 label.style.color = '#f43f5e';
             } else {
                 led.className = 'led-dot flash-beat';
-                label.innerText = 'Takt ' + beat.barIndex + ' • Beat ' + beat.beatInBar;
+                label.innerText = 'Bar ' + beat.barIndex + ' · Beat ' + beat.beatInBar;
                 label.style.color = '#38bdf8';
             }
             setTimeout(() => { led.className = 'led-dot'; }, 120);
@@ -662,7 +662,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
             const baseName = currentResult.metadata.fileName.replace(/\\.[^/.]+$/, "");
             let txt = "";
             currentResult.beats.forEach(b => {
-                const lbl = b.isDownbeat ? "[Takt " + b.barIndex + "] 1" : b.barIndex + "." + b.beatInBar;
+                const lbl = b.isDownbeat ? "[Bar " + b.barIndex + "] 1" : b.barIndex + "." + b.beatInBar;
                 txt += b.time.toFixed(6) + "\\t" + b.time.toFixed(6) + "\\t" + lbl + "\\n";
             });
             downloadFile(txt, baseName + "_audacity.txt", "text/plain");
@@ -805,7 +805,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(content)
         except Exception as e:
-            self.send_error(500, f"Fehler beim Laden der Datei: {e}")
+            self.send_error(500, f"Error loading the file: {e}")
 
     def do_POST(self):
         parsed = urlparse(self.path)
@@ -818,16 +818,16 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
         elif parsed.path == "/api/settings":
             self.handle_settings()
         else:
-            self.send_error(404, "Endpoint nicht gefunden")
+            self.send_error(404, "Endpoint not found")
 
     def handle_analyze(self):
         try:
             file_bytes, filename = extract_uploaded_file(self.headers, self.rfile)
             if not file_bytes:
-                self.send_error_json(400, "Keine gültige Audiodatei empfangen.")
+                self.send_error_json(400, "No valid audio file received.")
                 return
 
-            print(f"[BeatAnalyzer Server] Starte Analyse für: {filename} ({len(file_bytes)} Bytes)...")
+            print(f"[BeatAnalyzer Server] Analysing: {filename} ({len(file_bytes)} bytes)...")
 
             temp_path = os.path.join(TEMP_DIR, f"track_{os.getpid()}_{filename}")
             with open(temp_path, "wb") as f_out:
@@ -849,7 +849,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
                 self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(body)
-                print(f"[BeatAnalyzer Server] Analyse erfolgreich für: {filename} ({result.get('globalBpm')} BPM)")
+                print(f"[BeatAnalyzer Server] Analysis done: {filename} ({result.get('globalBpm')} BPM)")
             finally:
                 if os.path.exists(temp_path):
                     try:
@@ -858,16 +858,16 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
                         pass
         except Exception as e:
             traceback.print_exc()
-            self.send_error_json(500, f"Fehler bei Audioanalyse: {str(e)}")
+            self.send_error_json(500, f"Audio analysis failed: {str(e)}")
 
     def handle_resolve_install(self):
         try:
             target = resolve_plugin.install()
-            print(f"[BeatAnalyzer Server] Resolve-Skript installiert: {target}")
+            print(f"[BeatAnalyzer Server] Resolve script installed: {target}")
             self.send_json(200, resolve_plugin.status())
         except Exception as e:
             traceback.print_exc()
-            self.send_error_json(500, f"Installation fehlgeschlagen: {e}")
+            self.send_error_json(500, f"Installation failed: {e}")
 
     def handle_update(self):
         try:
@@ -878,7 +878,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             self.send_error_json(409, str(e))
         except Exception as e:
             traceback.print_exc()
-            self.send_error_json(500, f"Update fehlgeschlagen: {e}")
+            self.send_error_json(500, f"Update failed: {e}")
 
     def handle_settings(self):
         """POST {"language"?: ..., "ffmpegDir"?: ...}: validate, persist, and apply settings."""
@@ -886,7 +886,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
             if not isinstance(body, dict) or ("language" not in body and "ffmpegDir" not in body):
-                raise ValueError('Erwartet: {"language": "auto" | "en" | "de" | "tr"} oder {"ffmpegDir": "..."}')
+                raise ValueError('Expected: {"language": "auto" | "en" | "de" | "tr"} or {"ffmpegDir": "..."}')
 
             if "language" in body and str(body["language"]) not in settings.LANGUAGE_CHOICES:
                 raise ValueError(f"Unknown language: {body['language']!r} (allowed: {', '.join(settings.LANGUAGE_CHOICES)})")
@@ -904,7 +904,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             return
         except Exception as e:
             traceback.print_exc()
-            self.send_error_json(500, f"Einstellungen nicht gespeichert: {e}")
+            self.send_error_json(500, f"Settings not saved: {e}")
             return
         self.send_json(200, {**settings_payload(), "pluginUpdated": plugin_updated})
 
@@ -935,35 +935,35 @@ def main():
     httpd = ServerClass(server_address, BeatThisRequestHandler)
 
     print("======================================================================")
-    print("      BeatAnalyzer - Lokaler Audio-Analyzer Server gestartet")
+    print("      BeatAnalyzer - local analysis server started")
     print("======================================================================")
     print(f" URL:            http://localhost:{port}")
     print(f" Version:        {APP_VERSION}")
     print(f" Python Version: {sys.version.split()[0]}")
     if ANALYZER_ERROR:
-        print(" Analyse:        NICHT MOEGLICH - analyzer.py nicht geladen (siehe oben)")
+        print(" Analysis:       NOT POSSIBLE - analyzer.py not loaded (see above)")
     elif BEAT_THIS_AVAILABLE:
-        print(" Analyse:        CPJKU beat_this")
+        print(" Analysis:       CPJKU beat_this")
     else:
-        print(" Analyse:        librosa - beat_this ist NICHT installiert (install_and_run.bat erneut starten)")
+        print(" Analysis:       librosa - beat_this is NOT installed (run install_and_run.bat again)")
     print("======================================================================")
-    print(" Server laeuft. Druecke STRG + C zum Beenden.")
+    print(" Server running. Press CTRL + C to stop.")
     print("======================================================================")
 
     try:
         path = resolve_plugin.status()["path"]
         if resolve_plugin.ensure_current():
-            print(f"[Resolve] Skript an Sprache und Ordner angepasst: {path}")
+            print(f"[Resolve] Script adapted to language and folder: {path}")
     except Exception as err:
-        print(f"[Resolve] Skript nicht abgeglichen: {err}")
+        print(f"[Resolve] Script not adapted: {err}")
 
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\nServer wird heruntergefahren...")
+        print("\nShutting down the server...")
     finally:
         httpd.server_close()
-        print("Server beendet.")
+        print("Server stopped.")
 
 
 if __name__ == "__main__":
