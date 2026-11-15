@@ -195,9 +195,21 @@ class DialogTests(unittest.TestCase):
 
         def scenario():
             self.pick_json()
-            self.assertFalse(self.item("Warnings").Hidden)
-            self.assertIn("MP3", self.item("Warnings").Text)
+            self.assertFalse(self.item("Warnings").Hidden)              # JSON without resolveOffset
+            self.assertIn("keinen Ausgleich", self.item("Warnings").Text)
             self.assertTrue(self.item("OK").Enabled)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_json_with_mp3_offset_needs_no_warning(self):
+        self.lua.execute("MOCK.song.file = 'Müller Song.mp3'")
+        data = resolve_marker_data(trs.sample_result())
+        data["fileName"], data["resolveOffset"] = "Müller Song.mp3", 0.05118
+        Path(self.json_path).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+        def scenario():
+            self.pick_json()
+            self.assertTrue(self.item("Warnings").Hidden)
             self.close()
         self.run_dialog(scenario)
 
@@ -533,7 +545,7 @@ class AnalysisDialogTests(DialogTests):
             self.tick(25)
             self.assertFalse(self.item("Warnings").Hidden)
             self.assertIn("50 ms", self.item("Warnings").Text)
-            self.assertIn("WAV oder FLAC", self.item("Warnings").Text)
+            self.assertIn("Marker entsprechend später", self.item("Warnings").Text)   # the analysis corrects it
             self.assertTrue(self.item("OK").Enabled)                    # only a hint, analysing is allowed
             self.check("WayJson", True)                                 # the JSON way has its own warnings
             self.tick(25)

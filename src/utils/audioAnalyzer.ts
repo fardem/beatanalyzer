@@ -52,6 +52,9 @@ export async function analyzeAudioFile(
 
   // Prüfe, ob das lokale Python Backend aktiv ist (z.B. via install_and_run.bat)
   let pythonResult: AnalysisResult | null = null;
+  // the server answered: an error of its analysis is shown, never replaced by the browser analysis without a word
+  // (test 0.2.3: an m4a failed on the server and the browser silently computed a much worse result)
+  let serverError: Error | null = null;
   try {
     const healthCheck = await fetch('/api/health', { signal: AbortSignal.timeout(800) });
     if (healthCheck.ok) {
@@ -76,17 +79,20 @@ export async function analyzeAudioFile(
           selectedModel: data.selectedModel ?? model,
           waveformPeaks: peaks.length > 0 ? peaks : waveformPeaks,
         };
-      } else if (options.requireServer) {
+      } else {
         const body = await apiResp.json().catch(() => null);
-        throw new Error(body?.error || `Server-Fehler ${apiResp.status}`);
+        serverError = new Error(
+          `Analyse im lokalen Server fehlgeschlagen: ${body?.error || `Server-Fehler ${apiResp.status}`}`
+        );
       }
     } else if (options.requireServer) {
       throw new Error('Der lokale Server antwortet nicht.');
     }
   } catch (err) {
     if (options.requireServer) throw err;
-    // Kein lokales Backend aktiv -> Web Audio MIR Engine übernimmt nahtlos
+    // Kein lokales Backend aktiv -> Web Audio MIR Engine übernimmt (das Banner zeigt "Fallback aktiv")
   }
+  if (serverError) throw serverError;
 
   if (pythonResult) {
     onProgress?.(100, `Analyse via ${modelLabel} erfolgreich abgeschlossen!`);

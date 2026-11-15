@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.4] – 2026-11-15
+
+Rückmeldungen aus dem Test von 0.2.3.
+
+### Behoben
+- **MP3 in Resolve: Marker lagen ≈ 50 ms vor dem Beat.** Resolve spielt bei MP3 zuerst den Xing/Info-Rahmen und die Verzögerung des Encoders ab, die die Analyse (wie jede Gapless-Wiedergabe) weglässt. Der Server liest den Versatz aus dem Kopf der MP3 (Rahmen + Encoder-Verzögerung aus dem LAME-Tag + 529 Samples des Decoders; z. B. 51,2 ms bei 44,1 kHz) und schreibt ihn als `resolveOffset` in die Analyse und die Marker-JSON. Das Resolve-Skript setzt Marker und Subtitles auf MP3-Clips um diesen Wert später und meldet das („MP3: Marker um 51 ms nach hinten gesetzt“). Auf WAV/FLAC-Clips ändert sich nichts. JSON ohne den Wert (älter oder im Browser analysiert) bekommen im Fenster weiter den Warnhinweis.
+- **Web-App rechnete bei einem Fehler des Servers still im Browser weiter** (z. B. m4a, die der Server nicht lesen konnte). Antwortet der Server, erscheint jetzt seine Fehlermeldung; die Browser-Analyse springt nur noch ein, wenn kein Server läuft (mit Banner „Fallback aktiv“).
+
+### Geändert
+- Resolve-Fenster: Bei MP3 im Weg „Ausgewählten Clip analysieren“ steht statt der Warnung der Hinweis, dass BeatAnalyzer die Marker entsprechend später setzt.
+
 ## [0.2.3] – 2026-11-15
 
 Rückmeldungen aus dem Test von 0.2.2.
