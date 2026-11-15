@@ -10,6 +10,8 @@ interface WaveformBeatVisualizerProps {
   loopRange?: { start: number; end: number } | null;
   /** the section the waveform shows (for the loop "section") */
   onViewChange?: (start: number, end: number) => void;
+  /** false while the loop follows the blue frame: the view must not jump back to the playhead */
+  followPlayhead?: boolean;
   currentTime: number;
   onSeek: (time: number) => void;
   activeBeat: BeatItem | null;
@@ -121,6 +123,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   audioBuffer,
   loopRange,
   onViewChange,
+  followPlayhead = true,
   currentTime,
   onSeek,
   activeBeat,
@@ -200,13 +203,13 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   useEffect(() => {
     const playheadMoved = Math.abs(currentTime - prevCurrentTimeRef.current) > 0.0001;
     prevCurrentTimeRef.current = currentTime;
-    if (!playheadMoved || minimapDragMode === 'pan') return;
+    if (!playheadMoved || minimapDragMode === 'pan' || !followPlayhead) return;
 
     if (currentTime < scrollOffsetSec || currentTime > scrollOffsetSec + visibleDuration) {
       const newOffset = Math.max(0, Math.min(currentTime - visibleDuration * 0.35, duration - visibleDuration));
       setScrollOffsetSec(newOffset);
     }
-  }, [currentTime, visibleDuration, duration, scrollOffsetSec, minimapDragMode]);
+  }, [currentTime, visibleDuration, duration, scrollOffsetSec, minimapDragMode, followPlayhead]);
 
   // Main Canvas Rendering
   const drawMainCanvas = useCallback(() => {

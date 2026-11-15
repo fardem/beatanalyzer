@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.9] – 2026-11-15
+
+Rückmeldungen aus dem Test von 0.2.8.
+
+### Geändert
+- **Loop „Ausschnitt“ folgt dem blauen Rahmen:** Verschiebst du den Rahmen in der Übersicht (oder zoomst), ist seine linke Kante der Start und die rechte das Ende des Loops; liegt die Wiedergabe außerhalb, springt sie an den Start. Solange dieser Loop läuft, scrollt die Ansicht nicht mehr selbst mit.
+- Player kompakter, damit er in einer Zeile bleibt: Geschwindigkeit als Auswahlfeld.
+- **Loop-Knopf als Symbol** (Wunsch des Nutzers): grau = aus, gelb mit „A-B“ = Ausschnitt (blauer Rahmen), grün = ganzer Song; was ein Klick tut, steht im Tooltip.
+
+### Behoben
+- **Player sprang bei jedem Downbeat in eine zweite Zeile:** Die Anzeige „Takt 35 • Downbeat (Beat 1)“ war breiter als „Takt 34 • Beat 2“. Sie ist jetzt zweizeilig in fester Größe (oben der Takt, darunter Downbeat/Beat); die Höhe des Players bleibt beim Abspielen und beim Umschalten des Loops gleich.
+
 ## [0.2.8] – 2026-11-15
 
 Rückmeldungen aus dem Test von 0.2.7.

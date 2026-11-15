@@ -133,6 +133,8 @@
   (`@source not "../dist"`), der Build ist reproduzierbar.
 - Neue Texte in `lang/en.json`, `de.json`, `tr.json`; danach `python backend/resolve_plugin.py template` (englische
   Vorlage im Lua-Skript; ein Test prüft den Gleichlauf).
+- **Release Notes (`docs/releases/<version>.md`) nur, wenn der Nutzer sie verlangt** (Nutzer, 2026-11-15). Changelog
+  und Test-Liste wie bisher.
 - Version: `VERSION`, `package.json`, `package-lock.json` (2×), `resolve/BeatAnalyzer_Markers.lua`,
-  `resolve/BeatThis_Markers.lua`, README-Zeile; Changelog, `docs/releases/<version>.md`, Test-Liste für Resolve.
+  `resolve/BeatThis_Markers.lua`, README-Zeile; Changelog und Test-Liste (Release Notes nur auf Wunsch).
 - Release (Tag = `VERSION`) hängt `BeatAnalyzer.zip` an, das der Updater der Web-App lädt.

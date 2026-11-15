@@ -48,6 +48,8 @@ export default function App() {
   const [loopMode, setLoopMode] = useState<'off' | 'view' | 'song'>('off');
   const [loopRange, setLoopRange] = useState<{ start: number; end: number } | null>(null);
   const viewRef = useRef<{ start: number; end: number } | null>(null);
+  const loopModeRef = useRef<'off' | 'view' | 'song'>('off');
+  const loopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Modals
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
@@ -128,6 +130,7 @@ export default function App() {
       setAudioBuffer(audioBuffer);
       if (!opts.reanalysis) {
         setLoopMode('off');   // a new song: no loop (loadBuffer keeps no loop either)
+        loopModeRef.current = 'off';
         setLoopRange(null);
         playerRef.current?.setLoop(null);
       }
@@ -160,6 +163,7 @@ export default function App() {
   }, []);
 
   const applyLoop = useCallback((mode: 'off' | 'view' | 'song', range: { start: number; end: number } | null) => {
+    loopModeRef.current = mode;
     setLoopMode(mode);
     setLoopRange(range);
     playerRef.current?.setLoop(range);
@@ -185,6 +189,17 @@ export default function App() {
     else if (loopMode !== 'song' && !(loopMode === 'off' && viewIsPart)) applyLoop('song', { start: 0, end: dur });
     else applyLoop('off', null);
   }, [result, loopMode, applyLoop]);
+
+  // the blue frame moved or the zoom changed: with the loop "section" its left edge is the start, its right edge the
+  // end (wish of the user, test 0.2.8); applied when the frame rests for a moment, not at every step of a drag
+  const handleViewChange = useCallback((start: number, end: number) => {
+    viewRef.current = { start, end };
+    if (loopModeRef.current !== 'view') return;
+    if (loopTimerRef.current) clearTimeout(loopTimerRef.current);
+    loopTimerRef.current = setTimeout(() => {
+      if (loopModeRef.current === 'view') applyLoop('view', { start, end });
+    }, 150);
+  }, [applyLoop]);
 
   const handleSetMusicVolume = useCallback((vol: number) => {
     setMusicVolume(vol);
@@ -319,9 +334,8 @@ export default function App() {
                 result={result}
                 audioBuffer={audioBuffer}
                 loopRange={loopRange}
-                onViewChange={(start, end) => {
-                  viewRef.current = { start, end };
-                }}
+                onViewChange={handleViewChange}
+                followPlayhead={loopMode !== 'view'}
                 currentTime={currentTime}
                 onSeek={handleSeek}
                 activeBeat={activeBeat}

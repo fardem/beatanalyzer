@@ -319,11 +319,13 @@
       "your_tap": "Your tap:",
       "song": "Song",
       "song_volume": "Song volume",
-      "loop_off_tip": "Loop: a click repeats the visible section, another click the whole song",
+      "loop_off_tip": "Loop off – click: repeat the visible section (blue frame)",
       "loop_view": "Section",
-      "loop_view_tip": "Loop: visible section – click: whole song",
+      "loop_view_tip": "Loop: section (blue frame) – click: whole song",
       "loop_song": "Whole song",
-      "loop_song_tip": "Loop: whole song – click: loop off"
+      "loop_song_tip": "Loop: whole song – click: loop off",
+      "loop_off": "Loop",
+      "speed": "Speed"
     },
     "progress": {
       "browser_activation": "Browser analysis: BAF and DAF …",
