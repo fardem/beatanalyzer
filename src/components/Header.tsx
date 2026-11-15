@@ -1,10 +1,11 @@
 import React from 'react';
 import { Activity, BookOpen, Download, RefreshCw, ExternalLink, Terminal } from 'lucide-react';
-import { AnalysisResult } from '../types/analyzer';
+import { AnalysisModel, AnalysisResult } from '../types/analyzer';
 import { UpdateBadge } from './UpdateBadge';
 
 interface HeaderProps {
   result: AnalysisResult | null;
+  selectedModel: AnalysisModel;
   onReset: () => void;
   onOpenExport: () => void;
   onOpenModelInfo: () => void;
@@ -13,11 +14,14 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   result,
+  selectedModel,
   onReset,
   onOpenExport,
   onOpenModelInfo,
   onOpenLocalSetup,
 }) => {
+  const activeModel = result?.selectedModel ?? selectedModel;
+
   return (
     <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3.5 transition-all">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
@@ -30,9 +34,15 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
                 BeatAnalyzer
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-cyan-950 text-cyan-300 border border-cyan-800/80">
-                  CPJKU Transformer
-                </span>
+                {activeModel === 'md_beat_this' ? (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-950/90 text-amber-300 border border-amber-700/80">
+                    md_beat_this · Non-Commercial
+                  </span>
+                ) : (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-cyan-950 text-cyan-300 border border-cyan-800/80">
+                    CPJKU Transformer
+                  </span>
+                )}
               </h1>
             </div>
             <div className="flex flex-wrap items-center gap-x-3">

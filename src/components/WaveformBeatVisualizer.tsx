@@ -1,12 +1,28 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
-import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
 
 interface WaveformBeatVisualizerProps {
   result: AnalysisResult;
   currentTime: number;
   onSeek: (time: number) => void;
   activeBeat: BeatItem | null;
+}
+
+const LOUPE_MIN_VISIBLE_SEC = 45;
+const LOUPE_TARGET_OPTICAL_GAIN = 5.0;
+const LOUPE_MIN_WINDOW_SEC = 3.0;
+const LOUPE_MAX_WINDOW_SEC = 12.0;
+const LOUPE_WIDTH_PX = 264;
+const LOUPE_CANVAS_HEIGHT_PX = 82;
+const LOUPE_TOTAL_HEIGHT_PX = 108;
+const QUICK_WINDOW_SEC = 20;
+
+function formatLoupeTime(seconds: number): string {
+  const safe = Math.max(0, seconds);
+  const mins = Math.floor(safe / 60);
+  const secs = (safe % 60).toFixed(3).padStart(6, '0');
+  return `${mins}:${secs}`;
 }
 
 export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
@@ -18,6 +34,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const minimapCanvasRef = useRef<HTMLCanvasElement>(null);
+  const loupeCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Zoom & View state
   const [zoom, setZoom] = useState<number>(1.0); // 1.0 = fit whole song
@@ -25,9 +42,15 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   const [showBaf, setShowBaf] = useState<boolean>(true);
   const [showDaf, setShowDaf] = useState<boolean>(true);
   const [showBeats, setShowBeats] = useState<boolean>(true);
+  const [isLoupeEnabled, setIsLoupeEnabled] = useState<boolean>(false);
 
   // Mouse drag / interaction state
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [minimapDragMode, setMinimapDragMode] = useState<'none' | 'pan' | 'seek'>('none');
+  const [isHoveringViewportBox, setIsHoveringViewportBox] = useState<boolean>(false);
+  const minimapDragStartRef = useRef<{ startX: number; startOffsetSec: number } | null>(null);
+  const prevCurrentTimeRef = useRef<number>(currentTime);
+  const [containerWidth, setContainerWidth] = useState<number>(800);
   const [hoverInfo, setHoverInfo] = useState<{
     x: number;
     y: number;
@@ -36,16 +59,48 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   } | null>(null);
 
   const duration = result.metadata.duration || 1;
+  const maxZoom = Math.max(16.0, duration / 5);
   const visibleDuration = duration / zoom;
+  const is20sActive = duration > QUICK_WINDOW_SEC && Math.abs(visibleDuration - QUICK_WINDOW_SEC) < 0.25;
 
-  // Auto-scroll when playing beyond viewport
+  const hasDafCurve = result.activationCurve.some((pt) => pt.downbeatActivation !== null);
+  const isMdModel = result.engineInfo?.id === 'md_beat_this' || result.selectedModel === 'md_beat_this';
+  const dafTooltip = hasDafCurve
+    ? 'Downbeat Activation Function (DAF) umschalten'
+    : isMdModel
+    ? 'DAF unter md_beat_this nicht verfügbar: Das Masked-Diffusion-Modell liefert nur diskrete Beat-/Takteintritts-Zeitpunkte ohne fortlaufende Downbeat-Wahrscheinlichkeitskurve.'
+    : 'DAF in diesem Analyse-Modus nicht verfügbar: Keine fortlaufende Downbeat-Wahrscheinlichkeitskurve vorhanden.';
+  const bafTooltip =
+    result.activationSource === 'onset'
+      ? 'Beat Activation Function (BAF – hier aus Onset-Stärke berechnet, da das Modell keine Frame-Kurve ausgibt)'
+      : 'Beat Activation Function (BAF)';
+
+  // Loupe is only useful when overview shows >= 45s; below that, main view already provides detail resolution
+  const isLoupeApplicable = visibleDuration >= LOUPE_MIN_VISIBLE_SEC;
+  const isLoupeActive = isLoupeEnabled && isLoupeApplicable;
+
+  // Adaptive loupe window targeting ~5x true pixel-per-second density over current main canvas
+  const safeMainWidth = Math.max(320, containerWidth);
+  const rawLoupeWindow =
+    (visibleDuration * (LOUPE_WIDTH_PX / safeMainWidth)) / LOUPE_TARGET_OPTICAL_GAIN;
+  const loupeSpan = Math.min(
+    duration,
+    Math.round(Math.max(LOUPE_MIN_WINDOW_SEC, Math.min(LOUPE_MAX_WINDOW_SEC, rawLoupeWindow)) * 2) / 2
+  );
+  const opticalMagnification =
+    (LOUPE_WIDTH_PX / Math.max(0.5, loupeSpan)) / (safeMainWidth / Math.max(0.5, visibleDuration));
+
+  // Auto-scroll only when playhead itself moves beyond the visible viewport (so user panning isn't overwritten)
   useEffect(() => {
+    const playheadMoved = Math.abs(currentTime - prevCurrentTimeRef.current) > 0.0001;
+    prevCurrentTimeRef.current = currentTime;
+    if (!playheadMoved || minimapDragMode === 'pan') return;
+
     if (currentTime < scrollOffsetSec || currentTime > scrollOffsetSec + visibleDuration) {
-      // Center the playhead
       const newOffset = Math.max(0, Math.min(currentTime - visibleDuration * 0.35, duration - visibleDuration));
       setScrollOffsetSec(newOffset);
     }
-  }, [currentTime, zoom, visibleDuration, duration, scrollOffsetSec]);
+  }, [currentTime, visibleDuration, duration, scrollOffsetSec, minimapDragMode]);
 
   // Main Canvas Rendering
   const drawMainCanvas = useCallback(() => {
@@ -224,7 +279,33 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       });
     }
 
-    // 4. Playhead Cursor
+    // 4. Loupe inspection bracket on main canvas when Loupe is active
+    if (isLoupeActive && hoverInfo) {
+      const span = Math.min(loupeSpan, duration);
+      const winStart = Math.max(0, Math.min(hoverInfo.time - span / 2, duration - span));
+      const winEnd = winStart + span;
+      const x1 = Math.max(0, ((winStart - scrollOffsetSec) / visibleDuration) * width);
+      const x2 = Math.min(width, ((winEnd - scrollOffsetSec) / visibleDuration) * width);
+      const cx = ((hoverInfo.time - scrollOffsetSec) / visibleDuration) * width;
+
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.10)';
+      ctx.fillRect(x1, 0, Math.max(2, x2 - x1), height);
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x1, 1, Math.max(2, x2 - x1), height - 2);
+
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.7)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(cx, height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // 5. Playhead Cursor
     if (currentTime >= scrollOffsetSec && currentTime <= scrollOffsetSec + visibleDuration) {
       const playX = ((currentTime - scrollOffsetSec) / visibleDuration) * width;
 
@@ -263,6 +344,9 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     showBaf,
     showDaf,
     showBeats,
+    isLoupeActive,
+    loupeSpan,
+    hoverInfo,
   ]);
 
   // Mini-map Overview Rendering
@@ -303,24 +387,231 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     // Viewport window overlay
     const viewLeft = (scrollOffsetSec / duration) * width;
     const viewWidth = (visibleDuration / duration) * width;
+    const isFrameHighlighted = zoom > 1.01 && (isHoveringViewportBox || minimapDragMode === 'pan');
 
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+    ctx.fillStyle = isFrameHighlighted ? 'rgba(56, 189, 248, 0.24)' : 'rgba(56, 189, 248, 0.15)';
     ctx.fillRect(viewLeft, 0, viewWidth, height);
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = isFrameHighlighted ? '#7dd3fc' : '#38bdf8';
+    ctx.lineWidth = isFrameHighlighted ? 2 : 1.5;
     ctx.strokeRect(viewLeft, 0, viewWidth, height);
+
+    if (zoom > 1.01 && viewWidth >= 12) {
+      const gripH = height * 0.45;
+      const gripY = (height - gripH) / 2;
+      ctx.fillStyle = isFrameHighlighted ? 'rgba(186, 230, 253, 0.85)' : 'rgba(56, 189, 248, 0.65)';
+      ctx.fillRect(viewLeft + 3, gripY, 2, gripH);
+      ctx.fillRect(viewLeft + viewWidth - 5, gripY, 2, gripH);
+    }
 
     // Playhead in minimap
     const playX = (currentTime / duration) * width;
     ctx.fillStyle = '#fbbf24';
     ctx.fillRect(playX - 1, 0, 2, height);
-  }, [result, duration, scrollOffsetSec, visibleDuration, currentTime]);
+  }, [result, duration, scrollOffsetSec, visibleDuration, currentTime, zoom, isHoveringViewportBox, minimapDragMode]);
+
+  // Floating HiDPI Loupe Canvas Rendering
+  const drawLoupeCanvas = useCallback(() => {
+    if (!isLoupeActive || !hoverInfo) return;
+    const canvas = loupeCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = LOUPE_WIDTH_PX;
+    const h = LOUPE_CANVAS_HEIGHT_PX;
+    if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+    }
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    // Background
+    const bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, '#0b1120');
+    bg.addColorStop(1, '#020617');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+
+    const span = Math.min(loupeSpan, duration);
+    const winStart = Math.max(0, Math.min(hoverInfo.time - span / 2, duration - span));
+    const winEnd = winStart + span;
+
+    // Adaptive grid lines depending on loupe window width
+    const step = span <= 4 ? 0.25 : span <= 8 ? 0.5 : 1.0;
+    const majorMod = span <= 8 ? 1.0 : 2.0;
+    const firstTick = Math.ceil(winStart / step) * step;
+    for (let s = firstTick; s <= winEnd; s += step) {
+      const x = ((s - winStart) / span) * w;
+      const rem = Math.abs(s % majorMod);
+      const isMajor = rem < 0.001 || Math.abs(rem - majorMod) < 0.001;
+      ctx.strokeStyle = isMajor ? 'rgba(51, 65, 85, 0.9)' : 'rgba(30, 41, 59, 0.55)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+
+    // Center axis baseline
+    const midY = h * 0.46;
+    const waveAmp = h * 0.38;
+    ctx.strokeStyle = 'rgba(51, 65, 85, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, midY);
+    ctx.lineTo(w, midY);
+    ctx.stroke();
+
+    // Waveform envelope in loupe window
+    const peaks = result.waveformPeaks;
+    const numBuckets = peaks.length / 2;
+    if (numBuckets > 0) {
+      const startBucket = Math.max(0, Math.floor((winStart / duration) * numBuckets) - 1);
+      const endBucket = Math.min(numBuckets, Math.ceil((winEnd / duration) * numBuckets) + 1);
+
+      ctx.strokeStyle = '#38bdf8';
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.28)';
+      ctx.lineWidth = 1.25;
+      ctx.beginPath();
+
+      let started = false;
+      for (let b = startBucket; b < endBucket; b++) {
+        const bTime = (b / numBuckets) * duration;
+        const x = ((bTime - winStart) / span) * w;
+        const y = midY - peaks[b * 2 + 1] * waveAmp;
+        if (!started) {
+          ctx.moveTo(x, y);
+          started = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      for (let b = endBucket - 1; b >= startBucket; b--) {
+        const bTime = (b / numBuckets) * duration;
+        const x = ((bTime - winStart) / span) * w;
+        const y = midY - peaks[b * 2] * waveAmp;
+        ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Activation curves in loupe
+    const actCurve = result.activationCurve;
+    const actBaseY = h * 0.92;
+    const actHeight = h * 0.30;
+
+    if (showBaf && actCurve.length > 0) {
+      ctx.strokeStyle = 'rgba(34, 211, 238, 0.9)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      let first = true;
+      for (let i = 0; i < actCurve.length; i++) {
+        const pt = actCurve[i];
+        if (pt.time < winStart - 0.1) continue;
+        if (pt.time > winEnd + 0.1) break;
+        const x = ((pt.time - winStart) / span) * w;
+        const y = actBaseY - pt.beatActivation * actHeight;
+        if (first) {
+          ctx.moveTo(x, y);
+          first = false;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+    }
+
+    if (showDaf && actCurve.length > 0) {
+      ctx.strokeStyle = 'rgba(244, 63, 94, 0.9)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      let first = true;
+      for (let i = 0; i < actCurve.length; i++) {
+        const pt = actCurve[i];
+        if (pt.downbeatActivation === null) continue;
+        if (pt.time < winStart - 0.1) continue;
+        if (pt.time > winEnd + 0.1) break;
+        const x = ((pt.time - winStart) / span) * w;
+        const y = actBaseY - pt.downbeatActivation * actHeight;
+        if (first) {
+          ctx.moveTo(x, y);
+          first = false;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+    }
+
+    // Beats & Downbeats in loupe
+    if (showBeats) {
+      result.beats.forEach((b) => {
+        if (b.time < winStart - 0.05 || b.time > winEnd + 0.05) return;
+        const x = ((b.time - winStart) / span) * w;
+        if (b.isDownbeat) {
+          ctx.strokeStyle = '#f43f5e';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, h);
+          ctx.stroke();
+
+          ctx.fillStyle = '#f43f5e';
+          ctx.fillRect(x, 0, 38, 13);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 9px Inter, sans-serif';
+          ctx.fillText(`T${b.barIndex}`, x + 3, 10);
+        } else {
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x, 10);
+          ctx.lineTo(x, h);
+          ctx.stroke();
+
+          if (span <= 8) {
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '9px Inter, monospace';
+            ctx.fillText(`${b.beatInBar}`, x + 2, 19);
+          }
+        }
+      });
+    }
+
+    // Playhead inside loupe window
+    if (currentTime >= winStart && currentTime <= winEnd) {
+      const playX = ((currentTime - winStart) / span) * w;
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(playX, 0);
+      ctx.lineTo(playX, h);
+      ctx.stroke();
+    }
+
+    // Exact hovered cursor reticle
+    const cursorX = ((hoverInfo.time - winStart) / span) * w;
+    ctx.strokeStyle = 'rgba(248, 250, 252, 0.85)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cursorX, 0);
+    ctx.lineTo(cursorX, h);
+    ctx.stroke();
+  }, [isLoupeActive, loupeSpan, hoverInfo, duration, result, showBaf, showDaf, showBeats, currentTime]);
 
   // Resize listener
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current && canvasRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
+        setContainerWidth(rect.width);
         canvasRef.current.width = rect.width * window.devicePixelRatio;
         canvasRef.current.height = 240 * window.devicePixelRatio;
         canvasRef.current.style.width = `${rect.width}px`;
@@ -346,7 +637,8 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   useEffect(() => {
     drawMainCanvas();
     drawMinimap();
-  }, [drawMainCanvas, drawMinimap]);
+    drawLoupeCanvas();
+  }, [drawMainCanvas, drawMinimap, drawLoupeCanvas]);
 
   // Mouse seeking & dragging
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -403,19 +695,90 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     onSeek(targetTime);
   };
 
-  const handleMinimapClick = (e: React.MouseEvent<HTMLElement>) => {
+  const isInsideViewportHitArea = useCallback(
+    (clientX: number): boolean => {
+      if (zoom <= 1.01) return false;
+      const rect = minimapCanvasRef.current?.getBoundingClientRect();
+      if (!rect || rect.width <= 0) return false;
+      const x = clientX - rect.left;
+      const boxLeft = (scrollOffsetSec / duration) * rect.width;
+      const boxWidth = (visibleDuration / duration) * rect.width;
+      const boxCenter = boxLeft + boxWidth / 2;
+      const hitHalf = Math.max(10, boxWidth / 2 + 4);
+      return Math.abs(x - boxCenter) <= hitHalf;
+    },
+    [zoom, scrollOffsetSec, duration, visibleDuration]
+  );
+
+  const handleMinimapMouseDown = (e: React.MouseEvent<HTMLElement>) => {
+    e.preventDefault();
     const rect = minimapCanvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    if (!rect || rect.width <= 0) return;
+
+    if (isInsideViewportHitArea(e.clientX)) {
+      minimapDragStartRef.current = { startX: e.clientX, startOffsetSec: scrollOffsetSec };
+      setMinimapDragMode('pan');
+      return;
+    }
+
     const x = e.clientX - rect.left;
     const frac = Math.max(0, Math.min(1, x / rect.width));
     const centerTime = frac * duration;
     const newOffset = Math.max(0, Math.min(centerTime - visibleDuration / 2, duration - visibleDuration));
     setScrollOffsetSec(newOffset);
     onSeek(centerTime);
+    setMinimapDragMode('seek');
   };
 
+  const handleMinimapHoverMove = (e: React.MouseEvent<HTMLElement>) => {
+    if (minimapDragMode !== 'none') return;
+    setIsHoveringViewportBox(isInsideViewportHitArea(e.clientX));
+  };
+
+  useEffect(() => {
+    if (minimapDragMode === 'none') return;
+
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      const rect = minimapCanvasRef.current?.getBoundingClientRect();
+      if (!rect || rect.width <= 0) return;
+
+      if (minimapDragMode === 'pan' && minimapDragStartRef.current) {
+        const deltaPx = e.clientX - minimapDragStartRef.current.startX;
+        const deltaSec = (deltaPx / rect.width) * duration;
+        const maxOffset = Math.max(0, duration - visibleDuration);
+        const clampedOffset = Math.max(
+          0,
+          Math.min(minimapDragStartRef.current.startOffsetSec + deltaSec, maxOffset)
+        );
+        setScrollOffsetSec(clampedOffset);
+      } else if (minimapDragMode === 'seek') {
+        const x = e.clientX - rect.left;
+        const frac = Math.max(0, Math.min(1, x / rect.width));
+        const centerTime = frac * duration;
+        const newOffset = Math.max(
+          0,
+          Math.min(centerTime - visibleDuration / 2, Math.max(0, duration - visibleDuration))
+        );
+        setScrollOffsetSec(newOffset);
+        onSeek(centerTime);
+      }
+    };
+
+    const handleWindowMouseUp = () => {
+      minimapDragStartRef.current = null;
+      setMinimapDragMode('none');
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [minimapDragMode, duration, visibleDuration, onSeek]);
+
   const handleZoom = (factor: number) => {
-    const nextZoom = Math.max(1.0, Math.min(16.0, zoom * factor));
+    const nextZoom = Math.max(1.0, Math.min(maxZoom, zoom * factor));
     const centerTime = scrollOffsetSec + visibleDuration / 2;
     const nextVisibleDur = duration / nextZoom;
     const nextOffset = Math.max(0, Math.min(centerTime - nextVisibleDur / 2, duration - nextVisibleDur));
@@ -423,10 +786,33 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     setScrollOffsetSec(nextOffset);
   };
 
+  const handleZoomTo20s = () => {
+    if (duration <= QUICK_WINDOW_SEC) return;
+    if (is20sActive) {
+      handleResetZoom();
+      return;
+    }
+    const targetZoom = Math.min(maxZoom, duration / QUICK_WINDOW_SEC);
+    const nextVisibleDur = duration / targetZoom;
+    const nextOffset = Math.max(0, Math.min(currentTime - nextVisibleDur / 2, duration - nextVisibleDur));
+    setZoom(targetZoom);
+    setScrollOffsetSec(nextOffset);
+  };
+
   const handleResetZoom = () => {
     setZoom(1.0);
     setScrollOffsetSec(0);
   };
+
+  // Compute clamped floating loupe coordinates inside 240px container
+  const loupeLeftPx = hoverInfo
+    ? Math.max(8, Math.min(hoverInfo.x - LOUPE_WIDTH_PX / 2, Math.max(8, containerWidth - LOUPE_WIDTH_PX - 8)))
+    : 8;
+  const loupeTopPx = hoverInfo
+    ? hoverInfo.y >= 120
+      ? Math.max(8, hoverInfo.y - LOUPE_TOTAL_HEIGHT_PX - 12)
+      : Math.min(240 - LOUPE_TOTAL_HEIGHT_PX - 8, hoverInfo.y + 14)
+    : 8;
 
   return (
     <div className="space-y-3">
@@ -449,12 +835,13 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Curve Toggles */}
           <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg p-1 text-xs">
             <button
+              type="button"
               onClick={() => setShowBeats(!showBeats)}
-              className={`px-2 py-0.5 rounded flex items-center gap-1 transition-colors ${
+              className={`px-2 py-0.5 rounded flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                 showBeats ? 'bg-cyan-900/60 text-cyan-300' : 'text-slate-500 hover:text-slate-300'
               }`}
               title="Beat- & Downbeat-Linien umschalten"
@@ -462,51 +849,113 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
               <span>Beats</span>
             </button>
             <button
+              type="button"
               onClick={() => setShowBaf(!showBaf)}
-              className={`px-2 py-0.5 rounded flex items-center gap-1 transition-colors ${
+              className={`px-2 py-0.5 rounded flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                 showBaf ? 'bg-cyan-900/60 text-cyan-300' : 'text-slate-500 hover:text-slate-300'
               }`}
-              title="Beat Activation Function (BAF)"
+              title={bafTooltip}
             >
               <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
               <span>BAF</span>
             </button>
-            <button
-              onClick={() => setShowDaf(!showDaf)}
-              className={`px-2 py-0.5 rounded flex items-center gap-1 transition-colors ${
-                showDaf ? 'bg-rose-900/60 text-rose-300' : 'text-slate-500 hover:text-slate-300'
-              }`}
-              title="Downbeat Activation Function (DAF)"
-            >
-              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-              <span>DAF</span>
-            </button>
+            <span title={dafTooltip} className="inline-flex">
+              <button
+                type="button"
+                onClick={() => setShowDaf(!showDaf)}
+                disabled={!hasDafCurve}
+                aria-pressed={hasDafCurve && showDaf}
+                className={`px-2 py-0.5 rounded flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
+                  !hasDafCurve
+                    ? 'text-slate-600 opacity-50 cursor-not-allowed'
+                    : showDaf
+                    ? 'bg-rose-900/60 text-rose-300 cursor-pointer'
+                    : 'text-slate-500 hover:text-slate-300 cursor-pointer'
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    hasDafCurve ? 'bg-rose-500' : 'bg-slate-600'
+                  }`}
+                ></span>
+                <span>DAF</span>
+              </button>
+            </span>
           </div>
+
+          {/* Loupe Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsLoupeEnabled((prev) => !prev)}
+            disabled={!isLoupeApplicable && !isLoupeEnabled}
+            aria-pressed={isLoupeActive}
+            className={`px-2.5 py-1 rounded-lg border text-xs font-medium flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
+              isLoupeActive
+                ? 'bg-cyan-950/90 border-cyan-600/80 text-cyan-200 shadow-sm shadow-cyan-500/20'
+                : isLoupeEnabled && !isLoupeApplicable
+                ? 'bg-slate-900/70 border-slate-700 text-slate-400'
+                : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+            }`}
+            title={
+              !isLoupeApplicable
+                ? isLoupeEnabled
+                  ? `Lupe in Detailansicht (< ${LOUPE_MIN_VISIBLE_SEC}s) pausiert – wird beim Rauszoomen wieder aktiv (Klick zum Deaktivieren)`
+                  : `Lupe nur bei Übersichts-Zoom (ab ${LOUPE_MIN_VISIBLE_SEC}s Sichtbereich) aktiv`
+                : `Detail-Lupe (~${opticalMagnification.toFixed(0)}× / ${loupeSpan.toFixed(1)}s) beim Überfahren aktivieren`
+            }
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Lupe</span>
+          </button>
 
           {/* Zoom controls */}
           <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
             <button
+              type="button"
               onClick={() => handleZoom(0.7)}
               disabled={zoom <= 1.0}
-              className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 cursor-pointer"
+              className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 cursor-pointer shrink-0"
               title="Verkleinern"
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
-            <span className="text-[11px] font-mono text-slate-400 px-1 min-w-[32px] text-center">
+            <span className="text-[11px] font-mono tabular-nums text-slate-400 px-1 min-w-[38px] text-center whitespace-nowrap shrink-0">
               {zoom.toFixed(1)}x
             </span>
             <button
+              type="button"
               onClick={() => handleZoom(1.4)}
-              disabled={zoom >= 16.0}
-              className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 cursor-pointer"
+              disabled={zoom >= maxZoom}
+              className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 cursor-pointer shrink-0"
               title="Vergrößern (Detailansicht)"
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
+            <div className="w-px h-3.5 bg-slate-800 mx-0.5 shrink-0" aria-hidden="true" />
             <button
+              type="button"
+              onClick={handleZoomTo20s}
+              disabled={duration <= QUICK_WINDOW_SEC}
+              aria-pressed={is20sActive}
+              className={`px-2 py-0.5 rounded text-[11px] font-mono tabular-nums font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
+                is20sActive
+                  ? 'bg-cyan-900/70 text-cyan-200 border border-cyan-700/70'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+              title={
+                duration <= QUICK_WINDOW_SEC
+                  ? 'Track ist kürzer als 20 Sekunden'
+                  : is20sActive
+                  ? 'Zurück zur Gesamtansicht'
+                  : '20-Sekunden-Detailansicht um Playhead zentrieren'
+              }
+            >
+              20s
+            </button>
+            <button
+              type="button"
               onClick={handleResetZoom}
-              className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer shrink-0"
               title="Ganze Datei anzeigen"
             >
               <Maximize2 className="w-3.5 h-3.5" />
@@ -529,13 +978,48 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
           className="block w-full h-[240px]"
         />
 
-        {/* Hover Tooltip */}
-        {hoverInfo && (
+        {/* Floating HiDPI Waveform Loupe */}
+        {isLoupeActive && hoverInfo && (
+          <div
+            className="absolute pointer-events-none z-30 rounded-lg border border-cyan-500/60 bg-slate-950/95 shadow-2xl shadow-black/70 backdrop-blur-md overflow-hidden"
+            style={{
+              left: `${loupeLeftPx}px`,
+              top: `${loupeTopPx}px`,
+              width: `${LOUPE_WIDTH_PX}px`,
+            }}
+          >
+            <div className="flex items-center justify-between gap-2 px-2 py-1 bg-slate-900/95 border-b border-slate-800 text-[10px]">
+              <span className="font-mono tabular-nums font-semibold text-cyan-300 whitespace-nowrap">
+                {formatLoupeTime(hoverInfo.time)}
+              </span>
+              {hoverInfo.beat ? (
+                <span
+                  className={`truncate font-medium ${
+                    hoverInfo.beat.isDownbeat ? 'text-rose-400' : 'text-slate-300'
+                  }`}
+                >
+                  {hoverInfo.beat.isDownbeat
+                    ? `Takt ${hoverInfo.beat.barIndex} · Downbeat`
+                    : `Takt ${hoverInfo.beat.barIndex} · Beat ${hoverInfo.beat.beatInBar}`}
+                </span>
+              ) : (
+                <span className="text-slate-400 truncate">Detail-Lupe</span>
+              )}
+              <span className="font-mono tabular-nums text-cyan-400/90 whitespace-nowrap shrink-0">
+                {opticalMagnification.toFixed(1)}× · {loupeSpan.toFixed(1)}s
+              </span>
+            </div>
+            <canvas ref={loupeCanvasRef} className="block" />
+          </div>
+        )}
+
+        {/* Standard Hover Tooltip (shown when loupe is off or paused in detail view) */}
+        {!isLoupeActive && hoverInfo && (
           <div
             className="absolute pointer-events-none z-30 px-2.5 py-1.5 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl text-xs text-white backdrop-blur-md -translate-x-1/2 -translate-y-full mb-2"
             style={{ left: `${hoverInfo.x}px`, top: `${Math.max(30, hoverInfo.y)}px` }}
           >
-            <div className="font-mono font-semibold text-cyan-300">
+            <div className="font-mono tabular-nums font-semibold text-cyan-300">
               {hoverInfo.time.toFixed(3)}s
             </div>
             {hoverInfo.beat && (
@@ -549,7 +1033,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
                     Takt {hoverInfo.beat.barIndex} • Beat {hoverInfo.beat.beatInBar}
                   </span>
                 )}
-                <span className="ml-1.5 text-slate-400 font-mono">
+                <span className="ml-1.5 text-slate-400 font-mono tabular-nums">
                   ({hoverInfo.beat.instantBpm.toFixed(0)} BPM)
                 </span>
               </div>
@@ -562,11 +1046,23 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       <div className="space-y-1">
         <div className="flex justify-between text-[10px] text-slate-500 font-mono px-0.5">
           <span>Übersicht & Navigation</span>
-          <span>Klick zum direkten Vor-/Zurückspringen</span>
+          <span>
+            {zoom > 1.01
+              ? 'Blauen Rahmen ziehen zum Verschieben · Klick außerhalb springt'
+              : 'Klick zum direkten Vor-/Zurückspringen'}
+          </span>
         </div>
         <div
-          className="relative rounded-lg border border-slate-800 overflow-hidden bg-slate-950 cursor-pointer h-9 shadow-inner"
-          onClick={handleMinimapClick}
+          className={`relative rounded-lg border border-slate-800 overflow-hidden bg-slate-950 h-9 shadow-inner select-none ${
+            minimapDragMode === 'pan'
+              ? 'cursor-grabbing'
+              : isHoveringViewportBox
+              ? 'cursor-grab'
+              : 'cursor-pointer'
+          }`}
+          onMouseDown={handleMinimapMouseDown}
+          onMouseMove={handleMinimapHoverMove}
+          onMouseLeave={() => setIsHoveringViewportBox(false)}
         >
           <canvas ref={minimapCanvasRef} className="block w-full h-9" />
         </div>

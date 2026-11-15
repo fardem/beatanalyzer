@@ -1,8 +1,9 @@
-import { AnalysisResult, AudioMetadata, BeatItem, ActivationPoint } from '../types/analyzer';
+import { AnalysisModel, AnalysisResult, AudioMetadata, BeatItem, ActivationPoint } from '../types/analyzer';
 
 /**
  * Advanced Music Beat & Downbeat Analyzer
  * Modeled on CPJKU beat_this (Beat & Downbeat Tracking with Transformers)
+ * and fosfrancesco/md_beat_this (Masked Diffusion Beat Tracking, CC BY-NC 4.0)
  * Computes Beat Activation Functions (BAF), Downbeat Activation Functions (DAF),
  * Dynamic Tempo Curves, Meter/Time Signature Estimation, and Waveform Peaks.
  */
@@ -13,8 +14,16 @@ export async function analyzeAudioFile(
   onProgress?: (progress: number, stage: string) => void,
   // requireServer: no silent fallback to the browser analysis (re-analysis of a server result)
   // protect: protection of clear "1"s for the smoothing (0.5 ... 1); audioBuffer: already decoded, skip decoding
-  options: { smoothBars?: boolean; requireServer?: boolean; protect?: number; audioBuffer?: AudioBuffer } = {}
+  options: {
+    smoothBars?: boolean;
+    requireServer?: boolean;
+    protect?: number;
+    audioBuffer?: AudioBuffer;
+    model?: AnalysisModel;
+  } = {}
 ): Promise<{ result: AnalysisResult; audioBuffer: AudioBuffer }> {
+  const model: AnalysisModel = options.model === 'md_beat_this' ? 'md_beat_this' : 'beat_this';
+  const modelLabel = model === 'md_beat_this' ? 'Masked Diffusion md_beat_this' : 'CPJKU beat_this';
   let audioBuffer: AudioBuffer;
   try {
     if (options.audioBuffer) {
@@ -41,19 +50,20 @@ export async function analyzeAudioFile(
   onProgress?.(30, 'Generiere Wellenform-Daten...');
   const waveformPeaks = extractWaveformPeaks(audioBuffer, 2400);
 
-  // Prüfe, ob das lokale Python CPJKU beat_this Backend aktiv ist (z.B. via install_and_run.bat)
+  // Prüfe, ob das lokale Python Backend aktiv ist (z.B. via install_and_run.bat)
   let pythonResult: AnalysisResult | null = null;
   try {
     const healthCheck = await fetch('/api/health', { signal: AbortSignal.timeout(800) });
     if (healthCheck.ok) {
-      onProgress?.(40, 'Verbinde mit lokaler Python CPJKU beat_this Engine...');
+      onProgress?.(40, `Verbinde mit lokaler Python ${modelLabel} Engine...`);
       const formData = new FormData();
       formData.append('audio', file, fileName);
 
-      onProgress?.(65, 'Führe CPJKU beat_this Transformer Inferenz aus...');
+      onProgress?.(65, `Führe ${modelLabel} Inferenz aus...`);
       const params = new URLSearchParams();
       if (options.smoothBars === false) params.set('smoothBars', '0');
       if (options.protect !== undefined) params.set('protect', String(options.protect));
+      if (model !== 'beat_this') params.set('model', model);
       const url = params.toString() ? `/api/analyze?${params}` : '/api/analyze';
       const apiResp = await fetch(url, { method: 'POST', body: formData });
       if (apiResp.ok) {
@@ -63,6 +73,7 @@ export async function analyzeAudioFile(
 
         pythonResult = {
           ...data,
+          selectedModel: data.selectedModel ?? model,
           waveformPeaks: peaks.length > 0 ? peaks : waveformPeaks,
         };
       } else if (options.requireServer) {
@@ -78,7 +89,7 @@ export async function analyzeAudioFile(
   }
 
   if (pythonResult) {
-    onProgress?.(100, 'Analyse via CPJKU beat_this erfolgreich abgeschlossen!');
+    onProgress?.(100, `Analyse via ${modelLabel} erfolgreich abgeschlossen!`);
     return { result: pythonResult, audioBuffer };
   }
 
@@ -137,6 +148,9 @@ export async function analyzeAudioFile(
   onProgress?.(100, 'Analyse erfolgreich abgeschlossen!');
 
   const result: AnalysisResult = {
+    engine: model === 'md_beat_this' ? 'Browser MIR (Fallback für md_beat_this)' : 'Browser MIR (Fallback)',
+    engineInfo: { id: 'librosa', device: null, gpu: null, fallbackReason: 'not_installed' },
+    selectedModel: model,
     metadata,
     beats,
     downbeats,

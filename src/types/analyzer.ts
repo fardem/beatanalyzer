@@ -24,8 +24,10 @@ export interface AudioMetadata {
   format: string;
 }
 
+export type AnalysisModel = 'beat_this' | 'md_beat_this';
+
 export interface EngineInfo {
-  id: 'beat_this' | 'librosa';
+  id: 'beat_this' | 'md_beat_this' | 'librosa';
   device: 'cuda' | 'cpu' | null;
   gpu: string | null;
   fallbackReason: 'not_installed' | 'model_load_failed' | 'inference_failed' | 'analyzer_failed' | null;
@@ -42,8 +44,11 @@ export interface BarSmoothing {
 export interface AnalysisResult {
   engine?: string;
   engineInfo?: EngineInfo;
+  selectedModel?: AnalysisModel;
+  license?: string;
+  attribution?: string;
   barSmoothing?: BarSmoothing;
-  activationSource?: 'beat_this' | 'onset'; // beat_this probabilities or librosa/browser onset strength
+  activationSource?: 'beat_this' | 'md_beat_this' | 'onset'; // model probabilities or librosa/browser onset strength
   metadata: AudioMetadata;
   beats: BeatItem[];
   downbeats: BeatItem[];

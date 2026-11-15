@@ -51,7 +51,7 @@ class AnalyzerTests(unittest.TestCase):
         write_click_track(self.wav)
 
     def tearDown(self):
-        for name in ("beat_this", "beat_this.inference", "analyzer"):
+        for name in ("beat_this", "beat_this.inference", "md_beat_this", "md_beat_this.inference", "analyzer"):
             sys.modules.pop(name, None)
 
     def test_fallback_without_beat_this(self):
@@ -331,6 +331,95 @@ class AnalyzerTests(unittest.TestCase):
         self.assertEqual(self.analyzer.resolve_marker_data(result)["engine"], result["engineInfo"])
         del result["engineInfo"]
         self.assertNotIn("engine", self.analyzer.resolve_marker_data(result))
+
+    # --- md_beat_this (Non-Commercial) -------------------------------------------------------------
+
+    def test_md_beat_this_model_selection(self):
+        calls = {}
+        beats = np.arange(0.5, 12.0, 0.5)
+
+        class FakeMdAudio2Beats:
+            def __init__(self, checkpoint_path="run1", device="cpu"):
+                calls["init"] = dict(checkpoint_path=checkpoint_path, device=device)
+
+            def __call__(self, signal, sr):
+                calls["calls"] = calls.get("calls", 0) + 1
+                calls["sr"] = sr
+                return beats, beats[::4]
+
+        fake_md = types.ModuleType("md_beat_this.inference")
+        fake_md.Audio2Beats = FakeMdAudio2Beats
+        pkg = types.ModuleType("md_beat_this")
+        pkg.inference = fake_md
+        sys.modules["md_beat_this"] = pkg
+        sys.modules["md_beat_this.inference"] = fake_md
+        sys.modules["beat_this"] = None
+
+        torch_stub_needed = "torch" not in sys.modules
+        if torch_stub_needed:
+            torch_stub = types.ModuleType("torch")
+            torch_stub.cuda = types.SimpleNamespace(is_available=lambda: False)
+            sys.modules["torch"] = torch_stub
+        try:
+            sys.modules.pop("analyzer", None)
+            analyzer = importlib.import_module("analyzer")
+            self.assertTrue(analyzer.MD_BEAT_THIS_AVAILABLE)
+            self.assertEqual(analyzer.engine_status("md_beat_this")["id"], "md_beat_this")
+
+            result = analyzer.analyze_audio_file(self.wav, "click.wav", model="md_beat_this")
+            self.assertEqual(result["engine"], "Masked Diffusion md_beat_this (Non-Commercial)")
+            self.assertEqual(result["engineInfo"]["id"], "md_beat_this")
+            self.assertEqual(result["selectedModel"], "md_beat_this")
+            self.assertEqual(calls["init"]["checkpoint_path"], "run1")
+            self.assertEqual(result["totalBeats"], 23)
+            self.assertEqual(result["timeSignature"]["barShare"], 100)
+            self.assertEqual(result["license"], "CC BY-NC 4.0")
+            self.assertIn("fosfrancesco/md_beat_this", result["attribution"])
+            marker_json = analyzer.resolve_marker_data(result)
+            self.assertEqual(marker_json["license"], "CC BY-NC 4.0")
+            self.assertIn("CC BY-NC 4.0", marker_json["attribution"])
+        finally:
+            if torch_stub_needed:
+                sys.modules.pop("torch", None)
+
+    def test_md_beat_this_fallback_when_not_installed(self):
+        sys.modules["beat_this"] = None
+        sys.modules["md_beat_this"] = None
+        sys.modules.pop("analyzer", None)
+        analyzer = importlib.import_module("analyzer")
+        self.assertFalse(analyzer.MD_BEAT_THIS_AVAILABLE)
+        self.assertEqual(analyzer.engine_status("md_beat_this")["fallbackReason"], "not_installed")
+
+        result = analyzer.analyze_audio_file(self.wav, "click.wav", model="md_beat_this")
+        self.assertEqual(result["engineInfo"]["id"], "librosa")
+        self.assertEqual(result["engineInfo"]["fallbackReason"], "not_installed")
+        self.assertEqual(result["selectedModel"], "md_beat_this")
+
+    def test_cache_separates_beat_this_and_md_beat_this(self):
+        calls = {}
+        md_beats = np.arange(0.6, 12.0, 0.5)
+
+        class FakeMdAudio2Beats:
+            def __init__(self, checkpoint_path="run1", device="cpu"):
+                pass
+
+            def __call__(self, signal, sr):
+                calls["md"] = calls.get("md", 0) + 1
+                return md_beats, md_beats[::4]
+
+        fake_md = types.ModuleType("md_beat_this.inference")
+        fake_md.Audio2Beats = FakeMdAudio2Beats
+        pkg = types.ModuleType("md_beat_this")
+        pkg.inference = fake_md
+        sys.modules["md_beat_this"] = pkg
+        sys.modules["md_beat_this.inference"] = fake_md
+
+        first = self.analyze_with_fake(calls=calls)
+        second = self.analyzer.analyze_audio_file(self.wav, "click.wav", model="md_beat_this")
+        self.assertEqual(first["selectedModel"], "beat_this")
+        self.assertEqual(second["selectedModel"], "md_beat_this")
+        self.assertEqual(calls["md"], 1)
+        self.assertNotEqual(first["beats"][0]["time"], second["beats"][0]["time"])
 
 
 if __name__ == "__main__":

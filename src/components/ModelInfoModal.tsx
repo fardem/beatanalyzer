@@ -29,7 +29,7 @@ export const ModelInfoModal: React.FC<ModelInfoModalProps> = ({ onClose }) => {
           <div className="p-4 rounded-xl bg-cyan-950/30 border border-cyan-800/50 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">
-                Forschung & Publikation
+                Standard-Modell · MIT-Lizenz
               </span>
               <a
                 href="https://github.com/CPJKU/beat_this"
@@ -46,7 +46,41 @@ export const ModelInfoModal: React.FC<ModelInfoModalProps> = ({ onClose }) => {
             </h3>
             <p className="text-slate-400">
               Entwickelt an der <strong>Johannes Kepler Universität Linz (CP JKU)</strong> von
-              Florian Schmid, Shahed Masoudian, Khaled Koutini und Gerhard Widmer.
+              Florian Schmid, Shahed Masoudian, Khaled Koutini und Gerhard Widmer. Kommerziell &amp; privat nutzbar.
+            </p>
+          </div>
+
+          {/* Optional Non-Commercial Model: md_beat_this */}
+          <div className="p-4 rounded-xl bg-amber-950/25 border border-amber-700/50 space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                Optionales Modell · Nur nicht-kommerziell (CC BY-NC 4.0)
+              </span>
+              <a
+                href="https://github.com/fosfrancesco/md_beat_this/blob/main/README.md#installation"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[11px] text-amber-300 hover:text-white font-medium underline"
+              >
+                <span>GitHub Installation</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+            <h3 className="text-sm font-bold text-white">
+              Masked Diffusion Enables Coherent Beat Tracking (md_beat_this)
+            </h3>
+            <p className="text-slate-300">
+              Von Francesco Foscarin, Filip Korzeniowski und Richard Vogl (ISMIR 2026).{' '}
+              <strong className="text-amber-300">
+                Darf ausschließlich bei nicht-kommerzieller Nutzung mit Namensnennung verwendet werden
+              </strong>{' '}
+              (Lizenz: CC BY-NC 4.0). BeatAnalyzer enthält weder Code noch Modellgewichte von{' '}
+              <code className="font-mono">md_beat_this</code>; manuelle Installation in deiner{' '}
+              <code className="font-mono">venv</code>-Umgebung über{' '}
+              <code className="text-cyan-300 font-mono bg-slate-950 px-1.5 py-0.5 rounded">
+                venv\Scripts\pip install https://github.com/fosfrancesco/md_beat_this/archive/main.zip
+              </code>{' '}
+              (Linux/macOS: <code className="font-mono">venv/bin/pip</code>; benötigt PyTorch &amp; ffmpeg).
             </p>
           </div>
 

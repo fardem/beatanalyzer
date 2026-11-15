@@ -20,6 +20,7 @@ modules_to_test = [
     ("PyTorch", "torch"),
     ("Torchaudio", "torchaudio"),
     ("CPJKU beat_this", "beat_this"),
+    ("Masked Diffusion md_beat_this (Non-Commercial)", "md_beat_this"),
 ]
 
 print("\n--- Modul-Status ---")
