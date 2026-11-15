@@ -39,17 +39,17 @@ try:
     # voraussetzt (unter Windows meist nicht vorhanden -> MP3/AAC schlagen fehl).
     from beat_this.inference import Audio2Beats
     BEAT_THIS_AVAILABLE = True
-    print("[BeatAnalyzer Backend] CPJKU beat_this Transformer-Bibliothek erfolgreich geladen!")
+    print("[BeatAnalyzer Backend] CPJKU beat_this loaded.")
 except Exception as e:
-    print(f"[BeatAnalyzer Backend] Hinweis: CPJKU beat_this direkt nicht verfügbar ({e}). Verwende High-Performance MIR-Fallback.")
+    print(f"[BeatAnalyzer Backend] Note: CPJKU beat_this not available ({e}). Using the librosa fallback.")
 
 try:
     # Optionales Modell (CC BY-NC 4.0, nur nicht-kommerzielle Nutzung): fosfrancesco/md_beat_this
     from md_beat_this.inference import Audio2Beats as MdAudio2Beats
     MD_BEAT_THIS_AVAILABLE = True
-    print("[BeatAnalyzer Backend] Masked Diffusion md_beat_this (Non-Commercial) erfolgreich geladen!")
+    print("[BeatAnalyzer Backend] Masked Diffusion md_beat_this (non-commercial) loaded.")
 except Exception as e:
-    print(f"[BeatAnalyzer Backend] Hinweis: md_beat_this nicht installiert ({e}).")
+    print(f"[BeatAnalyzer Backend] Note: md_beat_this not installed ({e}).")
 
 
 def normalize_model(value: Any) -> str:
@@ -69,14 +69,14 @@ def get_predictor():
             # 'final0' ist das offizielle Standard-Checkpoint-Modell von CPJKU
             predictor_instance = Audio2Beats(checkpoint_path="final0", device=device)
             MODEL_LOAD_FAILED, PREDICTOR_DEVICE = False, device
-            print("[BeatAnalyzer Backend] Modell bereit für Inferenz.")
+            print("[BeatAnalyzer Backend] Model ready.")
         except Exception as err:
             try:   # beat_this hides the real reason of a failed download; never let this stop the fallback
                 from model_check import cause_of
                 cause = cause_of(err)
             except Exception:
                 cause = "?"
-            print(f"[BeatAnalyzer Backend] Fehler beim Laden des Modells: {err} - Ursache: {cause}")
+            print(f"[BeatAnalyzer Backend] Error loading the model: {err} - cause: {cause}")
             predictor_instance = None
             MODEL_LOAD_FAILED = True
     return predictor_instance
@@ -103,9 +103,9 @@ def get_md_predictor():
             print(f"[BeatAnalyzer Backend] Initialisiere md_beat_this Audio2Beats (Non-Commercial) auf Device: {device}...")
             md_predictor_instance = MdAudio2Beats(checkpoint_path="run1", device=device)
             MD_MODEL_LOAD_FAILED, MD_PREDICTOR_DEVICE = False, device
-            print("[BeatAnalyzer Backend] md_beat_this Modell bereit für Inferenz.")
+            print("[BeatAnalyzer Backend] md_beat_this model ready.")
         except Exception as err:
-            print(f"[BeatAnalyzer Backend] Fehler beim Laden von md_beat_this: {err}")
+            print(f"[BeatAnalyzer Backend] Error loading md_beat_this: {err}")
             md_predictor_instance = None
             MD_MODEL_LOAD_FAILED = True
     return md_predictor_instance
@@ -191,7 +191,7 @@ def decode_with_ffmpeg(file_path: str, target_sr: int):
     import subprocess
     status = ffmpeg_utils.apply_ffmpeg_dir(settings.load().get("ffmpegDir"))
     if not status["available"]:
-        raise RuntimeError("kein ffmpeg gefunden")
+        raise RuntimeError("no ffmpeg found")
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     proc = subprocess.run([status["path"], "-v", "error", "-nostdin", "-i", file_path, "-map", "0:a:0",
                            "-f", "f32le", "-ac", "1", "-ar", str(target_sr), "-"],
@@ -216,7 +216,7 @@ def load_audio_safely(file_path: str, target_sr: int = 44100):
                 return decode_with_ffmpeg(file_path, target_sr)
             except Exception as ff_err:
                 raise RuntimeError(
-                    f"Format von {os.path.basename(file_path)} nicht lesbar ({sf_err}; {ff_err}). "
+                    f"Cannot read the format of {os.path.basename(file_path)} ({sf_err}; {ff_err}). "
                     "PyAV installieren (venv: pip install av) oder ffmpeg einrichten.") from ff_err
     if sr != target_sr:
         mono = librosa.resample(np.asarray(mono, dtype=np.float32), orig_sr=sr, target_sr=target_sr)
@@ -415,16 +415,16 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
 
     if predictor is not None and cached_model is not None:
         model_cache = cached_model
-        print(f"[BeatAnalyzer Backend] Ergebnis von {model_id} aus dem Speicher (nur Glättung neu): {original_filename}")
+        print(f"[BeatAnalyzer Backend] Result of {model_id} from memory (only smoothing recomputed): {original_filename}")
         beats_sec, downbeats_sec, beat_prob, downbeat_prob = list(model_cache[0]), list(model_cache[1]), model_cache[2], model_cache[3]
     elif predictor is not None:
         try:
-            print(f"[BeatAnalyzer Backend] Starte {model_id} Inferenz für: {original_filename}")
+            print(f"[BeatAnalyzer Backend] Running {model_id} on: {original_filename}")
             beats_sec, downbeats_sec, beat_prob, downbeat_prob = runner(predictor, y, sr)
             model_cache = (list(beats_sec), list(downbeats_sec), beat_prob, downbeat_prob)
         except Exception as e:
             beat_prob = downbeat_prob = None
-            print(f"[BeatAnalyzer Backend] Fehler bei {model_id}-Inferenz, wechsle auf Fallback: {e}")
+            print(f"[BeatAnalyzer Backend] {model_id} failed, switching to the fallback: {e}")
             info = engine_info("librosa", "inference_failed")
             beats_sec, downbeats_sec = fallback_mir_track(y, sr)
     else:

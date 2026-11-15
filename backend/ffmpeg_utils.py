@@ -81,14 +81,14 @@ def verify_ffmpeg_executable(exe_path: str) -> Tuple[bool, str]:
             timeout=5,
         )
     except OSError as err:
-        return False, f"ffmpeg ist nicht ausführbar ({err})."
+        return False, f"ffmpeg cannot be run ({err})."
     except subprocess.TimeoutExpired:
-        return False, "ffmpeg hat bei der Prüfung nicht rechtzeitig geantwortet."
+        return False, "ffmpeg did not answer in time during the check."
 
     if proc.returncode != 0:
         detail = (proc.stderr or proc.stdout or "").strip().splitlines()
         msg = detail[-1] if detail else f"Exit-Code {proc.returncode}"
-        return False, f"ffmpeg konnte nicht ausgeführt werden: {msg}"
+        return False, f"ffmpeg could not be run: {msg}"
     return True, ""
 
 
@@ -145,12 +145,12 @@ def validate_and_resolve_ffmpeg_dir(raw_dir: Any) -> Tuple[str, Dict[str, Any]]:
     exe_path, bin_dir = find_ffmpeg_in_dir(cleaned)
     if not exe_path or not bin_dir:
         raise ValueError(
-            f"Im Ordner '{cleaned}' wurde kein ausführbares ffmpeg gefunden (weder direkt noch im Unterordner 'bin')."
+            f"No runnable ffmpeg found in the folder '{cleaned}' (neither directly nor in the subfolder 'bin')."
         )
 
     ok, err = verify_ffmpeg_executable(exe_path)
     if not ok:
-        raise ValueError(f"Gefundenes ffmpeg ({exe_path}) ist nicht ausführbar: {err}")
+        raise ValueError(f"The ffmpeg found ({exe_path}) cannot be run: {err}")
 
     status = apply_ffmpeg_dir(bin_dir)
     return bin_dir, status

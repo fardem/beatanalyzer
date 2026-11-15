@@ -50,14 +50,14 @@ def check(load: Optional[Callable] = None) -> Tuple[bool, str]:
         (load or _default_load)()
     except Exception as e:
         return False, "\n".join([
-            f"Modell {CHECKPOINT} von beat_this konnte nicht geladen werden.",
-            f"Ursache: {cause_of(e)}",
-            f"Datei: {FILE_NAME}",
-            f"Ordner: {cache_dir()}",
-            f"Download von Hand: {URL}",
-            f"Die Datei unter dem Namen {FILE_NAME} in den Ordner legen und BeatAnalyzer neu starten.",
+            f"Model {CHECKPOINT} of beat_this could not be loaded.",
+            f"Cause: {cause_of(e)}",
+            f"File: {FILE_NAME}",
+            f"Folder: {cache_dir()}",
+            f"Download by hand: {URL}",
+            f"Put the file into that folder under the name {FILE_NAME} and restart BeatAnalyzer.",
         ])
-    return True, f"Modell {CHECKPOINT} von beat_this bereit ({os.path.join(cache_dir(), FILE_NAME)})."
+    return True, f"Model {CHECKPOINT} of beat_this ready ({os.path.join(cache_dir(), FILE_NAME)})."
 
 
 def main(load: Optional[Callable] = None) -> int:

@@ -244,14 +244,14 @@ def main(argv) -> int:
         print(st)
         return 0
     if cmd == "auto" and not st["resolveFound"]:
-        print("[Resolve] DaVinci Resolve nicht gefunden - Skript nicht installiert.")
+        print("[Resolve] DaVinci Resolve not found - script not installed.")
         return 0
     if cmd == "auto" and st["state"] == "current":
-        print(f"[Resolve] Skript ist aktuell ({st['version']}): {st['path']}")
+        print(f"[Resolve] Script is up to date ({st['version']}): {st['path']}")
         return 0
     if cmd in ("install", "auto"):
         target = install()
-        print(f"[Resolve] Skript installiert ({st['version']}): {target}")
+        print(f"[Resolve] Script installed ({st['version']}): {target}")
         print("[Resolve] In Resolve: Workspace -> Scripts -> BeatAnalyzer_Markers (Resolve ggf. neu starten).")
         return 0
     print("Aufruf: python backend/resolve_plugin.py [status|install|auto|template]")

@@ -22,7 +22,7 @@ export const SAMPLE_TRACKS: SampleTrackMeta[] = [
     bpm: 126,
     meter: '4/4',
     duration: 16,
-    description: 'Klassischer 4-on-the-Floor Beat mit starkem Kick auf jedem Beat, Snare/Clap auf 2 & 4.',
+    description: 'Classic four-on-the-floor beat, strong kick on every beat, snare/clap on 2 and 4.',
   },
   {
     id: 'waltz_150',
@@ -31,7 +31,7 @@ export const SAMPLE_TRACKS: SampleTrackMeta[] = [
     bpm: 150,
     meter: '3/4',
     duration: 15,
-    description: 'Ausgeprägter 3/4-Takt (Boom-Tschack-Tschack) mit betonter Eins zur Verifikation der Taktarterkennung.',
+    description: 'Clear 3/4 time (boom-chick-chick) with an accented one, to check the time signature detection.',
   },
   {
     id: 'funk_108',
@@ -40,7 +40,7 @@ export const SAMPLE_TRACKS: SampleTrackMeta[] = [
     bpm: 108,
     meter: '4/4 (Swing)',
     duration: 18,
-    description: 'Synkopierter Bassgroove, Ghost Notes und leichtes Swing-Feeling.',
+    description: 'Syncopated bass groove, ghost notes and a light swing feel.',
   },
   {
     id: 'lofi_85',
@@ -49,7 +49,7 @@ export const SAMPLE_TRACKS: SampleTrackMeta[] = [
     bpm: 85,
     meter: '4/4',
     duration: 20,
-    description: 'Entspannter Downtempo Boom-Bap mit warmen Rhodes-Akkorden.',
+    description: 'Relaxed downtempo boom-bap with warm Rhodes chords.',
   },
 ];
 

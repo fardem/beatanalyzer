@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.12] – 2026-11-15
+
+### Geändert
+- **Alle Texte des Servers auf Englisch:** Fehlermeldungen an die Web-App (z. B. „Audio analysis failed: …“, „Settings not saved: …“), Meldungen des Updaters, der ffmpeg-Prüfung und der Modellprüfung bei der Installation, Ausgaben in der Konsole, Kommandozeile (`analyze_cli.py`, Hilfe und Ausgabe) und die Ersatz-Oberfläche, die der Server ohne `dist/` zeigt. Die Web-App selbst bleibt in der gewählten Sprache; Meldungen des Servers erscheinen darin englisch.
+- **Batch- und Shell-Skripte englisch** (`install_and_run.bat`, `start.bat`, `update.bat`, `run_cli.bat`, `debug_system.bat`, `install_and_run.sh`). Grundsatz (Nutzer): Das Programm spricht Englisch; nur die Oberflächen mit Sprachwahl (Web-App, Resolve-Fenster) zeigen die gewählte Sprache.
+
 ## [0.2.11] – 2026-11-15
 
 ### Behoben

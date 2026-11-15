@@ -89,11 +89,11 @@ def latest_release(timeout: float = 10) -> Optional[dict]:
         return parse_release(json.loads(_get(RELEASE_API, timeout=timeout)))
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            raise UpdateError("Kein Release gefunden (oder das Repository ist privat und "
-                              "BEATANALYZER_GITHUB_TOKEN ist nicht gesetzt).") from e
-        raise UpdateError(f"GitHub antwortet mit HTTP {e.code}.") from e
+            raise UpdateError("No release found (or the repository is private and "
+                              "BEATANALYZER_GITHUB_TOKEN is not set).") from e
+        raise UpdateError(f"GitHub answers with HTTP {e.code}.") from e
     except OSError as e:
-        raise UpdateError(f"GitHub nicht erreichbar: {e}") from e
+        raise UpdateError(f"GitHub not reachable: {e}") from e
 
 
 def check(root: Path = PROJECT_ROOT, fetch: Callable[[], Optional[dict]] = latest_release) -> dict:
@@ -103,7 +103,7 @@ def check(root: Path = PROJECT_ROOT, fetch: Callable[[], Optional[dict]] = lates
     except UpdateError as e:
         return {"current": current, "latest": None, "available": False, "error": str(e)}
     if not release:
-        return {"current": current, "latest": None, "available": False, "error": "Kein Release gefunden."}
+        return {"current": current, "latest": None, "available": False, "error": "No release found."}
     return {"current": current, "latest": release["version"], "available": newer(release["version"], current),
             "page": release["page"], "zip": release["zip"]}
 
@@ -125,12 +125,12 @@ def extract_release(zip_path: Path, dest: Path) -> Path:
         for member in z.namelist():
             target = (dest / member).resolve()
             if target != root and root not in target.parents:
-                raise UpdateError(f"Ungültiger Pfad im ZIP: {member}")
+                raise UpdateError(f"Invalid path in the ZIP: {member}")
         z.extractall(dest)
     for cand in [dest, *sorted(p for p in dest.iterdir() if p.is_dir())]:
         if (cand / "VERSION").is_file() and (cand / "backend" / "server.py").is_file():
             return cand
-    raise UpdateError("Das ZIP enthält kein BeatAnalyzer (VERSION oder backend/server.py fehlt).")
+    raise UpdateError("The ZIP contains no BeatAnalyzer (VERSION or backend/server.py missing).")
 
 
 def release_files(folder: Path) -> list:
@@ -189,7 +189,7 @@ def copy_program(src: Path, dst: Path, log=print) -> dict:
 
 
 def install_requirements(root: Path, log=print) -> bool:
-    log("[Update] requirements.txt hat sich geändert - installiere Python-Pakete ...")
+    log("[Update] requirements.txt changed - installing Python packages ...")
     r = subprocess.run([sys.executable, "-m", "pip", "install", "-r", str(root / "requirements.txt")],
                        cwd=str(root))
     return r.returncode == 0
@@ -199,21 +199,21 @@ def update(root: Path = PROJECT_ROOT, release: Optional[dict] = None, log=print,
            pip: Callable[[Path], bool] = None) -> dict:
     root = Path(root)
     if (root / ".git").exists():
-        raise UpdateError("Dieser Ordner ist ein Git-Checkout. Aktualisiere ihn mit 'git pull'.")
+        raise UpdateError("This folder is a Git checkout. Update it with 'git pull'.")
     info = check(root) if release is None else {"current": read_version(root), "latest": release["version"],
                                                  "available": newer(release["version"], read_version(root)),
                                                  "zip": release["zip"]}
     if info.get("error"):
         raise UpdateError(info["error"])
     if not info["available"]:
-        return {"updated": False, "version": info["current"], "message": f"BeatAnalyzer {info['current']} ist aktuell."}
+        return {"updated": False, "version": info["current"], "message": f"BeatAnalyzer {info['current']} is up to date."}
     tmp = root / TEMP_DIR
     zip_path = tmp / RELEASE_ASSET
-    log(f"[Update] Lade BeatAnalyzer {info['latest']} ...")
+    log(f"[Update] Downloading BeatAnalyzer {info['latest']} ...")
     download(info["zip"], zip_path)
     src = extract_release(zip_path, tmp / "unpacked")
     if read_version(src) != info["latest"]:
-        raise UpdateError(f"Das ZIP enthält Version {read_version(src)}, erwartet {info['latest']}.")
+        raise UpdateError(f"The ZIP contains version {read_version(src)}, expected {info['latest']}.")
     result = copy_program(src, root, log)
     shutil.rmtree(tmp, ignore_errors=True)
     pip_ok = True
@@ -223,9 +223,9 @@ def update(root: Path = PROJECT_ROOT, release: Optional[dict] = None, log=print,
     if plugin["state"] == "outdated":
         resolve_plugin.install()
         log(f"[Update] Resolve-Skript aktualisiert: {plugin['path']}")
-    msg = f"BeatAnalyzer {info['latest']} installiert. Starte BeatAnalyzer neu (start.bat)."
+    msg = f"BeatAnalyzer {info['latest']} installed. Restart BeatAnalyzer (start.bat)."
     if not pip_ok:
-        msg += " Achtung: Die Python-Pakete konnten nicht installiert werden - starte install_and_run.bat."
+        msg += " Warning: the Python packages could not be installed - run install_and_run.bat."
     return {"updated": True, "version": info["latest"], "message": msg, **result}
 
 
@@ -238,13 +238,13 @@ def main(argv) -> int:
                 print(f"[Update] {info['error']}")
                 return 1
             print(f"[Update] Installiert: {info['current']} | Neuestes Release: {info['latest']}"
-                  + (" -> Update verfügbar" if info["available"] else " -> aktuell"))
+                  + (" -> update available" if info["available"] else " -> up to date"))
             return 0
         if cmd == "update":
             print(f"[Update] {update()['message']}")
             return 0
     except UpdateError as e:
-        print(f"[Update] Fehler: {e}")
+        print(f"[Update] Error: {e}")
         return 1
     print("Aufruf: python backend/updater.py [check|update]")
     return 2
