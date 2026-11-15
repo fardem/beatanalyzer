@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FolderSearch, CheckCircle2, AlertTriangle, AlertCircle, RotateCcw, Loader2 } from 'lucide-react';
 import { BackendHealth, getBackendHealth, saveFfmpegDir } from '../utils/localBackend';
+import { useI18n } from '../i18n';
 
 interface FfmpegDirControlProps {
   backendHealth: BackendHealth | null;
@@ -11,6 +12,7 @@ export const FfmpegDirControl: React.FC<FfmpegDirControlProps> = ({
   backendHealth,
   onHealthUpdated,
 }) => {
+  const { t } = useI18n();
   const [dirInput, setDirInput] = useState<string>(backendHealth?.ffmpeg_dir ?? '');
   const [editing, setEditing] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
@@ -26,7 +28,7 @@ export const FfmpegDirControl: React.FC<FfmpegDirControlProps> = ({
   if (!backendHealth) {
     return (
       <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400">
-        <strong className="text-slate-200">Hinweis zu ffmpeg:</strong> Im System muss <code className="font-mono">ffmpeg</code> direkt ausführbar sein (<code className="font-mono">PATH</code>). Sobald der lokale Python-Server verbunden ist, kannst du hier bei Bedarf auch einen eigenen <code className="font-mono">ffmpeg</code>-Ordner hinterlegen.
+        <strong className="text-slate-200">ffmpeg:</strong> {t('web.ffmpeg.no_server')}
       </div>
     );
   }
@@ -41,7 +43,7 @@ export const FfmpegDirControl: React.FC<FfmpegDirControlProps> = ({
     try {
       const res = await saveFfmpegDir(nextDir);
       if (!res) {
-        setErrorMsg('Lokaler Python-Server ist nicht erreichbar.');
+        setErrorMsg(t('web.error.no_server'));
         return;
       }
       const updated = await getBackendHealth();
@@ -51,13 +53,13 @@ export const FfmpegDirControl: React.FC<FfmpegDirControlProps> = ({
       setEditing(false);
       setSuccessMsg(
         nextDir.trim()
-          ? `ffmpeg gefunden und aktiv: ${res.ffmpegPath}`
+          ? t('web.ffmpeg.found', { path: res.ffmpegPath ?? '' })
           : res.ffmpegAvailable
-          ? `Zurückgesetzt auf System-ffmpeg: ${res.ffmpegPath}`
-          : 'Benutzerdefinierter Ordner entfernt (kein ffmpeg im System-PATH gefunden).'
+          ? t('web.ffmpeg.reset_system', { path: res.ffmpegPath ?? '' })
+          : t('web.ffmpeg.reset_none')
       );
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'ffmpeg-Ordner konnte nicht gespeichert werden.');
+      setErrorMsg(err instanceof Error ? err.message : t('web.ffmpeg.save_failed'));
     } finally {
       setSaving(false);
     }
@@ -76,7 +78,7 @@ export const FfmpegDirControl: React.FC<FfmpegDirControlProps> = ({
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold">
-                ffmpeg ausführbar ({backendHealth.ffmpeg_source === 'custom' ? 'gewählter Ordner' : 'System-PATH'})
+                {t('web.ffmpeg.available', { source: backendHealth.ffmpeg_source === 'custom' ? t('web.ffmpeg.source_custom') : t('web.ffmpeg.source_system') })}
               </span>
               {backendHealth.ffmpeg_path && (
                 <code className="block text-[10px] text-slate-400 font-mono break-all mt-0.5">
@@ -90,10 +92,10 @@ export const FfmpegDirControl: React.FC<FfmpegDirControlProps> = ({
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold">
-                ffmpeg ist im System nicht direkt ausführbar (nicht im PATH).
+                {t('web.ffmpeg.missing')}
               </span>
               <span className="block text-amber-200/80 mt-0.5">
-                Gib unten den Ordner ein, in dem <code className="font-mono">ffmpeg</code> (oder <code className="font-mono">bin/ffmpeg</code>) liegt — BeatAnalyzer spricht dann <code className="font-mono">ffmpeg</code> direkt aus diesem Verzeichnis an.
+                {t('web.ffmpeg.missing_hint')}
               </span>
             </div>
           </div>
@@ -109,7 +111,7 @@ export const FfmpegDirControl: React.FC<FfmpegDirControlProps> = ({
               }}
               className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
             >
-              {editing ? 'Schließen' : 'Ordner ändern'}
+              {editing ? t('web.common.close') : t('web.ffmpeg.change')}
             </button>
           )}
           {backendHealth.ffmpeg_dir && (
@@ -121,10 +123,10 @@ export const FfmpegDirControl: React.FC<FfmpegDirControlProps> = ({
                 void applyDir('');
               }}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors cursor-pointer disabled:opacity-50"
-              title="Benutzerdefinierten ffmpeg-Ordner zurücksetzen"
+              title={t('web.ffmpeg.reset_tip')}
             >
               <RotateCcw className="w-3 h-3" />
-              <span>Reset</span>
+              <span>{t('web.ffmpeg.reset')}</span>
             </button>
           )}
         </div>
@@ -138,8 +140,8 @@ export const FfmpegDirControl: React.FC<FfmpegDirControlProps> = ({
               type="text"
               value={dirInput}
               onChange={(e) => setDirInput(e.target.value)}
-              placeholder="z. B. C:\ffmpeg\bin oder C:\Tools\ffmpeg"
-              aria-label="FFmpeg-Verzeichnis"
+              placeholder={t('web.ffmpeg.placeholder')}
+              aria-label={t('web.ffmpeg.folder')}
               className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded-lg pl-8 pr-3 py-1.5 text-[11px] font-mono text-slate-100 placeholder:text-slate-500 focus:outline-none"
             />
           </div>
@@ -149,7 +151,7 @@ export const FfmpegDirControl: React.FC<FfmpegDirControlProps> = ({
             className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-700 disabled:text-slate-400 text-slate-950 transition-colors cursor-pointer disabled:cursor-not-allowed shrink-0"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            <span>Speichern &amp; prüfen</span>
+            <span>{t('web.ffmpeg.save')}</span>
           </button>
         </form>
       )}

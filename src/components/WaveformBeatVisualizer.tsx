@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
 import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 interface WaveformBeatVisualizerProps {
   result: AnalysisResult;
@@ -120,6 +121,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
 }) => {
   // the detailed waveform of the current view, drawn once and reused while only the playhead moves
   const waveCacheRef = useRef<{ key: string; canvas: HTMLCanvasElement } | null>(null);
+  const { t, num } = useI18n();
   const detail = useMemo(() => {
     waveCacheRef.current = null;   // a new song: draw anew
     return audioBuffer ? buildDetailPeaks(audioBuffer) : null;
@@ -161,14 +163,14 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   const hasDafCurve = result.activationCurve.some((pt) => pt.downbeatActivation !== null);
   const isMdModel = result.engineInfo?.id === 'md_beat_this' || result.selectedModel === 'md_beat_this';
   const dafTooltip = hasDafCurve
-    ? 'Downbeat Activation Function (DAF) umschalten'
+    ? t('web.wave.daf_tip')
     : isMdModel
-    ? 'DAF unter md_beat_this nicht verfügbar: Das Masked-Diffusion-Modell liefert nur einzelne Beat- und Downbeat-Zeitpunkte ohne fortlaufende Downbeat-Wahrscheinlichkeitskurve.'
-    : 'DAF in diesem Analyse-Modus nicht verfügbar: Keine fortlaufende Downbeat-Wahrscheinlichkeitskurve vorhanden.';
+    ? t('web.wave.daf_md')
+    : t('web.wave.daf_none');
   const bafTooltip =
     result.activationSource === 'onset'
-      ? 'Beat Activation Function (BAF – hier aus Onset-Stärke berechnet, da das Modell keine Frame-Kurve ausgibt)'
-      : 'Beat Activation Function (BAF)';
+      ? t('web.wave.baf_onset')
+      : t('web.wave.baf_tip');
 
   // Loupe is only useful when overview shows >= 45s; below that, main view already provides detail resolution
   const isLoupeApplicable = visibleDuration >= LOUPE_MIN_VISIBLE_SEC;
@@ -400,7 +402,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       });
       ctx.font = 'bold 10px Inter, sans-serif';
       for (const f of flags) {
-        const label = `Takt ${f.bar}`;
+        const label = t('output.marker_downbeat', { bar: f.bar });
         ctx.fillStyle = '#f43f5e';
         ctx.fillRect(f.x - 1, 0, Math.ceil(ctx.measureText(label).width) + 9, 18);
         ctx.fillStyle = '#ffffff';
@@ -466,6 +468,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   }, [
     result,
     detail,
+    t,
     currentTime,
     zoom,
     scrollOffsetSec,
@@ -951,7 +954,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       {/* Visualizer Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-semibold text-slate-300 whitespace-nowrap shrink-0">Wellenform & Beat Grid</span>
+          <span className="text-xs font-semibold text-slate-300 whitespace-nowrap shrink-0">{t('web.wave.title')}</span>
           {/* the analysed song: long names are cut, the full name is in the tooltip */}
           <span
             className="text-xs text-slate-400 truncate min-w-0 max-w-[48ch]"
@@ -973,10 +976,10 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
             aria-hidden={!activeBeat}
           >
             {!activeBeat
-              ? 'Takt 000 · Downbeat'
+              ? t('web.wave.bar_downbeat', { bar: '000' })
               : activeBeat.isDownbeat
-              ? `Takt ${activeBeat.barIndex} · Downbeat`
-              : `Takt ${activeBeat.barIndex} · Beat ${activeBeat.beatInBar}`}
+              ? t('web.wave.bar_downbeat', { bar: activeBeat.barIndex })
+              : t('web.wave.bar_beat', { bar: activeBeat.barIndex, beat: activeBeat.beatInBar })}
           </span>
         </div>
 
@@ -989,7 +992,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
               className={`px-2 py-0.5 rounded flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                 showBeats ? 'bg-cyan-900/60 text-cyan-300' : 'text-slate-500 hover:text-slate-300'
               }`}
-              title="Beat- & Downbeat-Linien umschalten"
+              title={t('web.wave.beats_tip')}
             >
               <span>Beats</span>
             </button>
@@ -1044,13 +1047,13 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
             title={
               !isLoupeApplicable
                 ? isLoupeEnabled
-                  ? `Lupe in Detailansicht (< ${LOUPE_MIN_VISIBLE_SEC}s) pausiert – wird beim Rauszoomen wieder aktiv (Klick zum Deaktivieren)`
-                  : `Lupe nur bei Übersichts-Zoom (ab ${LOUPE_MIN_VISIBLE_SEC}s Sichtbereich) aktiv`
-                : `Detail-Lupe (~${opticalMagnification.toFixed(0)}× / ${loupeSpan.toFixed(1)}s) beim Überfahren aktivieren`
+                  ? t('web.wave.loupe_paused', { sec: LOUPE_MIN_VISIBLE_SEC })
+                  : t('web.wave.loupe_only_overview', { sec: LOUPE_MIN_VISIBLE_SEC })
+                : t('web.wave.loupe_tip', { zoom: num(opticalMagnification, 0), span: num(loupeSpan, 1) })
             }
           >
             <Search className="w-3.5 h-3.5" />
-            <span>Lupe</span>
+            <span>{t('web.wave.loupe')}</span>
           </button>
 
           {/* Zoom controls */}
@@ -1060,7 +1063,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
               onClick={() => handleZoom(0.7)}
               disabled={zoom <= 1.0}
               className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 cursor-pointer shrink-0"
-              title="Verkleinern"
+              title={t('web.wave.zoom_out')}
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
@@ -1072,7 +1075,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
               onClick={() => handleZoom(1.4)}
               disabled={zoom >= maxZoom}
               className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 cursor-pointer shrink-0"
-              title="Vergrößern (Detailansicht)"
+              title={t('web.wave.zoom_in')}
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
@@ -1094,10 +1097,10 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
                   }`}
                   title={
                     tooShort
-                      ? `Track ist kürzer als ${sec} Sekunden`
+                      ? t('web.wave.quick_too_short', { sec })
                       : active
-                      ? 'Zurück zur Gesamtansicht'
-                      : `${sec}-Sekunden-Ausschnitt um die Abspielposition`
+                      ? t('web.wave.quick_back')
+                      : t('web.wave.quick_tip', { sec })
                   }
                 >
                   {sec}s
@@ -1108,7 +1111,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
               type="button"
               onClick={handleResetZoom}
               className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer shrink-0"
-              title="Ganze Datei anzeigen"
+              title={t('web.wave.whole_file')}
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
@@ -1151,14 +1154,14 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
                   }`}
                 >
                   {hoverInfo.beat.isDownbeat
-                    ? `Takt ${hoverInfo.beat.barIndex} · Downbeat`
-                    : `Takt ${hoverInfo.beat.barIndex} · Beat ${hoverInfo.beat.beatInBar}`}
+                    ? t('web.wave.bar_downbeat', { bar: hoverInfo.beat.barIndex })
+                    : t('web.wave.bar_beat', { bar: hoverInfo.beat.barIndex, beat: hoverInfo.beat.beatInBar })}
                 </span>
               ) : (
-                <span className="text-slate-400 truncate">Detail-Lupe</span>
+                <span className="text-slate-400 truncate">{t('web.wave.loupe')}</span>
               )}
               <span className="font-mono tabular-nums text-cyan-400/90 whitespace-nowrap shrink-0">
-                {opticalMagnification.toFixed(1)}× · {loupeSpan.toFixed(1)}s
+                {num(opticalMagnification, 1)}× · {num(loupeSpan, 1)} s
               </span>
             </div>
             <canvas ref={loupeCanvasRef} className="block" />
@@ -1172,17 +1175,17 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
             style={{ left: `${hoverInfo.x}px`, top: `${Math.max(30, hoverInfo.y)}px` }}
           >
             <div className="font-mono tabular-nums font-semibold text-cyan-300">
-              {hoverInfo.time.toFixed(3)}s
+              {num(hoverInfo.time, 3)} s
             </div>
             {hoverInfo.beat && (
               <div className="text-[11px] text-slate-300 mt-0.5">
                 {hoverInfo.beat.isDownbeat ? (
                   <span className="text-rose-400 font-bold">
-                    Takt {hoverInfo.beat.barIndex} (Downbeat)
+                    {t('web.wave.bar_downbeat', { bar: hoverInfo.beat.barIndex })}
                   </span>
                 ) : (
                   <span>
-                    Takt {hoverInfo.beat.barIndex} • Beat {hoverInfo.beat.beatInBar}
+                    {t('web.wave.bar_beat', { bar: hoverInfo.beat.barIndex, beat: hoverInfo.beat.beatInBar })}
                   </span>
                 )}
                 <span className="ml-1.5 text-slate-400 font-mono tabular-nums">
@@ -1197,11 +1200,11 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       {/* Mini-map Scrubber */}
       <div className="space-y-1">
         <div className="flex justify-between text-[10px] text-slate-500 font-mono px-0.5">
-          <span>Übersicht & Navigation</span>
+          <span>{t('web.wave.overview')}</span>
           <span>
             {zoom > 1.01
-              ? 'Blauen Rahmen ziehen zum Verschieben · Klick außerhalb springt'
-              : 'Klick zum direkten Vor-/Zurückspringen'}
+              ? t('web.wave.overview_drag')
+              : t('web.wave.overview_click')}
           </span>
         </div>
         <div

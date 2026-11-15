@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.7] – 2026-11-15
+
+Teilprojekt 4 (Web-App), Schritt 2: Sprachen.
+
+### Hinzugefügt
+- **Web-App in Deutsch, Englisch und Türkisch.** Sprachwahl in der Kopfzeile (System, Deutsch, English, Türkçe). Die Wahl speichert der Server in `settings.json`; sie gilt auch für das installierte Resolve-Skript. Ohne Server merkt sich der Browser die Wahl.
+- Alle Texte der Web-App stehen in `lang/*.json` (Abschnitt `web`), zusammen mit den Texten des Resolve-Skripts. Zahlen und Prozente im Format der Sprache (89,6 / 89.6; 75 % / 75% / %75).
+- Kacheln nach Glossar: **Taktart** · 4/4 (EN *Time signature*, TR *Ölçü* · 4/4'lük) und **Taktanzahl** · 124 (EN *Bars*, TR *Toplam* · 124 ölçü). Takt-Fähnchen, Tabelle und Tooltips nennen den Takt in der Sprache („Takt 7“, „Bar 7“, „Ölçü 7“).
+
+### Geändert
+- Fortschritts- und Fehlertexte der Analyse kommen aus den Sprachdateien.
+- Fenster „Modell-Info“ korrigiert: Autoren und Titel von beat_this (Foscarin, Schlüter, Widmer – „Beat this! Accurate beat tracking without DBN postprocessing“, ISMIR 2024), Ablauf der Analyse wie er wirklich ist (Server mit beat_this, Browser nur als Ersatz).
+- Begriffe nach Glossar: Tabelle „Nur Downbeats“ statt „Taktanfänge“, Spalte „Confidence“.
+
 ## [0.2.6] – 2026-11-15
 
 Teilprojekt 4 (Web-App), Schritt 1. Plan: `docs/superpowers/plans/2026-11-15-teilprojekt-4-web-app.md`.

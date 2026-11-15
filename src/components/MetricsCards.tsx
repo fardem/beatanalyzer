@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AnalysisResult } from '../types/analyzer';
 import { Gauge, Clock, Radio, Music, Zap, Disc3 } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 interface MetricsCardsProps {
   result: AnalysisResult;
@@ -15,13 +16,6 @@ interface MetricsCardsProps {
   onChangeSmoothing: (smooth: boolean, protect: number) => void;
 }
 
-const SMOOTH_HELP = [
-  '0 % = aus: Takte wie von beat_this.',
-  'Mehr % = gleichmäßigeres Raster.',
-  '100 % = voll geglättet; neu angesetzt nur bei klar anderer „1“.',
-  'Die Beats bleiben unverändert.',
-].join('\n');
-
 // slider 1 ... 100 % <-> protection of clear "1"s 0.5 ... 1.0 (a "1" beat_this hears at least this sure stays)
 const toSlider = (protect: number) => Math.round((protect - 0.5) * 200);
 const toProtect = (slider: number) => Math.round((0.5 + slider / 200) * 1000) / 1000;
@@ -29,6 +23,9 @@ const toProtect = (slider: number) => Math.round((0.5 + slider / 200) * 1000) / 
 const COMMIT_MS = 300; // the slider rests this long before the bars are computed again
 
 export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, protect, busyText, error, onChangeSmoothing }) => {
+  const { t, num, pctValue, meter } = useI18n();
+  // same text as the slider in the Resolve window (plugin.smooth_tip)
+  const SMOOTH_HELP = t('plugin.smooth_tip');
   const canSmooth = result.activationSource === 'beat_this' || result.activationSource === 'md_beat_this';
   const busy = busyText !== null;
   // slider value while moving; computed again once it rests (mouse released, no key for COMMIT_MS)
@@ -75,13 +72,10 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
   };
 
   const getTempoCategory = (bpm: number): string => {
-    if (bpm < 60) return 'Largo (Sehr langsam)';
-    if (bpm < 76) return 'Adagio (Ruhig)';
-    if (bpm < 108) return 'Andante (Gehend)';
-    if (bpm < 120) return 'Moderato (Mäßig)';
-    if (bpm < 156) return 'Allegro (Schnell/Tanzbar)';
-    if (bpm < 176) return 'Vivace (Lebhaft)';
-    return 'Presto (Sehr schnell)';
+    const key =
+      bpm < 60 ? 'largo' : bpm < 76 ? 'adagio' : bpm < 108 ? 'andante' : bpm < 120 ? 'moderato'
+      : bpm < 156 ? 'allegro' : bpm < 176 ? 'vivace' : 'presto';
+    return t(`web.metrics.tempo_${key}`);
   };
 
   const avgIntervalMs =
@@ -98,11 +92,11 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Gauge className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Globales Tempo</span>
+          <span>{t('web.metrics.tempo')}</span>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
-            {result.globalBpm.toFixed(1)}
+            {num(result.globalBpm, 1)}
           </span>
           <span className="text-xs font-semibold text-cyan-400">BPM</span>
         </div>
@@ -116,28 +110,28 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Music className="w-3.5 h-3.5 text-purple-400" />
-          <span>Taktart (Meter)</span>
+          <span>{t('web.metrics.meter')}</span>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
-            {result.timeSignature.numerator}/{result.timeSignature.denominator}
+            {meter(`${result.timeSignature.numerator}/${result.timeSignature.denominator}`)}
           </span>
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/60">
-            {result.timeSignature.barShare === null ? '–' : `${result.timeSignature.barShare} % der Takte`}
+            {result.timeSignature.barShare === null ? '–' : t('web.metrics.bar_share', { share: pctValue(result.timeSignature.barShare) })}
           </span>
         </div>
         {/* always two lines high, so the tile does not change its height while the slider is moved */}
         <div className="text-[11px] text-slate-400 mt-1 leading-snug min-h-[2lh]">
           {!canSmooth
-            ? result.timeSignature.name
+            ? meter(result.timeSignature.name)
             : result.barSmoothing?.applied
             ? (
               <>
-                <span className="block">{result.barSmoothing.changedBeats} Beats neu eingeteilt</span>
-                <span className="block">{result.barSmoothing.reanchors} Neuansätze</span>
+                <span className="block">{t('web.metrics.changed_beats', { n: result.barSmoothing.changedBeats })}</span>
+                <span className="block">{t('web.metrics.reanchors', { n: result.barSmoothing.reanchors })}</span>
               </>
             )
-            : 'nicht geglättet'}
+            : t('web.metrics.not_smoothed')}
         </div>
         {canSmooth && (
           <label
@@ -145,8 +139,8 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             title={SMOOTH_HELP}
           >
             <span className="flex items-baseline justify-between gap-2">
-              <span>Glätten</span>
-              <span className="whitespace-nowrap tabular-nums">{slider === 0 ? 'aus' : `${slider} %`}</span>
+              <span>{t('plugin.smooth_label')}</span>
+              <span className="whitespace-nowrap tabular-nums">{slider === 0 ? t('plugin.smooth_off') : pctValue(slider)}</span>
             </span>
             <input
               type="range"
@@ -155,7 +149,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
               step={1}
               value={slider}
               disabled={sliderOff}
-              aria-label="Glätten"
+              aria-label={t('plugin.smooth_label')}
               className="mt-1 block w-full min-w-0 accent-purple-500"
               ref={sliderRef}
               onChange={(e) => setSlider(Number(e.target.value))}
@@ -166,9 +160,9 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         {/* progress or error: one line of fixed height, the full text in the tooltip */}
         <div
           className={`text-[10px] mt-1 h-[1lh] truncate ${busy ? 'text-purple-300' : 'text-rose-400'}`}
-          title={busy ? busyText ?? '' : error ? `Neue Analyse fehlgeschlagen: ${error}` : ''}
+          title={busy ? busyText ?? '' : error ? t('web.metrics.reanalysis_failed', { message: error }) : ''}
         >
-          {busy ? busyText : error ? `Neue Analyse fehlgeschlagen: ${error}` : ''}
+          {busy ? busyText : error ? t('web.metrics.reanalysis_failed', { message: error }) : ''}
         </div>
       </div>
 
@@ -177,16 +171,16 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Disc3 className="w-3.5 h-3.5 text-rose-400" />
-          <span>Takte & Downbeats</span>
+          <span>{t('web.metrics.bars')}</span>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
             {result.totalBars}
           </span>
-          <span className="text-xs font-semibold text-rose-400">Takte</span>
+          <span className="text-xs font-semibold text-rose-400">{t('web.metrics.bars_unit')}</span>
         </div>
         <div className="text-[11px] text-slate-400 mt-1 truncate">
-          {result.totalBeats} Beats insgesamt
+          {t('web.metrics.beats_total', { n: result.totalBeats })}
         </div>
       </div>
 
@@ -195,19 +189,19 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Zap className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Tempo-Stabilität</span>
+          <span>{t('web.metrics.stability')}</span>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
-            {result.tempoStability}%
+            {pctValue(result.tempoStability)}
           </span>
         </div>
         <div className="text-[11px] text-slate-400 mt-1 truncate">
           {result.tempoStability > 92
-            ? 'Präziser Click-Track'
+            ? t('web.metrics.stability_click')
             : result.tempoStability > 80
-            ? 'Natürlicher Groove'
-            : 'Starke Tempovariation'}
+            ? t('web.metrics.stability_groove')
+            : t('web.metrics.stability_varies')}
         </div>
       </div>
 
@@ -216,7 +210,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Clock className="w-3.5 h-3.5 text-amber-400" />
-          <span>Intervall (IBI)</span>
+          <span>{t('web.metrics.interval')}</span>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
@@ -225,7 +219,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
           <span className="text-xs font-semibold text-amber-400">ms</span>
         </div>
         <div className="text-[11px] text-slate-400 mt-1 truncate">
-          {result.swingRatio > 55 ? `${result.swingRatio.toFixed(0)}% Swing-Gefühl` : 'Gerades 8tel Feeling'}
+          {result.swingRatio > 55 ? t('web.metrics.swing', { swing: pctValue(result.swingRatio) }) : t('web.metrics.straight')}
         </div>
       </div>
 
@@ -234,7 +228,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-sky-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Radio className="w-3.5 h-3.5 text-sky-400" />
-          <span>Audiodetails</span>
+          <span>{t('web.metrics.audio')}</span>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-xl lg:text-2xl font-extrabold text-white tracking-tight">
@@ -242,7 +236,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
           </span>
         </div>
         <div className="text-[11px] text-slate-400 mt-1 truncate">
-          {result.metadata.format} • {(result.metadata.sampleRate / 1000).toFixed(1)} kHz
+          {result.metadata.format} • {num(result.metadata.sampleRate / 1000, 1)} kHz
         </div>
       </div>
     </div>
