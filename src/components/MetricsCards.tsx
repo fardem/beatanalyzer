@@ -29,7 +29,7 @@ const toProtect = (slider: number) => Math.round((0.5 + slider / 200) * 1000) / 
 const COMMIT_MS = 300; // the slider rests this long before the bars are computed again
 
 export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, protect, busyText, error, onChangeSmoothing }) => {
-  const canSmooth = result.activationSource === 'beat_this';
+  const canSmooth = result.activationSource === 'beat_this' || result.activationSource === 'md_beat_this';
   const busy = busyText !== null;
   // slider value while moving; computed again once it rests (mouse released, no key for COMMIT_MS)
   const applied = smoothBars ? Math.max(1, toSlider(protect)) : 0;
@@ -139,28 +139,30 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             )
             : 'nicht geglättet'}
         </div>
-        <label
-          className={`mt-2 block text-[11px] ${sliderOff ? 'text-slate-600' : 'text-slate-300'}`}
-          title={canSmooth ? SMOOTH_HELP : 'Glätten geht nur mit beat_this'}
-        >
-          <span className="flex items-baseline justify-between gap-2">
-            <span>Glätten</span>
-            <span className="whitespace-nowrap tabular-nums">{slider === 0 ? 'aus' : `${slider} %`}</span>
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={slider}
-            disabled={sliderOff}
-            aria-label="Glätten"
-            className="mt-1 block w-full min-w-0 accent-purple-500"
-            ref={sliderRef}
-            onChange={(e) => setSlider(Number(e.target.value))}
-            onPointerDown={() => setDragging(true)}
-          />
-        </label>
+        {canSmooth && (
+          <label
+            className={`mt-2 block text-[11px] ${sliderOff ? 'text-slate-600' : 'text-slate-300'}`}
+            title={SMOOTH_HELP}
+          >
+            <span className="flex items-baseline justify-between gap-2">
+              <span>Glätten</span>
+              <span className="whitespace-nowrap tabular-nums">{slider === 0 ? 'aus' : `${slider} %`}</span>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={slider}
+              disabled={sliderOff}
+              aria-label="Glätten"
+              className="mt-1 block w-full min-w-0 accent-purple-500"
+              ref={sliderRef}
+              onChange={(e) => setSlider(Number(e.target.value))}
+              onPointerDown={() => setDragging(true)}
+            />
+          </label>
+        )}
         {/* progress or error: one line of fixed height, the full text in the tooltip */}
         <div
           className={`text-[10px] mt-1 h-[1lh] truncate ${busy ? 'text-purple-300' : 'text-rose-400'}`}

@@ -124,6 +124,14 @@
     "explain_short_no_timeline": "Keine Timeline offen – nur Subtitle im Media Pool.",
     "explain_short_off": "Timeline bleibt unverändert, Subtitle im Ordner BeatAnalyzer.",
     "explain_short_tl_markers": "Marker auch auf den Clips in der Timeline ({items}).",
-    "explain_present_many": "In der Timeline „{timeline}“ liegt der Song auf {tracks}. Für jede dieser Spuren entsteht ein eigener Subtitle Track, z. B. „{track_name}“. Resolve erlaubt nur einen aktiven Subtitle Track; die anderen bleiben, werden aber deaktiviert."
+    "explain_present_many": "In der Timeline „{timeline}“ liegt der Song auf {tracks}. Für jede dieser Spuren entsteht ein eigener Subtitle Track, z. B. „{track_name}“. Resolve erlaubt nur einen aktiven Subtitle Track; die anderen bleiben, werden aber deaktiviert.",
+    "model_label": "Modell",
+    "model_tip": "beat_this (CPJKU, MIT): Standard, auch für kommerzielle Arbeiten.\nmd_beat_this (Masked Diffusion, CC BY-NC 4.0): nur nicht-kommerzielle Nutzung; wird separat installiert (siehe README).",
+    "model_beat_this": "beat_this (MIT) – Standard",
+    "model_md": "md_beat_this (CC BY-NC 4.0) – nur nicht-kommerziell",
+    "md_notice": "md_beat_this steht unter der Lizenz CC BY-NC 4.0 und darf nur für nicht-kommerzielle Zwecke genutzt werden, im Rahmen der CC-BY-NC-4.0-Lizenz: {url}",
+    "md_confirm": "Ich nutze md_beat_this nur für nicht-kommerzielle Zwecke (CC BY-NC 4.0)",
+    "md_confirm_needed": "Für md_beat_this das Lizenz-Häkchen setzen.",
+    "reason_md_not_installed": "md_beat_this nicht installiert"
   }
 }

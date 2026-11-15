@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.1.8"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.2.0"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -88,6 +88,13 @@ local BA = {
       ["plugin.explain_short_tl_markers"] = "Markers also on the clips in the Timeline ({items}).",
       ["plugin.explain_tl_markers"] = "The song's clips in this Timeline ({items}) get the markers as well.",
       ["plugin.json_none"] = "No JSON chosen.",
+      ["plugin.md_confirm"] = "I use md_beat_this for non-commercial purposes only (CC BY-NC 4.0)",
+      ["plugin.md_confirm_needed"] = "Tick the licence box to analyse with md_beat_this.",
+      ["plugin.md_notice"] = "md_beat_this is licensed under CC BY-NC 4.0 and may only be used for non-commercial purposes, within the terms of the CC BY-NC 4.0 licence: {url}",
+      ["plugin.model_beat_this"] = "beat_this (MIT) – standard",
+      ["plugin.model_label"] = "Model",
+      ["plugin.model_md"] = "md_beat_this (CC BY-NC 4.0) – non-commercial only",
+      ["plugin.model_tip"] = "beat_this (CPJKU, MIT): standard, also for commercial work.\nmd_beat_this (Masked Diffusion, CC BY-NC 4.0): non-commercial use only; installed separately (see README).",
       ["plugin.msg_analysis_error"] = "Analysis failed: {message}. Nothing in the project has changed.",
       ["plugin.msg_bad_format"] = "Unknown format '{format}', expected '{expected}'. Export the file in BeatAnalyzer under Export -> DaVinci Resolve.",
       ["plugin.msg_bin_missing"] = "media pool bin '{bin}' not available",
@@ -123,6 +130,7 @@ local BA = {
       ["plugin.msg_tl_write"] = "Timeline: cannot write {path}",
       ["plugin.reason_analyzer_failed"] = "the analyzer could not be loaded",
       ["plugin.reason_inference_failed"] = "analysis with beat_this failed",
+      ["plugin.reason_md_not_installed"] = "md_beat_this not installed",
       ["plugin.reason_model_load_failed"] = "beat_this model could not be loaded",
       ["plugin.reason_not_installed"] = "beat_this not installed",
       ["plugin.remove_confirm"] = "Remove from '{song}': {markers} BeatAnalyzer markers, {tracks} Subtitle Track(s) in the open Timeline, {srt} Subtitle clip(s) in the folder BeatAnalyzer? Markers set by hand stay.",
@@ -737,7 +745,8 @@ local function jobs_list()
   return work_base() .. SEP .. "jobs.txt"
 end
 
--- New job folder with job.txt. opts: lang, slider (0 ... 100), now (for tests). Returns the folder or nil, error.
+-- New job folder with job.txt. opts: lang, slider (0 ... 100), model ("beat_this" | "md_beat_this"), now (for
+-- tests). Returns the folder or nil, error.
 function M.new_job(audio_path, opts)
   opts = opts or {}
   local dir = M.work_dir()
@@ -751,6 +760,7 @@ function M.new_job(audio_path, opts)
     "lang=" .. tostring(opts.lang or BA.lang or "en"),
     "smooth=" .. (slider > 0 and "1" or "0"),
     "protect=" .. string.format("%g", M.slider_to_protect(slider > 0 and slider or 90)),
+    "model=" .. (opts.model == "md_beat_this" and "md_beat_this" or "beat_this"),
   }, "\n") .. "\n"
   if not write_file(dir .. SEP .. "job.txt", text) then
     return nil, T("plugin.msg_job_folder")
@@ -899,6 +909,9 @@ end
 M.MARKER_COLORS = { "Blue", "Cyan", "Green", "Yellow", "Red", "Pink", "Purple", "Fuchsia", "Rose", "Lavender",
                     "Sky", "Mint", "Lemon", "Sand", "Cocoa", "Cream" }
 M.NO_MARKER = "none"
+-- md_beat_this (Masked Diffusion, CC BY-NC 4.0): non-commercial use only; shown in the window with its address
+M.MD_URL = "https://github.com/fosfrancesco/md_beat_this"
+
 M.DEFAULT_COLORS = { downbeat = DOWNBEAT_COLOR, beat2 = BEAT_COLOR, beat3 = BEAT_COLOR, beat4 = BEAT_COLOR,
                      other = BEAT_COLOR }
 local COLOR_OK = {}
@@ -966,6 +979,8 @@ local function build_srt(data, opts)
   -- opts.segments: several parts of the song, each { shift, from, to } (one per use of the song on a track)
   local segments = opts.segments or { { shift = opts.shift or 0, from = opts.from, to = opts.to } }
   local info = M.info_lines(data)
+  -- md_beat_this gives no confidence: no "Confidence" line (other JSONs without a value show "–")
+  local no_confidence = type(data.engine) == "table" and data.engine.id == "md_beat_this"
   local cues = {}
   for _, seg in ipairs(segments) do
     local shift, from, to = seg.shift or 0, seg.from, seg.to
@@ -1004,8 +1019,10 @@ local function build_srt(data, opts)
           kind,
           T("output.bar_beat", { bar = bar, beat = beat }),
           T("output.time_bpm", { clock = clock(t), bpm = fmt_num(m.bpm, 1) }),
-          T("output.confidence", { value = fmt_pct(m.confidence) }),
         }
+        if not no_confidence then
+          lines[#lines + 1] = T("output.confidence", { value = fmt_pct(m.confidence) })
+        end
         if i == 1 and info_under then
           lines[#lines + 1] = info   -- no empty line: in an SRT it would end the subtitle
         end
@@ -1438,19 +1455,24 @@ function M.timecode(frame, fps)
                        math.floor(n / f) % 60, n % f)
 end
 
--- "beat_this (CUDA, RTX 3080)", "beat_this (CPU)", "librosa – <reason>" from the field engine of the JSON.
+-- "beat_this (CUDA, RTX 3080)", "beat_this (CPU)", "md_beat_this (CPU)", "librosa – <reason>" from the field
+-- engine of the JSON.
 function M.engine_text(engine)
   if type(engine) ~= "table" or not engine.id then
     return nil
   end
-  if engine.id == "beat_this" then
+  if engine.id == "beat_this" or engine.id == "md_beat_this" then
     local parts = { string.upper(tostring(engine.device or "?")) }
     if type(engine.gpu) == "string" and engine.gpu ~= "" then
       parts[#parts + 1] = engine.gpu
     end
-    return "beat_this (" .. table.concat(parts, ", ") .. ")"
+    return tostring(engine.id) .. " (" .. table.concat(parts, ", ") .. ")"
   end
-  local reason = engine.fallbackReason and lookup("plugin.reason_" .. tostring(engine.fallbackReason))
+  local key = tostring(engine.fallbackReason)
+  if engine.requestedModel == "md_beat_this" and key == "not_installed" then
+    key = "md_not_installed"   -- md_beat_this was chosen but is not installed
+  end
+  local reason = engine.fallbackReason and lookup("plugin.reason_" .. key)
   return tostring(engine.id) .. (reason and (" – " .. reason) or "")
 end
 
@@ -1839,7 +1861,7 @@ end
 
 function M.load_settings()
   local s = { json_dir = "", timeline = true, colors_open = false, colors = {}, geometry = nil, way = "json",
-              smooth = 90 }
+              smooth = 90, model = "beat_this" }
   for _, slot in ipairs(COLOR_SLOTS) do
     s.colors[slot] = M.DEFAULT_COLORS[slot]
   end
@@ -1855,6 +1877,8 @@ function M.load_settings()
       end
     elseif key == "way" and (value == "json" or value == "analyze") then
       s.way = value
+    elseif key == "model" and (value == "beat_this" or value == "md_beat_this") then
+      s.model = value   -- the licence check for md_beat_this is not saved: it is asked in every window
     elseif key == "smooth" and tonumber(value) then
       s.smooth = math.max(0, math.min(100, math.floor(tonumber(value))))
     elseif key == "geometry" then
@@ -1883,7 +1907,8 @@ function M.save_settings(s)
                   "timeline=" .. (s.timeline and "1" or "0"),
                   "colors_open=" .. (s.colors_open and "1" or "0"),
                   "way=" .. (s.way == "analyze" and "analyze" or "json"),
-                  "smooth=" .. tostring(math.floor(tonumber(s.smooth) or 90)) }
+                  "smooth=" .. tostring(math.floor(tonumber(s.smooth) or 90)),
+                  "model=" .. (s.model == "md_beat_this" and "md_beat_this" or "beat_this") }
   for _, slot in ipairs(COLOR_SLOTS) do
     lines[#lines + 1] = "color_" .. slot .. "=" .. tostring((s.colors or {})[slot] or M.DEFAULT_COLORS[slot])
   end
@@ -1957,6 +1982,13 @@ function M.main()
         ui:Label({ ID = "JsonLabel", Text = "JSON:", Weight = 0 }),
         ui:Label({ ID = "JsonPath", Text = T("plugin.json_none"), WordWrap = true, Weight = 1, MinimumSize = { 0, 36 } }),
         ui:Button({ ID = "Choose", Text = T("plugin.btn_choose"), Weight = 0 }) }),
+      ui:HGroup({ Weight = 0,
+        ui:Label({ ID = "ModelLabel", Text = T("plugin.model_label"), Weight = 0, ToolTip = T("plugin.model_tip") }),
+        ui:ComboBox({ ID = "Model", Weight = 1, ToolTip = T("plugin.model_tip") }) }),
+      -- md_beat_this (CC BY-NC 4.0): licence notice with the address and a check box that must be ticked
+      ui:Label({ ID = "MdNotice", Text = T("plugin.md_notice", { url = M.MD_URL }), WordWrap = true, Weight = 0,
+                 MinimumSize = { 0, 36 }, Hidden = true }),
+      ui:CheckBox({ ID = "MdConfirm", Text = T("plugin.md_confirm"), Checked = false, Weight = 0, Hidden = true }),
       ui:HGroup({ Weight = 0,
         ui:Label({ ID = "SmoothLabel", Text = T("plugin.smooth_label"), Weight = 0, ToolTip = T("plugin.smooth_tip") }),
         ui:Slider({ ID = "Smooth", Minimum = 0, Maximum = 100, Value = settings.smooth, Weight = 1,
@@ -2084,17 +2116,40 @@ function M.main()
     return get("WayAnalyze", "Checked") and true or false
   end
 
+  pcall(function() itm.Model:AddItem(T("plugin.model_beat_this")) end)
+  pcall(function() itm.Model:AddItem(T("plugin.model_md")) end)
+  set("Model", "CurrentIndex", settings.model == "md_beat_this" and 1 or 0)
+
+  local function model_value()
+    return tonumber(get("Model", "CurrentIndex")) == 1 and "md_beat_this" or "beat_this"
+  end
+  -- md_beat_this may only analyse once its licence box is ticked
+  local function model_ok()
+    return model_value() ~= "md_beat_this" or get("MdConfirm", "Checked") == true
+  end
+
   local function smooth_value()
     return math.max(0, math.min(100, math.floor(tonumber(get("Smooth", "Value")) or 90)))
   end
 
   local function show_way()
     local a = analyze_way()
+    local md = a and model_value() == "md_beat_this"
     for _, id in ipairs({ "JsonLabel", "JsonPath", "Choose" }) do
       set(id, "Hidden", a)
     end
-    for _, id in ipairs({ "SmoothLabel", "Smooth", "SmoothValue" }) do
+    for _, id in ipairs({ "ModelLabel", "Model" }) do
       set(id, "Hidden", not a)
+    end
+    for _, id in ipairs({ "MdNotice", "MdConfirm" }) do
+      set(id, "Hidden", not md)
+    end
+    if md then
+      fit("MdNotice", get("MdNotice", "Text"), 2)
+    end
+    -- md_beat_this gives no probabilities per frame: "Glätten" would change nothing
+    for _, id in ipairs({ "SmoothLabel", "Smooth", "SmoothValue" }) do
+      set(id, "Hidden", not a or md)
     end
     local v = smooth_value()
     set("SmoothValue", "Text", v == 0 and T("plugin.smooth_off") or (tostring(v) .. " %"))
@@ -2165,13 +2220,19 @@ function M.main()
       fit("Explain", explain, 2)
       relayout()
     end
-    set("OK", "Enabled", S.info ~= nil and S.info.ok == true)
+    local ok = S.info ~= nil and S.info.ok == true
+    if analyze_way() and ok and not model_ok() then
+      set("ClipInfo", "Text", S.info.clip_text .. "\n" .. T("plugin.md_confirm_needed"))
+      fit("ClipInfo", get("ClipInfo", "Text"))
+      ok = false
+    end
+    set("OK", "Enabled", ok)
     set("Remove", "Enabled", #remove_clips() > 0)
   end
 
   local function lock(locked)
-    for _, id in ipairs({ "WayAnalyze", "WayJson", "Smooth", "Choose", "Timeline", "Colors", "Remove", "OK",
-                          "Close" }) do
+    for _, id in ipairs({ "WayAnalyze", "WayJson", "Model", "MdConfirm", "Smooth", "Choose", "Timeline", "Colors",
+                          "Remove", "OK", "Close" }) do
       set(id, "Enabled", not locked)
     end
     for _, id in pairs(COLOR_IDS) do
@@ -2227,7 +2288,10 @@ function M.main()
 
   local function start_analysis()
     local info = S.info
-    local dir, err = M.new_job(info.path, { lang = BA.lang, slider = smooth_value() })
+    if not model_ok() then   -- OK is disabled then; never start md_beat_this without the licence box
+      return
+    end
+    local dir, err = M.new_job(info.path, { lang = BA.lang, slider = smooth_value(), model = model_value() })
     if not dir then
       status(tostring(err))
       return
@@ -2343,6 +2407,7 @@ function M.main()
     settings.colors = read_colors()
     settings.way = analyze_way() and "analyze" or "json"
     settings.smooth = smooth_value()
+    settings.model = model_value()
     local okg, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
     if okg and type(g) == "table" and tonumber(g[1]) and tonumber(g[4]) then
       settings.geometry = { g[1], g[2], g[3], g[4] }
@@ -2394,6 +2459,11 @@ function M.main()
     relayout()
   end
   win.On.Smooth.ValueChanged = function() show_way() end
+  win.On.Model.CurrentIndexChanged = function()
+    refresh()
+    relayout()
+  end
+  win.On.MdConfirm.Clicked = function() refresh() end
   win.On.Cancel.Clicked = function() cancel_analysis() end
   win.On.Colors.Clicked = function() colors_visibility() end
   win.On.OK.Clicked = function()

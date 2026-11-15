@@ -42,9 +42,22 @@ class ResolveJobTests(unittest.TestCase):
         lines += [f"{k}={v}" for k, v in extra.items()]
         (self.dir / "job.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    def fake(self, path, name, smooth=True, protect=0.95):
+    def fake(self, path, name, smooth=True, protect=0.95, model="beat_this"):
         self.calls.append((path, name, smooth, protect))
+        self.models = getattr(self, "models", []) + [model]
         return RESULT
+
+    def test_model_md_beat_this_is_passed_on(self):
+        self.write_job(model="md_beat_this")
+        self.assertEqual(resolve_job.run_job(str(self.dir), analyze=self.fake), "ok")
+        self.assertEqual(self.models, ["md_beat_this"])
+
+    def test_default_and_unknown_model_is_beat_this(self):
+        self.write_job()
+        resolve_job.run_job(str(self.dir), analyze=self.fake)
+        self.write_job(model="other")
+        resolve_job.run_job(str(self.dir), analyze=self.fake)
+        self.assertEqual(self.models, ["beat_this", "beat_this"])
 
     def test_ok_writes_markers_and_done(self):
         self.write_job(smooth=1, protect=0.95)

@@ -574,6 +574,70 @@ class AnalysisDialogTests(DialogTests):
         self.assertFalse((self.tmp / "resolve_temp").exists() and any(
             d.is_dir() for d in (self.tmp / "resolve_temp").iterdir()))   # job folder removed
 
+    def test_model_choice_only_in_the_analyze_way(self):
+        def scenario():
+            self.assertTrue(self.item("Model").Hidden)
+            self.check("WayAnalyze", True)
+            self.assertFalse(self.item("Model").Hidden)
+            self.assertEqual(list(self.item("Model").entries.values()),
+                             ["beat_this (MIT) – Standard", "md_beat_this (CC BY-NC 4.0) – nur nicht-kommerziell"])
+            self.assertEqual(self.item("Model").CurrentIndex, 0)
+            self.assertTrue(self.item("MdConfirm").Hidden)
+            self.assertTrue(self.item("MdNotice").Hidden)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_md_beat_this_needs_the_licence_box(self):
+        def scenario():
+            self.select_song()
+            self.check("WayAnalyze", True)
+            self.tick(20)
+            self.assertTrue(self.item("OK").Enabled)
+            self.choose("Model", 1)
+            self.assertFalse(self.item("MdConfirm").Hidden)
+            self.assertFalse(self.item("MdConfirm").Checked)
+            notice = self.item("MdNotice").Text
+            self.assertFalse(self.item("MdNotice").Hidden)
+            self.assertIn("CC BY-NC 4.0", notice)
+            self.assertIn("nicht-kommerzielle Zwecke", notice)
+            self.assertIn("https://github.com/fosfrancesco/md_beat_this", notice)
+            self.assertTrue(self.item("Smooth").Hidden)                   # no frame probabilities: no smoothing
+            self.assertFalse(self.item("OK").Enabled)
+            self.assertIn("Lizenz-Häkchen", self.item("ClipInfo").Text)
+            self.click("OK")                                               # disabled: nothing starts
+            self.assertEqual(self.spawned, [])
+            self.check("MdConfirm", True)
+            self.assertTrue(self.item("OK").Enabled)
+            self.assertNotIn("Lizenz-Häkchen", self.item("ClipInfo").Text)
+            self.click("OK")
+            self.assertEqual(len(self.spawned), 1)
+            job = (self.job_dir() / "job.txt").read_text(encoding="utf-8")
+            self.assertIn("model=md_beat_this", job)
+            self.click("Cancel")
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_beat_this_job_and_saved_model_without_the_licence_box(self):
+        def scenario():
+            self.start_analysis()
+            job = (self.job_dir() / "job.txt").read_text(encoding="utf-8")
+            self.assertIn("model=beat_this", job)
+            self.click("Cancel")
+            self.choose("Model", 1)
+            self.check("MdConfirm", True)
+            self.close()
+        self.run_dialog(scenario)
+        text = (self.tmp / "resolve_temp" / "plugin.txt").read_text(encoding="utf-8")
+        self.assertIn("model=md_beat_this", text)
+
+        def again():
+            self.check("WayAnalyze", True)
+            self.assertEqual(self.item("Model").CurrentIndex, 1)
+            self.assertFalse(self.item("MdConfirm").Checked)   # asked again in every window
+            self.close()
+        self.ui.exited = False
+        self.run_dialog(again)
+
     def test_engine_line_gets_its_height_after_the_analysis(self):
         # Resolve 0.1.6: "Analysiert mit beat_this (CUDA, NVIDIA GeForce RTX 5080)" overlapped the next line
         def scenario():

@@ -8,6 +8,7 @@ import {
   generateResolveMarkerJson,
   downloadTextFile,
   downloadBlob,
+  MD_BEAT_THIS_ATTRIBUTION,
 } from '../utils/exportUtils';
 import { ResolveInstallPanel } from './ResolveInstallPanel';
 import {
@@ -22,6 +23,7 @@ import {
   Film,
   Sparkles,
   Info,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface ExportModalProps {
@@ -34,10 +36,13 @@ type TabType = 'davinci' | 'audacity' | 'json' | 'midi' | 'csv';
 export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('davinci');
   const [copied, setCopied] = useState(false);
+  const [copiedAttribution, setCopiedAttribution] = useState(false);
 
   const [davinciOnlyDownbeats, setDavinciOnlyDownbeats] = useState<boolean>(false);
 
   const baseFileName = result.metadata.fileName.replace(/\.[^/.]+$/, '');
+  const isMdBeatThis = result.engineInfo?.id === 'md_beat_this';
+  const attributionText = result.attribution ?? MD_BEAT_THIS_ATTRIBUTION;
 
   const resolveJsonContent = generateResolveMarkerJson(result, {
     onlyDownbeats: davinciOnlyDownbeats,
@@ -51,6 +56,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyAttribution = () => {
+    navigator.clipboard.writeText(attributionText);
+    setCopiedAttribution(true);
+    setTimeout(() => setCopiedAttribution(false), 2000);
   };
 
   const handleDownload = () => {
@@ -150,6 +161,36 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
 
         {/* Content Area */}
         <div className="p-6 flex-1 overflow-y-auto font-mono text-xs text-slate-300 space-y-4">
+          {isMdBeatThis && (
+            <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-700/60 font-sans text-xs text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="font-semibold">
+                    CC BY-NC 4.0 · Namensnennung (Attribution) bei Veröffentlichung erforderlich
+                  </div>
+                  <div className="text-[11px] text-amber-200/80">{attributionText}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopyAttribution}
+                className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-amber-900/50 hover:bg-amber-900/80 text-amber-100 border border-amber-700/60 transition-colors cursor-pointer"
+              >
+                {copiedAttribution ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Kopiert!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Attribution kopieren</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
           {/* 1. DaVinci Resolve Marker Tab */}
           {activeTab === 'davinci' && (
             <div className="space-y-4 font-sans">

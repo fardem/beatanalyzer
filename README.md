@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.1.8** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
+**Version 0.2.0** · [Änderungen](CHANGELOG.md) · [Lizenz](LICENSE)
 
 BeatAnalyzer erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und legt die Beats als **farbige Marker auf deinen Audio-Clip in DaVinci Resolve**. Die Erkennung läuft lokal auf deinem PC mit dem Transformer-Modell [CPJKU beat_this](https://github.com/CPJKU/beat_this). Die Oberfläche ist eine Web-App im Browser, der Server dahinter ist Python.
 
@@ -30,7 +30,7 @@ BeatAnalyzer erkennt in Musikdateien **Beats, Downbeats, Tempo und Taktart** und
 
 ## Funktionen
 
-- **Beat- und Downbeat-Erkennung** mit CPJKU beat_this (PyTorch, mit NVIDIA-Grafikkarte über CUDA). Ist beat_this nicht installiert, rechnet BeatAnalyzer mit librosa.
+- **Beat- und Downbeat-Erkennung** mit CPJKU beat_this (PyTorch, mit NVIDIA-Grafikkarte über CUDA). Ist beat_this nicht installiert, rechnet BeatAnalyzer mit librosa. Optional lässt sich auch [fosfrancesco/md_beat_this](https://github.com/fosfrancesco/md_beat_this) (CC BY-NC 4.0, nur nicht-kommerziell) manuell nachinstallieren und in der App auswählen.
 - **Tempo und Taktart:** globales Tempo, Durchschnitt, Median, kleinstes und größtes Tempo, Tempo-Stabilität in Prozent, Taktart (z. B. 4/4, 3/4).
 - **Wellenform mit Beat-Raster:** Takte und Beats als Linien, dazu die Aktivierungskurven für Beats (BAF) und Downbeats (DAF). Zoom und Übersicht zum Springen.
 - **Wiedergabe mit Metronom:** Der Klick liegt auf den erkannten Beats, der Downbeat klingt höher. Geschwindigkeit 0,5× bis 1,5×.
@@ -189,6 +189,8 @@ venv/bin/python backend/analyze_cli.py song.mp3
 | `--only-downbeats` | Resolve-Marker nur auf Downbeats |
 | `--export-audacity PFAD` | Audacity-Textspur |
 | `--export-csv PFAD` | CSV-Tabelle |
+| `--model beat_this\|md_beat_this` | Analyse-Modell wählen (`md_beat_this` nur nicht-kommerziell, CC BY-NC 4.0) |
+| `--ffmpeg-dir PFAD` | Optionaler Ordner mit ausführbarem `ffmpeg` (falls nicht im System-`PATH`) |
 
 Unter Windows heißt der Python-Pfad `venv\Scripts\python.exe`.
 
@@ -302,6 +304,24 @@ Wenn du beat_this in einer wissenschaftlichen Arbeit verwendest, zitiere bitte:
     address = {San Francisco, CA, United States},
 }
 ```
+
+**Masked Diffusion (`fosfrancesco/md_beat_this`, optional)** – <https://github.com/fosfrancesco/md_beat_this>,
+Francesco Foscarin, Filip Korzeniowski, Richard Vogl (ISMIR 2026). Code, Modellgewichte, Vorhersagen
+und Aktivierungen stehen unter **CC BY-NC 4.0** (nur nicht-kommerzielle Nutzung mit Namensnennung).
+BeatAnalyzer enthält **weder Code noch Modellgewichte** von `md_beat_this` und lädt das Paket auch
+nicht automatisch herunter. Wer es lokal für nicht-kommerzielle Zwecke verwenden möchte, installiert
+es nach dem Basis-Setup manuell im BeatAnalyzer-Ordner in die eigene `venv`-Umgebung (benötigt
+zusätzlich `ffmpeg`):
+
+```bash
+# Windows (CMD / PowerShell im BeatAnalyzer-Ordner)
+venv\Scripts\pip install https://github.com/fosfrancesco/md_beat_this/archive/main.zip
+
+# Linux / macOS (Terminal im BeatAnalyzer-Ordner)
+venv/bin/pip install https://github.com/fosfrancesco/md_beat_this/archive/main.zip
+```
+
+Danach den BeatAnalyzer-Server neu starten (`start.bat`). Falls `ffmpeg` nicht direkt im System-`PATH` ausführbar ist, kannst du in der Web-Oberfläche (oder per `--ffmpeg-dir`) einen lokalen `ffmpeg`-Ordner hinterlegen, den BeatAnalyzer automatisch für `ffmpeg`-Aufrufe verwendet. Bei Exporten mit `md_beat_this` fügt BeatAnalyzer automatisch den Lizenz- und Namensnennungs-Hinweis (`CC BY-NC 4.0`) in JSON-Dateien hinzu.
 
 Weitere Bibliotheken, die per pip installiert werden: PyTorch (BSD-3-Clause), librosa (ISC),
 NumPy und SciPy (BSD-3-Clause), soundfile (BSD-3-Clause). Das Frontend in `dist/` enthält React,

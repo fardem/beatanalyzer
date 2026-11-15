@@ -17,9 +17,21 @@ export function generateAudacityLabels(result: AnalysisResult): string {
   return lines.join('\n');
 }
 
+export const MD_BEAT_THIS_ATTRIBUTION =
+  'Masked Diffusion (md_beat_this) by Francesco Foscarin, Filip Korzeniowski, Richard Vogl (https://github.com/fosfrancesco/md_beat_this) — Licensed under CC BY-NC 4.0 (Non-Commercial Use Only).';
+
 export function generateBeatThisJson(result: AnalysisResult): string {
+  const isMdBeatThis = result.engineInfo?.id === 'md_beat_this';
   const exportData = {
-    generator: 'CPJKU/beat_this Web Analyzer',
+    generator: isMdBeatThis
+      ? 'BeatAnalyzer (fosfrancesco/md_beat_this · CC BY-NC 4.0)'
+      : 'CPJKU/beat_this Web Analyzer',
+    ...(isMdBeatThis
+      ? {
+          license: result.license ?? 'CC BY-NC 4.0',
+          attribution: result.attribution ?? MD_BEAT_THIS_ATTRIBUTION,
+        }
+      : {}),
     metadata: {
       file_name: result.metadata.fileName,
       format: result.metadata.format,
@@ -164,6 +176,7 @@ export function generateResolveMarkerJson(
   result: AnalysisResult,
   options: ResolveMarkerOptions = {}
 ): string {
+  const isMdBeatThis = result.engineInfo?.id === 'md_beat_this';
   const beats = options.onlyDownbeats ? result.beats.filter((b) => b.isDownbeat) : result.beats;
   const data = {
     format: RESOLVE_MARKER_FORMAT,
@@ -180,6 +193,12 @@ export function generateResolveMarkerJson(
       confidence: b.confidence,
     })),
     ...(result.engineInfo ? { engine: result.engineInfo } : {}),
+    ...(isMdBeatThis
+      ? {
+          license: result.license ?? 'CC BY-NC 4.0',
+          attribution: result.attribution ?? MD_BEAT_THIS_ATTRIBUTION,
+        }
+      : {}),
   };
   return JSON.stringify(data, null, 2);
 }

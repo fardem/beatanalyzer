@@ -1,5 +1,19 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileAudio, Sparkles, Music2, Play, AlertCircle, ArrowRight } from 'lucide-react';
+import {
+  Upload,
+  FileAudio,
+  Sparkles,
+  Music2,
+  Play,
+  AlertCircle,
+  ArrowRight,
+  Cpu,
+  AlertTriangle,
+  Settings,
+  CheckCircle2,
+} from 'lucide-react';
+import { AnalysisModel } from '../types/analyzer';
+import { BackendHealth } from '../utils/localBackend';
 import { SAMPLE_TRACKS, generateSampleWavBlob } from '../utils/sampleTracks';
 
 interface UploadZoneProps {
@@ -8,6 +22,10 @@ interface UploadZoneProps {
   progress: number;
   stageText: string;
   error: string | null;
+  selectedModel: AnalysisModel;
+  onSelectModel: (model: AnalysisModel) => void;
+  onOpenMdSetup: () => void;
+  backendHealth: BackendHealth | null;
 }
 
 export const UploadZone: React.FC<UploadZoneProps> = ({
@@ -16,9 +34,18 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
   progress,
   stageText,
   error,
+  selectedModel,
+  onSelectModel,
+  onOpenMdSetup,
+  backendHealth,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleChooseModel = (model: AnalysisModel) => {
+    if (isAnalyzing) return;
+    onSelectModel(model);
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -53,6 +80,9 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
     onFileSelected(blob, `${sample.name}.wav`);
   };
 
+  const mdInstalledOnServer = backendHealth?.md_beat_this_installed;
+  const beatThisInstalledOnServer = backendHealth?.beat_this_installed;
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-6">
       {/* Hero Header */}
@@ -70,6 +100,128 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
         <p className="text-slate-400 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
           Präzise Lokalisierung von Takten, Beats und Downbeats basierend auf der CPJKU-Transformer-Architektur. Unterstützt MP3, WAV, AAC und FLAC.
         </p>
+      </div>
+
+      {/* Model Selector */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <Cpu className="w-4 h-4 text-cyan-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Analyse-Modell auswählen
+            </h3>
+          </div>
+          <span className="text-[11px] text-slate-500">
+            {backendHealth ? 'Lokaler Python-Server verbunden' : 'Browser-Analyse aktiv'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Analyse-Modell">
+          {/* Option 1: CPJKU beat_this */}
+          <button
+            type="button"
+            role="radio"
+            aria-checked={selectedModel === 'beat_this'}
+            disabled={isAnalyzing}
+            onClick={() => handleChooseModel('beat_this')}
+            className={`text-left p-4 rounded-xl border transition-all cursor-pointer disabled:opacity-60 ${
+              selectedModel === 'beat_this'
+                ? 'bg-cyan-950/35 border-cyan-500/80 shadow-lg shadow-cyan-950/40'
+                : 'bg-slate-900/70 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-white">CPJKU beat_this</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
+                    MIT-Lizenz
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Standard-Transformer für Beat &amp; Downbeat Tracking. Kommerziell &amp; privat nutzbar.
+                </p>
+                {backendHealth && (
+                  <p className="text-[11px] text-slate-500 pt-0.5">
+                    Lokal:{' '}
+                    <span className={beatThisInstalledOnServer ? 'text-emerald-400' : 'text-slate-400'}>
+                      {beatThisInstalledOnServer ? 'installiert' : 'nicht installiert (Librosa-Fallback)'}
+                    </span>
+                  </p>
+                )}
+              </div>
+              {selectedModel === 'beat_this' && (
+                <CheckCircle2 className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+              )}
+            </div>
+          </button>
+
+          {/* Option 2: Masked Diffusion md_beat_this */}
+          <div
+            className={`rounded-xl border transition-all flex items-stretch justify-between ${
+              selectedModel === 'md_beat_this'
+                ? 'bg-amber-950/30 border-amber-500/80 shadow-lg shadow-amber-950/30'
+                : 'bg-slate-900/70 border-slate-800 hover:border-amber-700/60 hover:bg-slate-900'
+            } ${isAnalyzing ? 'opacity-60' : ''}`}
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={selectedModel === 'md_beat_this'}
+              disabled={isAnalyzing}
+              onClick={() => handleChooseModel('md_beat_this')}
+              className="flex-1 text-left p-4 pr-2 cursor-pointer disabled:cursor-not-allowed rounded-l-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-white">Masked Diffusion (md_beat_this)</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-950/90 text-amber-300 border border-amber-700/70">
+                    Nur nicht-kommerziell
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Kohärentes Beat-Tracking per Masked Diffusion (<span className="font-mono text-slate-300">CC BY-NC 4.0</span>).
+                </p>
+                {backendHealth && (
+                  <p className="text-[11px] text-slate-500 pt-0.5">
+                    Lokal:{' '}
+                    <span className={mdInstalledOnServer ? 'text-emerald-400' : 'text-amber-300'}>
+                      {mdInstalledOnServer ? 'installiert' : 'nicht installiert (Fallback aktiv)'}
+                    </span>
+                  </p>
+                )}
+              </div>
+            </button>
+
+            <div className="flex items-start gap-1 p-3 pl-1 shrink-0">
+              <button
+                type="button"
+                disabled={isAnalyzing}
+                onClick={onOpenMdSetup}
+                aria-label="md_beat_this und FFmpeg einrichten"
+                title="Modell & FFmpeg einrichten"
+                className="p-2 rounded-lg text-slate-400 hover:text-amber-300 hover:bg-amber-950/60 border border-transparent hover:border-amber-700/60 transition-colors cursor-pointer disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              {selectedModel === 'md_beat_this' && (
+                <div className="p-1.5 text-amber-400" aria-hidden="true">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Highlighted Single-Line Non-Commercial Notice */}
+        {selectedModel === 'md_beat_this' && (
+          <div className="px-3.5 py-2 rounded-xl bg-amber-950/35 border border-amber-600/60 text-xs flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <p className="text-amber-200 font-medium">
+              Hinweis: md_beat_this darf ausschließlich nicht-kommerziell genutzt werden (CC BY-NC 4.0).
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Error Banner */}

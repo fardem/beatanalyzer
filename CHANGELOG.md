@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0] – 2026-11-15
+
+Zusammenführung mit der parallelen Entwicklung aus Google AI Studio (`fardem/BeatAnalyzer_test`, Basis 0.1.4;
+Protokoll in `docs/gemini weiterentwicklung 0.1.4.md`). Der Stand 0.1.8 bleibt vollständig erhalten.
+
+### Hinzugefügt
+- **Zweites Analyse-Modell `md_beat_this`** (Masked Diffusion, fosfrancesco/md_beat_this, **CC BY-NC 4.0 – nur nicht-kommerzielle Nutzung**). Wird nicht mitinstalliert, sondern bei Bedarf von Hand in die `venv` (siehe README). Server: `/api/analyze?model=md_beat_this`, `/api/health` meldet beide Modelle; Kommandozeile: `--model`. Ohne Installation rechnet librosa. Lizenz und Namensnennung stehen in Analyse- und Marker-JSON und in den Exporten.
+- **Resolve-Fenster: Modellwahl** im Weg „Ausgewählten Clip analysieren“ (`beat_this (MIT)` / `md_beat_this (CC BY-NC 4.0)`). Bei `md_beat_this` Lizenzhinweis mit <https://github.com/fosfrancesco/md_beat_this> und ein Häkchen „nur nicht-kommerziell“, ohne das OK gesperrt bleibt. Das Modell wird gespeichert, das Häkchen nicht. „Glätten“ ist dabei ausgeblendet (das Modell liefert keine Wahrscheinlichkeiten je Frame).
+- **ffmpeg-Ordner** einstellbar (Web-App, `settings.json`, `--ffmpeg-dir`), wenn ffmpeg nicht im System-`PATH` liegt; der Ordner wird beim Speichern geprüft.
+- Web-App: Modell-Kacheln mit Zahnrad, Lizenz- und Einrichtungsfenster (Bestätigung einmal je Sitzung), Lizenzzeile in der Ergebnisansicht.
+- Wellenform: Knopf **`20s`** (20-Sekunden-Ausschnitt um die Abspielposition), höhere Zoomgrenze bei langen Songs, zuschaltbare **Lupe**, **verschiebbarer Rahmen** in der Übersicht.
+
+### Geändert
+- Web-App: Regler „Glätten“ nur, wenn er wirkt; Knopf DAF gesperrt, wenn das Modell keine Downbeat-Kurve liefert (Tooltip nennt den Grund).
+- Subtitles mit `md_beat_this`: ohne Zeile „Confidence“ (das Modell liefert keine), Infoblock „Model: md_beat_this – Nutzung im Rahmen der CC BY-NC 4.0-Lizenz“. Rechnet librosa ersatzweise, heißt es „md_beat_this nicht installiert“.
+
 ## [0.1.8] – 2026-11-14
 
 ### Behoben

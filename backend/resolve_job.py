@@ -89,6 +89,7 @@ def run_job(job_dir: str, analyze: Optional[Callable] = None) -> str:
             protect = float(job.get("protect", DEFAULT_PROTECT))
         except ValueError:
             protect = DEFAULT_PROTECT
+        model = job.get("model", "beat_this")   # md_beat_this only after the licence check in the Resolve window
         if _cancelled(job_dir):
             return _done(job_dir, "cancelled")
 
@@ -99,7 +100,8 @@ def run_job(job_dir: str, analyze: Optional[Callable] = None) -> str:
             return _done(job_dir, "cancelled")
 
         _progress(job_dir, "analyze")
-        result = analyze(audio, os.path.basename(audio), smooth=smooth, protect=clamp_protect(protect))
+        kwargs = {"model": "md_beat_this"} if model == "md_beat_this" else {}
+        result = analyze(audio, os.path.basename(audio), smooth=smooth, protect=clamp_protect(protect), **kwargs)
         if _cancelled(job_dir):
             return _done(job_dir, "cancelled")
 
