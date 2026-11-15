@@ -125,6 +125,14 @@
     "explain_short_no_timeline": "Açık Timeline yok – yalnızca Media Pool'da Subtitle.",
     "explain_short_off": "Timeline değişmez, Subtitle BeatAnalyzer klasöründe.",
     "explain_short_tl_markers": "Marker'lar Timeline'daki kliplere de eklenir ({items}).",
-    "explain_present_many": "„{timeline}“ Timeline'ında şarkı {tracks} üzerinde. Bu izlerin her biri için ayrı bir Subtitle Track oluşur, ör. „{track_name}“. Resolve yalnızca bir etkin Subtitle Track'e izin verir; diğerleri kalır ama devre dışı bırakılır."
+    "explain_present_many": "„{timeline}“ Timeline'ında şarkı {tracks} üzerinde. Bu izlerin her biri için ayrı bir Subtitle Track oluşur, ör. „{track_name}“. Resolve yalnızca bir etkin Subtitle Track'e izin verir; diğerleri kalır ama devre dışı bırakılır.",
+    "model_label": "Model",
+    "model_tip": "beat_this (CPJKU, MIT): standart, ticari işler için de.\nmd_beat_this (Masked Diffusion, CC BY-NC 4.0): yalnızca ticari olmayan kullanım; ayrıca kurulur (bkz. README).",
+    "model_beat_this": "beat_this (MIT) – standart",
+    "model_md": "md_beat_this (CC BY-NC 4.0) – yalnızca ticari olmayan",
+    "md_notice": "md_beat_this, CC BY-NC 4.0 lisansı altındadır ve yalnızca ticari olmayan amaçlarla, CC BY-NC 4.0 lisansı çerçevesinde kullanılabilir: {url}",
+    "md_confirm": "md_beat_this'i yalnızca ticari olmayan amaçlarla kullanıyorum (CC BY-NC 4.0)",
+    "md_confirm_needed": "md_beat_this ile analiz için lisans kutusunu işaretleyin.",
+    "reason_md_not_installed": "md_beat_this kurulu değil"
   }
 }

@@ -123,9 +123,11 @@ def _gpu_name() -> Optional[str]:
 
 
 # Model and licence per engine, shown in the subtitles. beat_this: code and published weights under MIT (README of
-# CPJKU/beat_this); librosa: ISC. A later model with other terms sets "commercial": False.
+# CPJKU/beat_this); librosa: ISC; md_beat_this (fosfrancesco/md_beat_this): CC BY-NC 4.0, non-commercial only.
 MODELS = {
     "beat_this": {"name": "beat_this", "license": "MIT", "commercial": True},
+    "md_beat_this": {"name": "md_beat_this", "license": "CC BY-NC 4.0", "commercial": False,
+                     "url": "https://github.com/fosfrancesco/md_beat_this"},
     "librosa": {"name": "librosa", "license": "ISC", "commercial": True},
 }
 
@@ -597,7 +599,9 @@ def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) ->
         ],
     }
     if result.get("engineInfo"):
-        data["engine"] = result["engineInfo"]
+        data["engine"] = dict(result["engineInfo"])
+        if result.get("selectedModel") == "md_beat_this" and data["engine"].get("id") != "md_beat_this":
+            data["engine"]["requestedModel"] = "md_beat_this"   # librosa stood in for md_beat_this
     if (result.get("engineInfo") or {}).get("id") == "md_beat_this":
         data["license"] = result.get("license") or "CC BY-NC 4.0"
         data["attribution"] = result.get("attribution") or MD_BEAT_THIS_ATTRIBUTION

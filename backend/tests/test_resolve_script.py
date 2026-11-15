@@ -556,6 +556,27 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(t({"id": "librosa", "fallbackReason": "not_installed"}), "librosa – beat_this nicht installiert")
         self.assertIsNone(self.M.engine_text(None))
 
+    def test_engine_text_md_beat_this(self):
+        t = lambda d: self.M.engine_text(self.lua.table_from(d))
+        self.assertEqual(t({"id": "md_beat_this", "device": "cpu"}), "md_beat_this (CPU)")
+        self.load_lang("de")
+        t = lambda d: self.M.engine_text(self.lua.table_from(d))
+        self.assertEqual(t({"id": "librosa", "fallbackReason": "not_installed", "requestedModel": "md_beat_this"}),
+                         "librosa – md_beat_this nicht installiert")
+
+    def test_md_beat_this_subtitles_without_confidence_with_licence(self):
+        self.load_lang("de")
+        data = resolve_marker_data(sample_result())
+        for m in data["markers"]:
+            m["confidence"] = None                       # md_beat_this gives no confidence
+        data["engine"] = {"id": "md_beat_this", "device": "cpu", "gpu": None, "fallbackReason": None,
+                          "model": {"name": "md_beat_this", "license": "CC BY-NC 4.0", "commercial": False}}
+        ok, msg = self.M.apply(self.write_json(data))
+        self.assertTrue(ok, msg)
+        self.assertEqual(self.first_beat_cue(), ["Downbeat (1)", "Takt 1 – Beat 1", "00:00.500 – 120,0 BPM"])
+        self.assertIn("Model: md_beat_this – Nutzung im Rahmen der CC BY-NC 4.0-Lizenz", self.intro_cue())
+        self.assertEqual(self.markers(self.mock.song)[13]["note"], "Takt 1 – Beat 1 | 0,500 s | 120,0 BPM")
+
     def test_prepare_shows_engine(self):
         self.load_lang("de")
         data = resolve_marker_data(sample_result())
@@ -1081,7 +1102,11 @@ class ResolveJobScriptTests(unittest.TestCase):
         self.assertEqual(Path(job).parent, self.tmp / "resolve_temp")
         kv = self.kv(Path(job) / "job.txt")
         self.assertEqual(kv, {"format": "beatanalyzer-resolve-job/1", "audio": audio, "lang": "de",
-                              "smooth": "1", "protect": "0.95"})
+                              "smooth": "1", "protect": "0.95", "model": "beat_this"})
+
+    def test_new_job_with_md_beat_this(self):
+        job = self.M.new_job("/x/a.mp3", self.lua.table_from({"lang": "de", "model": "md_beat_this"}))
+        self.assertEqual(self.kv(Path(job) / "job.txt")["model"], "md_beat_this")
 
     def test_new_job_slider_zero_is_off(self):
         job = self.M.new_job("/x/a.mp3", self.lua.table_from({"lang": "en", "slider": 0}))

@@ -17,6 +17,27 @@
 - Testergebnisse und Nutzerentscheidungen: `docs/superpowers/notes/2026-11-14-resolve-test-tp3.md`,
   `docs/superpowers/notes/2026-11-12-rueckmeldung-glaett-regler.md`.
 
+## 0. Zusammenführung mit der parallelen Entwicklung (2026-11-15)
+
+- Der Zweig aus Google AI Studio (`fardem/BeatAnalyzer_test`, Basis 0.1.4, Protokoll
+  `docs/gemini weiterentwicklung 0.1.4.md`) ist per 3-Wege-Merge in 0.1.8 übernommen: Modell `md_beat_this`
+  (CC BY-NC 4.0) in Server, Kommandozeile und Web-App, `ffmpeg`-Ordner, Lizenz-Modal, Lupe, `20s`-Zoom, ziehbarer
+  Rahmen der Übersicht, DAF/BAF je nach Kurve. Die Basis war unser `5cb8010` (Code gleich 0.1.4); Import-Commit
+  `2f82fca`, Merge `46f1560`.
+- Nicht übernommen (Umgebung von AI Studio): Löschung von `package-lock.json`, Dateirechte von
+  `install_and_run.sh`, Bilder und Test-JSON unter `public/assets/aistudio/`, gelöschte `docs/releases/0.1.4.md`.
+  Ein Test von Gemini lief nur mit installiertem `torch` und ist angepasst.
+- **Resolve-Fenster:** Im Weg „Ausgewählten Clip analysieren“ wird das Modell gewählt (`beat_this` / `md_beat_this`).
+  Bei `md_beat_this` erscheinen der Lizenzhinweis (CC BY-NC 4.0, nur nicht-kommerziell,
+  <https://github.com/fosfrancesco/md_beat_this>) und ein Häkchen, das gesetzt sein muss, sonst bleibt OK aus. Das
+  Häkchen wird nicht gespeichert (jedes Fenster fragt neu), das Modell schon. „Glätten“ ist bei `md_beat_this`
+  ausgeblendet (keine Wahrscheinlichkeiten je Frame). Subtitles ohne Zeile „Confidence“, Infoblock mit
+  „md_beat_this – CC BY-NC 4.0“; Ersatz durch librosa nennt „md_beat_this nicht installiert“.
+- **Offen nach Teilprojekt 4:** Das Resolve-Fenster wird nach der Web-App wieder angeglichen (Begriffe, Anzeige des
+  Analyse-Programms, Modellwahl und Lizenzhinweis wie in der Web-App). In Resolve noch nicht getestet.
+- Noch zu prüfen: Texte der Web-App aus dem Gemini-Zweig sind nur deutsch (gehört zu Teilprojekt 4, Sprachen);
+  `md_beat_this` selbst ist hier nicht installiert und nur mit nachgestellten Modulen getestet.
+
 ## 1. Teilprojekt 4 – Web-App (Gesamtkonzept Abschnitt 9)
 
 - **Sprachen:** Sprachwahl in der Kopfzeile (System, Deutsch, English, Türkçe), gespeichert über `/api/settings`
