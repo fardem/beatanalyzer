@@ -6,6 +6,8 @@ numpy>=1.24  # kein <2: fuer Python 3.13+ gibt es keine numpy-1.x-Wheels
 scipy>=1.10.0
 librosa>=0.10.0
 soundfile>=0.12.1
+# m4a/AAC, ALAC, Opus, WMA ... lesen, bringt eigene FFmpeg-Bibliotheken mit (ohne installiertes ffmpeg)
+av>=12.0
 
 # Deep Learning / PyTorch Engine
 torch>=2.0.0
@@ -15,5 +17,5 @@ torchaudio>=2.0.0
 git+https://github.com/CPJKU/beat_this.git#egg=beat_this
 
 # Optional: Masked Diffusion (fosfrancesco/md_beat_this) - NUR nicht-kommerzielle Nutzung (CC BY-NC 4.0)!
-# Benötigt außerdem ffmpeg auf dem System:
+# Benötigt ffmpeg (Ordner in der Web-App einstellbar):
 # https://github.com/fosfrancesco/md_beat_this/archive/main.zip

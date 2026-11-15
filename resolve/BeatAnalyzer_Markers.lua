@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.2.2"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.2.3"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -2230,6 +2230,9 @@ function M.main()
     if analyze_way() and not model_ok() then
       ok = false   -- md_beat_this without the licence box (the hint is in ClipInfo)
     end
+    if analyze_way() and ok and S.failed and S.failed.path == S.info.path and S.failed.model == model_value() then
+      ok = false   -- this file failed with this model: only Close, another clip or another model
+    end
     set("OK", "Enabled", ok)
     set("Remove", "Enabled", #remove_clips() > 0)
   end
@@ -2282,7 +2285,10 @@ function M.main()
     return table.concat(lines, "\n")
   end
 
-  local function end_analysis(text)
+  -- failed: the analysis of this file with this model failed (error, no start, timeout); OK stays off for it, so
+  -- the window can only be closed or another clip / model chosen (Resolve test 0.2.2: m4a error, OK was active)
+  local function end_analysis(text, failed)
+    S.failed = failed and S.analysis and { path = S.analysis.path, model = S.analysis.model } or nil
     S.state, S.analysis = "select", nil
     set("Cancel", "Hidden", true)
     lock(false)
@@ -2307,7 +2313,8 @@ function M.main()
       return
     end
     -- project, timeline and clip are fixed at OK (spec 6.2), also for the markers without a subtitle track
-    S.analysis = { dir = dir, started = G_os.time(), clip = info.clip, marker_timeline = current_timeline(),
+    S.analysis = { dir = dir, started = G_os.time(), clip = info.clip, path = info.path, model = model_value(),
+                   marker_timeline = current_timeline(),
                    timeline = get("Timeline", "Checked") and current_timeline() or false }
     S.state = "analyze"
     lock(true)
@@ -2341,14 +2348,14 @@ function M.main()
       else
         M.remove_job(a.dir)
       end
-      end_analysis(text)
+      end_analysis(text, r.state ~= "cancelled")
       return
     end
     local job, err = M.start(r.markers_path, { colors = read_colors(), timeline = a.timeline, clips = { a.clip },
                                                marker_timeline = a.marker_timeline })
     if not job then
       M.remove_job(a.dir)
-      end_analysis(tostring(err))
+      end_analysis(tostring(err), true)
       return
     end
     local engine = M.engine_text(job.data.engine)

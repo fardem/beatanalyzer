@@ -836,19 +836,24 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
             · <span className="text-slate-200 font-medium">{result.metadata.fileName}</span>
             <span className="text-slate-500 tabular-nums"> · {formatSongLength(duration)}</span>
           </span>
-          {activeBeat && (
-            <span
-              className={`text-[11px] px-2 py-0.5 rounded-full font-bold transition-all ${
-                activeBeat.isDownbeat
-                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/50 scale-105'
-                  : 'bg-cyan-950 text-cyan-300 border border-cyan-800'
-              }`}
-            >
-              {activeBeat.isDownbeat
-                ? `Takt ${activeBeat.barIndex} · Downbeat`
-                : `Takt ${activeBeat.barIndex} · Beat ${activeBeat.beatInBar}`}
-            </span>
-          )}
+          {/* same size for "Beat 2" and "Downbeat" and also without a beat (test 0.2.2: the row wrapped on and off
+              in a narrow window and the waveform box changed its height while playing) */}
+          <span
+            className={`inline-flex justify-center w-[9.5rem] shrink-0 whitespace-nowrap text-[11px] px-2 py-0.5 rounded-full font-bold border transition-colors ${
+              !activeBeat
+                ? 'invisible border-transparent'
+                : activeBeat.isDownbeat
+                ? 'bg-rose-500 text-white border-rose-400 shadow-md shadow-rose-500/50'
+                : 'bg-cyan-950 text-cyan-300 border-cyan-800'
+            }`}
+            aria-hidden={!activeBeat}
+          >
+            {!activeBeat
+              ? 'Takt 000 · Downbeat'
+              : activeBeat.isDownbeat
+              ? `Takt ${activeBeat.barIndex} · Downbeat`
+              : `Takt ${activeBeat.barIndex} · Beat ${activeBeat.beatInBar}`}
+          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">

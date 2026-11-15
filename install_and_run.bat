@@ -158,6 +158,14 @@ if !errorlevel! neq 0 (
     echo   [OK] Audio-Pakete installiert.
 )
 
+echo   - Installiere PyAV (liest m4a/AAC, ALAC, Opus ... ohne eigenes ffmpeg)...
+!VENV_PIP! install "av>=12.0" >> "%LOGFILE%" 2>&1
+if !errorlevel! neq 0 (
+    echo   [HINWEIS] PyAV nicht installiert: m4a/AAC nur mit eingerichtetem ffmpeg, siehe install_log.txt
+) else (
+    echo   [OK] PyAV installiert.
+)
+
 echo   - Installiere Deep-Learning Engine (PyTorch ^& Torchaudio)...
 !VENV_PIP! install "torch>=2.0.0" "torchaudio>=2.0.0" >> "%LOGFILE%" 2>&1
 if !errorlevel! neq 0 (

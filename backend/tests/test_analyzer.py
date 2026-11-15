@@ -54,6 +54,74 @@ class AnalyzerTests(unittest.TestCase):
         for name in ("beat_this", "beat_this.inference", "md_beat_this", "md_beat_this.inference", "analyzer"):
             sys.modules.pop(name, None)
 
+    def test_m4a_is_read_without_ffmpeg(self):
+        # Resolve test 0.2.2: m4a (AAC) failed without an installed ffmpeg; PyAV brings its own decoders
+        try:
+            import av
+        except ImportError:
+            self.skipTest("PyAV (av) not installed")
+        y, sr = sf.read(self.wav, dtype="float32")
+        m4a = os.path.join(self.tmp, "click.m4a")
+        with av.open(m4a, "w") as out:
+            stream = out.add_stream("aac", rate=SR, layout="mono")
+            frame = av.AudioFrame.from_ndarray(y.reshape(1, -1), format="flt", layout="mono")
+            frame.sample_rate = SR
+            for packet in stream.encode(frame):
+                out.mux(packet)
+            for packet in stream.encode(None):
+                out.mux(packet)
+        sys.modules["beat_this"] = None
+        sys.modules.pop("analyzer", None)
+        analyzer = importlib.import_module("analyzer")
+        old_path = os.environ.get("PATH", "")
+        os.environ["PATH"] = ""                                  # no ffmpeg anywhere
+        try:
+            m, msr = analyzer.load_audio_safely(m4a)
+        finally:
+            os.environ["PATH"] = old_path
+        self.assertEqual(msr, 44100)
+        self.assertAlmostEqual(len(m) / msr, len(y) / SR, delta=0.05)
+        # (whether the AAC encoder delay is dropped depends on the edit list the encoder writes; with an m4a from
+        # ffmpeg the start matched the WAV to the sample, checked by hand)
+
+    def test_without_pyav_an_installed_ffmpeg_is_used(self):
+        import shutil
+        if not shutil.which("ffmpeg"):
+            self.skipTest("no ffmpeg on this machine")
+        ogg_free = os.path.join(self.tmp, "click.m4a")
+        import subprocess
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", self.wav, "-c:a", "aac", ogg_free], check=True)
+        sys.modules["beat_this"] = None
+        sys.modules["av"] = None                                  # PyAV missing
+        try:
+            sys.modules.pop("analyzer", None)
+            analyzer = importlib.import_module("analyzer")
+            m, msr = analyzer.load_audio_safely(ogg_free)
+            w, _ = analyzer.load_audio_safely(self.wav)
+        finally:
+            sys.modules.pop("av", None)
+        self.assertEqual(msr, 44100)
+        first = lambda a: int(np.argmax(np.abs(a) > 0.3))
+        self.assertLess(abs(first(m) - first(w)) / 44100, 0.005)   # ffmpeg drops the AAC encoder delay
+
+    def test_unreadable_format_names_the_remedy(self):
+        bad = os.path.join(self.tmp, "kaputt.m4a")
+        with open(bad, "wb") as f:
+            f.write(b"no audio")
+        sys.modules["beat_this"] = None
+        sys.modules["av"] = None
+        old_path = os.environ.get("PATH", "")
+        os.environ["PATH"] = ""
+        try:
+            sys.modules.pop("analyzer", None)
+            analyzer = importlib.import_module("analyzer")
+            with self.assertRaises(RuntimeError) as ctx:
+                analyzer.load_audio_safely(bad)
+        finally:
+            os.environ["PATH"] = old_path
+            sys.modules.pop("av", None)
+        self.assertIn("pip install av", str(ctx.exception))
+
     def test_fallback_without_beat_this(self):
         sys.modules["beat_this"] = None  # erzwingt ImportError
         sys.modules.pop("analyzer", None)

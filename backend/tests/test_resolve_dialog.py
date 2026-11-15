@@ -698,10 +698,34 @@ class AnalysisDialogTests(DialogTests):
             self.python_writes(done="error")
             self.tick(25)
             self.assertIn("kaputt", self.item("Status").Text)
+            # Resolve test 0.2.2 (m4a): after an error OK stays off for this file, only Close
+            self.assertFalse(self.item("OK").Enabled)
+            self.tick(60)                                       # also after the next refreshes
+            self.assertFalse(self.item("OK").Enabled)
+            self.assertIn("kaputt", self.item("Status").Text)
+            self.assertTrue(self.item("Close").Enabled)
+            self.choose("Model", 1)                             # another model may be tried
+            self.check("MdConfirm", True)
+            self.assertTrue(self.item("OK").Enabled)
+            self.choose("Model", 0)
+            self.assertFalse(self.item("OK").Enabled)
+            self.lua.execute("MOCK.selected = {}")              # another clip may be analysed
+            self.tick(25)
+            self.lua.execute("MOCK.song.filepath = '/Musik/Anderer Song.wav'; MOCK.selected = { MOCK.song }")
+            self.tick(25)
             self.assertTrue(self.item("OK").Enabled)
             self.close()
         self.run_dialog(scenario)
         self.assertEqual(self.markers(self.mock.song), {})
+
+    def test_cancel_keeps_ok(self):
+        def scenario():
+            self.start_analysis()
+            self.click("Cancel")
+            self.tick(25)
+            self.assertTrue(self.item("OK").Enabled)
+            self.close()
+        self.run_dialog(scenario)
 
     def test_python_does_not_start(self):
         def scenario():
@@ -709,7 +733,7 @@ class AnalysisDialogTests(DialogTests):
             self.lua.execute("os.time = (function(t) return function() return t() + 120 end end)(os.time)")
             self.tick(25)
             self.assertIn("Python ist nicht gestartet", self.item("Status").Text)
-            self.assertTrue(self.item("OK").Enabled)
+            self.assertFalse(self.item("OK").Enabled)                # like an error: only Close
             self.close()
         self.run_dialog(scenario)
 
