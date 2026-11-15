@@ -323,7 +323,9 @@
       "loop_view": "Ausschnitt",
       "loop_view_tip": "Loop: sichtbarer Ausschnitt – Klick: ganzer Song",
       "loop_song": "Ganzer Song",
-      "loop_song_tip": "Loop: ganzer Song – Klick: Loop aus"
+      "loop_song_tip": "Loop: ganzer Song – Klick: Loop aus",
+      "loop_off": "Loop",
+      "speed": "Geschwindigkeit"
     },
     "progress": {
       "browser_activation": "Browser-Analyse: BAF und DAF …",

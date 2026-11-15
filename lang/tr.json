@@ -324,7 +324,9 @@
       "loop_view": "Bölüm",
       "loop_view_tip": "Döngü: görünen bölüm – tıklayın: tüm şarkı",
       "loop_song": "Tüm şarkı",
-      "loop_song_tip": "Döngü: tüm şarkı – tıklayın: döngü kapalı"
+      "loop_song_tip": "Döngü: tüm şarkı – tıklayın: döngü kapalı",
+      "loop_off": "Döngü",
+      "speed": "Hız"
     },
     "progress": {
       "browser_activation": "Tarayıcı analizi: BAF ve DAF …",

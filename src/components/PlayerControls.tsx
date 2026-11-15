@@ -9,6 +9,7 @@ import {
   Rewind,
   Fingerprint,
   Repeat,
+  Gauge,
   Music,
 } from 'lucide-react';
 import { BeatItem, PlaybackSpeed } from '../types/analyzer';
@@ -168,15 +169,16 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           <button
             onClick={onCycleLoop}
             aria-pressed={loopMode !== 'off'}
-            className={`flex items-center gap-1 px-2 py-1.5 rounded-xl text-[11px] font-semibold transition-colors cursor-pointer ${
+            className={`flex items-center gap-1 px-2 py-1.5 rounded-xl text-[11px] font-semibold transition-colors cursor-pointer w-[6.75rem] shrink-0 overflow-hidden ${
               loopMode === 'off'
                 ? 'text-slate-400 hover:text-white hover:bg-slate-800'
                 : 'text-amber-200 bg-amber-950/60 border border-amber-700/70'
             }`}
             title={t(`web.player.loop_${loopMode}_tip`)}
           >
-            <Repeat className="w-4 h-4" />
-            {loopMode !== 'off' && <span>{t(`web.player.loop_${loopMode}`)}</span>}
+            {/* fixed width: the label of the mode must not move the row */}
+            <Repeat className="w-4 h-4 shrink-0" />
+            <span className="truncate">{t(`web.player.loop_${loopMode}`)}</span>
           </button>
 
           {/* Time Display */}
@@ -187,9 +189,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           </div>
         </div>
 
-        {/* Live Beat Flash LED / Indicator */}
-        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80">
-          <div className="relative flex items-center justify-center">
+        {/* Live Beat Flash LED / Indicator: two lines in a fixed size ("Ölçü 35" / "Downbeat (Beat 1)"), so the row
+            neither wraps on and off with every downbeat nor needs the width of the longest text (test 0.2.8) */}
+        <div className="flex items-center gap-3 px-3.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800/80 w-[10.5rem] h-12 shrink-0 overflow-hidden">
+          <div className="relative flex items-center justify-center shrink-0">
             <div
               className={`w-3.5 h-3.5 rounded-full transition-all duration-100 ${
                 activeBeat
@@ -201,19 +204,14 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             />
           </div>
 
-          <div className="text-xs">
+          <div className="text-xs leading-tight min-w-0">
             {activeBeat ? (
-              <div className="flex items-center gap-2">
-                <span
-                  className={`font-bold ${
-                    activeBeat.isDownbeat ? 'text-rose-400' : 'text-cyan-300'
-                  }`}
-                >
+              <>
+                <div className={`font-bold truncate ${activeBeat.isDownbeat ? 'text-rose-400' : 'text-cyan-300'}`}>
                   {t('output.marker_downbeat', { bar: activeBeat.barIndex })}
-                </span>
-                <span className="text-slate-500">•</span>
+                </div>
                 {/* glossary: Downbeat stays English; the downbeat is beat 1 of the bar */}
-                <span className="text-slate-200 font-mono">
+                <div className="text-slate-200 font-mono text-[11px] whitespace-nowrap">
                   {activeBeat.isDownbeat ? (
                     <>
                       <span className="text-rose-300 font-bold">Downbeat</span> (Beat {activeBeat.beatInBar})
@@ -221,10 +219,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                   ) : (
                     <>Beat {activeBeat.beatInBar}</>
                   )}
-                </span>
-              </div>
+                </div>
+              </>
             ) : (
-              <span className="text-slate-500 font-mono">{t('web.player.ready')}</span>
+              <span className="text-slate-500 font-mono text-[11px]">{t('web.player.ready')}</span>
             )}
           </div>
         </div>
@@ -281,22 +279,25 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             />
           </div>
 
-          {/* Speed selector */}
-          <div className="flex items-center gap-1 bg-slate-950/60 border border-slate-800 rounded-xl p-1">
-            {speeds.map((s) => (
-              <button
-                key={s}
-                onClick={() => onSetPlaybackSpeed(s)}
-                className={`px-2 py-1 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer ${
-                  playbackSpeed === s
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {s}x
-              </button>
-            ))}
-          </div>
+          {/* Speed: one field instead of five buttons, so the player stays one row */}
+          <label
+            className="flex items-center gap-1.5 bg-slate-950/60 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300"
+            title={t('web.player.speed')}
+          >
+            <Gauge className="w-4 h-4 text-indigo-300" />
+            <select
+              value={playbackSpeed}
+              onChange={(e) => onSetPlaybackSpeed(parseFloat(e.target.value) as PlaybackSpeed)}
+              className="bg-transparent font-mono text-slate-200 focus:outline-none cursor-pointer"
+              aria-label={t('web.player.speed')}
+            >
+              {speeds.map((sp) => (
+                <option key={sp} value={sp} className="bg-slate-900">
+                  {sp}x
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
 
