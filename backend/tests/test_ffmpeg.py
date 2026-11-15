@@ -9,6 +9,7 @@ import tempfile
 import threading
 import unittest
 import urllib.error
+from unittest import mock
 import urllib.request
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -18,6 +19,15 @@ import ffmpeg_utils  # noqa: E402
 import resolve_plugin  # noqa: E402
 import server  # noqa: E402
 import settings  # noqa: E402
+
+
+def fake_runs_on_windows(test: unittest.TestCase) -> None:
+    """Windows cannot run a text file named ffmpeg.exe (WinError 216): there the check "ffmpeg -version" is
+    replaced, the search for the file and the PATH handling stay real. On Linux the fake script really runs."""
+    if os.name == "nt":
+        patcher = mock.patch.object(ffmpeg_utils, "verify_ffmpeg_executable", return_value=(True, ""))
+        patcher.start()
+        test.addCleanup(patcher.stop)
 
 
 def create_fake_ffmpeg(folder: Path) -> Path:
@@ -35,6 +45,7 @@ class FfmpegUtilsTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
         self.old_path = os.environ.get("PATH", "")
+        fake_runs_on_windows(self)
 
     def tearDown(self):
         os.environ["PATH"] = self.old_path
@@ -59,7 +70,8 @@ class FfmpegUtilsTests(unittest.TestCase):
         self.assertTrue(status["available"])
         self.assertEqual(status["source"], "custom")
         self.assertEqual(status["path"], str(exe))
-        self.assertEqual(shutil.which("ffmpeg"), str(exe))
+        # Windows: which() may spell the extension as in PATHEXT (ffmpeg.EXE)
+        self.assertEqual(os.path.normcase(shutil.which("ffmpeg") or ""), os.path.normcase(str(exe)))
 
         # Resetting clears custom directory from PATH
         cleared, reset_status = ffmpeg_utils.validate_and_resolve_ffmpeg_dir("")
@@ -79,6 +91,7 @@ class ServerFfmpegSettingsTests(unittest.TestCase):
         self._scripts_dir = resolve_plugin.scripts_dir
         resolve_plugin.scripts_dir = lambda env=None, platform=None: self.tmp / "Resolve" / "Utility"
         self.old_path = os.environ.get("PATH", "")
+        fake_runs_on_windows(self)
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.BeatThisRequestHandler)
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
         self.base = f"http://127.0.0.1:{self.httpd.server_address[1]}"
