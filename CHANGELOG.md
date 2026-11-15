@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.11] – 2026-11-15
+
+### Behoben
+- Kacheln: Texte unter dem Wert wurden abgeschnitten (z. B. „sehr gleichmäßig (wie Click-Track“). Sie brechen jetzt bei Bedarf in eine zweite Zeile um; die Texte zur Tempo-Stabilität sind kürzer („sehr gleichmäßig“, „natürlicher Groove“, „Tempo schwankt“).
+
 ## [0.2.10] – 2026-11-15
 
 Rückmeldungen aus dem Test von 0.2.9 (alle Punkte bestanden).

@@ -102,7 +102,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
           </span>
           <span className="text-xs font-semibold text-cyan-400">BPM</span>
         </div>
-        <div className="text-[11px] text-slate-400 mt-1 truncate">
+        <div className="text-[11px] text-slate-400 mt-1 leading-snug line-clamp-2">
           {getTempoCategory(result.globalBpm)}
         </div>
       </div>
@@ -186,7 +186,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
           </span>
           <span className="text-xs font-semibold text-rose-400">{t('web.metrics.bars_unit')}</span>
         </div>
-        <div className="text-[11px] text-slate-400 mt-1 truncate">
+        <div className="text-[11px] text-slate-400 mt-1 leading-snug line-clamp-2">
           {t('web.metrics.beats_total', { n: result.totalBeats })}
         </div>
       </div>
@@ -203,7 +203,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             {pctValue(result.tempoStability)}
           </span>
         </div>
-        <div className="text-[11px] text-slate-400 mt-1 truncate">
+        <div className="text-[11px] text-slate-400 mt-1 leading-snug line-clamp-2">
           {result.tempoStability > 92
             ? t('web.metrics.stability_click')
             : result.tempoStability > 80
@@ -225,7 +225,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
           </span>
           <span className="text-xs font-semibold text-amber-400">ms</span>
         </div>
-        <div className="text-[11px] text-slate-400 mt-1 truncate">
+        <div className="text-[11px] text-slate-400 mt-1 leading-snug line-clamp-2">
           {result.swingRatio > 55 ? t('web.metrics.swing', { swing: pctValue(result.swingRatio) }) : t('web.metrics.straight')}
         </div>
       </div>
@@ -242,7 +242,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
             {formatTime(result.metadata.duration)}
           </span>
         </div>
-        <div className="text-[11px] text-slate-400 mt-1 truncate">
+        <div className="text-[11px] text-slate-400 mt-1 leading-snug line-clamp-2">
           {result.metadata.format} • {num(result.metadata.sampleRate / 1000, 1)} kHz
         </div>
       </div>
