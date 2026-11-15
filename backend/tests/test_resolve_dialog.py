@@ -201,7 +201,7 @@ class DialogTests(unittest.TestCase):
             self.close()
         self.run_dialog(scenario)
 
-    def test_json_with_mp3_offset_needs_no_warning(self):
+    def test_json_with_mp3_offset_shows_a_note_and_the_result(self):
         self.lua.execute("MOCK.song.file = 'Müller Song.mp3'")
         data = resolve_marker_data(trs.sample_result())
         data["fileName"], data["resolveOffset"] = "Müller Song.mp3", 0.05118
@@ -209,7 +209,14 @@ class DialogTests(unittest.TestCase):
 
         def scenario():
             self.pick_json()
-            self.assertTrue(self.item("Warnings").Hidden)
+            # test 0.2.4: nothing showed that the JSON corrects the MP3 offset; now a note before OK ...
+            self.assertFalse(self.item("Warnings").Hidden)
+            self.assertNotIn("⚠", self.item("Warnings").Text)
+            self.assertIn("51 ms", self.item("Warnings").Text)
+            self.click("OK")
+            self.tick(10)
+            # ... and the result names it
+            self.assertIn("MP3: Marker um 51 ms nach hinten gesetzt", self.item("Status").Text)
             self.close()
         self.run_dialog(scenario)
 

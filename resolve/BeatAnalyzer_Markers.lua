@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.2.4"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.2.5"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -130,6 +130,7 @@ local BA = {
       ["plugin.msg_tl_vehicle_left"] = "Timeline: the clip '{clip}' could not be removed from the Media Pool - delete it by hand.",
       ["plugin.msg_tl_write"] = "Timeline: cannot write {path}",
       ["plugin.note_mp3"] = "MP3: Resolve plays MP3 files about 50 ms later; BeatAnalyzer moves the markers to match.",
+      ["plugin.note_mp3_json"] = "MP3: the markers are set {ms} ms later (Resolve plays MP3 files that much later).",
       ["plugin.reason_analyzer_failed"] = "the analyzer could not be loaded",
       ["plugin.reason_inference_failed"] = "analysis with beat_this failed",
       ["plugin.reason_md_not_installed"] = "md_beat_this not installed",
@@ -1550,9 +1551,15 @@ function M.prepare(path)
       end
     end
   end
+  info.notes = {}
   for _, clip in ipairs(clips) do
-    if M.is_mp3(api(clip, "GetClipProperty", "File Name")) and not tonumber(data.resolveOffset) then
-      info.warnings[#info.warnings + 1] = T("plugin.warn_mp3")   -- older JSON or browser analysis: no offset
+    if M.is_mp3(api(clip, "GetClipProperty", "File Name")) then
+      local off = tonumber(data.resolveOffset)
+      if off and off > 0 then   -- shown before OK (test 0.2.4: the correction was not visible on this way)
+        info.notes[#info.notes + 1] = T("plugin.note_mp3_json", { ms = fmt_num(off * 1000, 0) })
+      else
+        info.warnings[#info.warnings + 1] = T("plugin.warn_mp3")   -- older JSON or browser analysis: no offset
+      end
       break
     end
   end
@@ -2243,6 +2250,9 @@ function M.main()
       local warnings = {}
       for _, w in ipairs(S.info.warnings or {}) do
         warnings[#warnings + 1] = "⚠ " .. w
+      end
+      for _, n in ipairs(S.info.notes or {}) do
+        warnings[#warnings + 1] = n
       end
       set("Warnings", "Text", table.concat(warnings, "\n"))
       fit("Warnings", table.concat(warnings, "\n"))

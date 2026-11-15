@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.5] – 2026-11-15
+
+Rückmeldungen aus dem Test von 0.2.4 (MP3-Ausgleich in Resolve bestätigt: Marker der MP3 liegen auf dem Beat).
+
+### Geändert
+- Resolve-Fenster, Weg „JSON laden“: Enthält die JSON den MP3-Ausgleich, steht schon vor OK „MP3: Die Marker werden 51 ms später gesetzt …“ (bisher stand das nur in der Meldung am Ende).
+- Web-App, *Exportieren → DaVinci Resolve*: Bei MP3 nennt ein Hinweis den Ausgleich in Millisekunden, den die JSON enthält.
+
 ## [0.2.4] – 2026-11-15
 
 Rückmeldungen aus dem Test von 0.2.3.

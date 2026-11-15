@@ -136,6 +136,7 @@
     "reason_md_not_installed": "md_beat_this kurulu değil",
     "warn_mp3": "MP3: Resolve MP3 dosyalarını BeatAnalyzer'ın analiz ettiğinden yaklaşık 50 ms geç çalar. Bu JSON düzeltme içermiyor (eski JSON veya tarayıcıda analiz): işaretçiler vuruştan bu kadar önce durur. Sunucuyla yeniden analiz edin veya şarkıyı WAV ya da FLAC olarak kullanın.",
     "note_mp3": "MP3: Resolve MP3 dosyalarını yaklaşık 50 ms geç çalar; BeatAnalyzer işaretçileri buna göre kaydırır.",
-    "msg_mp3_shift": "MP3: işaretçiler {ms} ms ileri kaydırıldı (Resolve MP3'ü bu kadar geç çalar)."
+    "msg_mp3_shift": "MP3: işaretçiler {ms} ms ileri kaydırıldı (Resolve MP3'ü bu kadar geç çalar).",
+    "note_mp3_json": "MP3: işaretçiler {ms} ms sonra konur (Resolve MP3 dosyalarını bu kadar geç çalar)."
   }
 }

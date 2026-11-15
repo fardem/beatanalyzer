@@ -256,6 +256,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
                     und die JSON wählen.
                   </li>
                 </ol>
+                {result.resolveOffset ? (
+                  // test 0.2.4: the correction for MP3 was not visible anywhere in the web app
+                  <p className="rounded-lg border border-cyan-800/60 bg-cyan-950/40 px-3 py-2 text-cyan-200 leading-relaxed">
+                    <strong>MP3:</strong> Resolve spielt MP3-Dateien{' '}
+                    {Math.round(result.resolveOffset * 1000)} ms später ab, als sie analysiert wurden. Die JSON
+                    enthält diesen Ausgleich; das Skript setzt Marker und Subtitles auf dem MP3-Clip entsprechend
+                    später und meldet es.
+                  </p>
+                ) : null}
                 <p className="text-slate-500 leading-relaxed">
                   Ein neuer Lauf ersetzt die Marker des letzten Laufs. Von Hand gesetzte Marker bleiben. Zusätzlich legt das Skript den Untertitel-Clip <code className="text-rose-300">{result.metadata.fileName.replace(/\.[^/.]+$/, '')}.srt</code> mit Typ, Takt, Zeit, Tempo und Konfidenz pro Beat im Media-Pool-Ordner <strong>BeatAnalyzer</strong> an. Ist eine Timeline mit dem Song offen, kommen die Untertitel auf die Spur <strong>BeatAnalyzer - Song</strong> unter den Song.
                 </p>

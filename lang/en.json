@@ -135,6 +135,7 @@
     "reason_md_not_installed": "md_beat_this not installed",
     "warn_mp3": "MP3: Resolve plays MP3 files about 50 ms later than BeatAnalyzer analyses them. This JSON has no correction (older JSON or analysed in the browser): the markers lie that much before the beat. Analyse again with the server or use the song as WAV or FLAC.",
     "note_mp3": "MP3: Resolve plays MP3 files about 50 ms later; BeatAnalyzer moves the markers to match.",
-    "msg_mp3_shift": "MP3: markers moved by {ms} ms (Resolve plays MP3 that much later)."
+    "msg_mp3_shift": "MP3: markers moved by {ms} ms (Resolve plays MP3 that much later).",
+    "note_mp3_json": "MP3: the markers are set {ms} ms later (Resolve plays MP3 files that much later)."
   }
 }
