@@ -78,6 +78,8 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
     return t(`web.metrics.tempo_${key}`);
   };
 
+  const meterText = meter(`${result.timeSignature.numerator}/${result.timeSignature.denominator}`);
+
   const avgIntervalMs =
     result.beats.length > 1
       ? Math.round(
@@ -112,11 +114,15 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
           <Music className="w-3.5 h-3.5 text-purple-400" />
           <span>{t('web.metrics.meter')}</span>
         </div>
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
-            {meter(`${result.timeSignature.numerator}/${result.timeSignature.denominator}`)}
+        <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
+          {/* a longer time signature (Turkish 4/4'lük) one size smaller, so the box fits next to it */}
+          <span
+            className={`${meterText.length > 5 ? 'text-2xl' : 'text-2xl lg:text-3xl'} font-extrabold text-white tracking-tight whitespace-nowrap`}
+          >
+            {meterText}
           </span>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/60">
+          {/* one line, so it sits on the same baseline as the time signature (test 0.2.7: Turkish wrapped) */}
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/60 whitespace-nowrap shrink-0">
             {result.timeSignature.barShare === null ? '–' : t('web.metrics.bar_share', { share: pctValue(result.timeSignature.barShare) })}
           </span>
         </div>

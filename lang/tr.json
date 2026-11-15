@@ -256,7 +256,7 @@
     },
     "metrics": {
       "audio": "Ses dosyası",
-      "bar_share": "ölçülerin {share}",
+      "bar_share": "{share} ölçü",
       "bars": "Toplam",
       "bars_unit": "ölçü",
       "beats_total": "toplam {n} beat",
