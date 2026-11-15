@@ -38,15 +38,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
   const [copied, setCopied] = useState(false);
   const [copiedAttribution, setCopiedAttribution] = useState(false);
 
-  const [davinciOnlyDownbeats, setDavinciOnlyDownbeats] = useState<boolean>(false);
 
   const baseFileName = result.metadata.fileName.replace(/\.[^/.]+$/, '');
   const isMdBeatThis = result.engineInfo?.id === 'md_beat_this';
   const attributionText = result.attribution ?? MD_BEAT_THIS_ATTRIBUTION;
 
-  const resolveJsonContent = generateResolveMarkerJson(result, {
-    onlyDownbeats: davinciOnlyDownbeats,
-  });
+  const resolveJsonContent = generateResolveMarkerJson(result);
 
   const jsonContent = generateBeatThisJson(result);
   const audacityContent = generateAudacityLabels(result);
@@ -206,30 +203,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-medium block">Marker:</label>
-                  <select
-                    value={davinciOnlyDownbeats ? 'downbeats' : 'all'}
-                    onChange={(e) => setDavinciOnlyDownbeats(e.target.value === 'downbeats')}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:border-rose-500 focus:outline-none"
-                  >
-                    <option value="all">Alle Beats ({result.totalBeats})</option>
-                    <option value="downbeats">Nur Downbeats ({result.totalBars})</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-slate-400 font-medium block">Farben:</span>
-                  <div className="flex flex-wrap items-center gap-3 pt-1.5">
-                    <span className="flex items-center gap-1.5 text-slate-200">
-                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>Red = Downbeat
-                    </span>
-                    <span className="flex items-center gap-1.5 text-slate-200">
-                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>Cyan = Beat
-                    </span>
-                  </div>
-                </div>
-              </div>
 
               <ResolveInstallPanel />
 
@@ -273,7 +246,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
               <div className="space-y-1.5 font-mono">
                 <div className="flex justify-between items-center text-[11px] text-slate-400">
                   <span>JSON-Vorschau:</span>
-                  <span>{davinciOnlyDownbeats ? result.totalBars : result.totalBeats} Marker</span>
+                  <span>{result.totalBeats} Marker</span>
                 </div>
                 <pre className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] overflow-x-auto text-rose-300 max-h-36">
                   {resolveJsonContent.split('\n').slice(0, 24).join('\n')}

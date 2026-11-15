@@ -1,9 +1,10 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
 import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
 
 interface WaveformBeatVisualizerProps {
   result: AnalysisResult;
+  audioBuffer?: AudioBuffer | null;
   currentTime: number;
   onSeek: (time: number) => void;
   activeBeat: BeatItem | null;
@@ -17,6 +18,86 @@ const LOUPE_WIDTH_PX = 264;
 const LOUPE_CANVAS_HEIGHT_PX = 82;
 const LOUPE_TOTAL_HEIGHT_PX = 108;
 const QUICK_WINDOWS_SEC = [5, 15, 30, 60] as const; // quick selection of the visible window around the playhead
+
+const TIME_STEPS = [0.1, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300];
+const MIN_TIME_LABEL_PX = 64;   // "1:07.25" plus a gap
+const MIN_BAR_LABEL_PX = 64;    // "Takt 124" flag plus a gap
+const MIN_BEAT_LABEL_PX = 14;   // beat numbers 2, 3, 4
+
+// typical length of a bar in seconds (median of the downbeat intervals); 2 s if there are no two downbeats
+function medianBarSeconds(beats: BeatItem[]): number {
+  const downs = beats.filter((b) => b.isDownbeat).map((b) => b.time);
+  const gaps = downs.slice(1).map((t, i) => t - downs[i]).filter((g) => g > 0).sort((a, b) => a - b);
+  return gaps.length ? gaps[Math.floor(gaps.length / 2)] : 2;
+}
+
+// Detailed peaks of the decoded audio: min, max and RMS per block of DETAIL_BLOCK samples (≈ 6 ms at 44.1 kHz).
+// The 2400 peaks of the analysis cover a whole song (≈ 90 ms each for 3:30): too coarse to see a beat when zoomed in.
+const DETAIL_BLOCK = 256;
+interface DetailPeaks {
+  min: Float32Array;
+  max: Float32Array;
+  rms: Float32Array;
+  blockSec: number;
+}
+
+function buildDetailPeaks(buffer: AudioBuffer): DetailPeaks {
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c));
+  const n = Math.ceil(buffer.length / DETAIL_BLOCK);
+  const min = new Float32Array(n);
+  const max = new Float32Array(n);
+  const rms = new Float32Array(n);
+  let peak = 1e-9;
+  for (let b = 0; b < n; b++) {
+    const start = b * DETAIL_BLOCK;
+    const end = Math.min(buffer.length, start + DETAIL_BLOCK);
+    let lo = 0;
+    let hi = 0;
+    let sq = 0;
+    for (let i = start; i < end; i++) {
+      let v = 0;
+      for (const ch of channels) v += ch[i];
+      v /= channels.length;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+      sq += v * v;
+    }
+    min[b] = lo;
+    max[b] = hi;
+    rms[b] = Math.sqrt(sq / Math.max(1, end - start));
+    peak = Math.max(peak, hi, -lo);
+  }
+  for (let b = 0; b < n; b++) {   // normalised like the peaks of the analysis
+    min[b] /= peak;
+    max[b] /= peak;
+    rms[b] /= peak;
+  }
+  return { min, max, rms, blockSec: DETAIL_BLOCK / buffer.sampleRate };
+}
+
+// One column per canvas pixel from min to max (as in DaVinci), with the RMS as a brighter core: attacks stand out.
+function drawDetailWave(
+  ctx: CanvasRenderingContext2D, d: DetailPeaks, t0: number, span: number, width: number, midY: number, amp: number
+) {
+  const blocks = d.min.length;
+  for (let x = 0; x < width; x++) {
+    const a = Math.max(0, Math.floor(((t0 + (x / width) * span) / d.blockSec)));
+    const e = Math.min(blocks, Math.max(a + 1, Math.floor(((t0 + ((x + 1) / width) * span) / d.blockSec))));
+    if (a >= blocks) break;
+    let lo = 0;
+    let hi = 0;
+    let r = 0;
+    for (let b = a; b < e; b++) {
+      if (d.min[b] < lo) lo = d.min[b];
+      if (d.max[b] > hi) hi = d.max[b];
+      if (d.rms[b] > r) r = d.rms[b];
+    }
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+    ctx.fillRect(x, midY - hi * amp, 1, Math.max(1, (hi - lo) * amp));
+    ctx.fillStyle = 'rgba(186, 230, 253, 0.85)';
+    ctx.fillRect(x, midY - r * amp, 1, Math.max(1, 2 * r * amp));
+  }
+}
 
 function formatSongLength(seconds: number): string {
   const total = Math.round(Math.max(0, seconds));
@@ -32,10 +113,17 @@ function formatLoupeTime(seconds: number): string {
 
 export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   result,
+  audioBuffer,
   currentTime,
   onSeek,
   activeBeat,
 }) => {
+  // the detailed waveform of the current view, drawn once and reused while only the playhead moves
+  const waveCacheRef = useRef<{ key: string; canvas: HTMLCanvasElement } | null>(null);
+  const detail = useMemo(() => {
+    waveCacheRef.current = null;   // a new song: draw anew
+    return audioBuffer ? buildDetailPeaks(audioBuffer) : null;
+  }, [audioBuffer]);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const minimapCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -130,7 +218,9 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     // Grid lines (seconds)
     ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = 1;
-    const secStep = zoom > 6 ? 0.5 : zoom > 3 ? 1 : zoom > 1.5 ? 2 : 5;
+    // time axis: the smallest "nice" step whose labels do not overlap (they did with many bars, test 0.2.1)
+    const pxPerSec = width / visibleDuration;
+    const secStep = TIME_STEPS.find((st) => st * pxPerSec >= MIN_TIME_LABEL_PX) ?? TIME_STEPS[TIME_STEPS.length - 1];
     const firstSec = Math.floor(scrollOffsetSec / secStep) * secStep;
 
     ctx.font = '10px Inter, monospace';
@@ -144,17 +234,36 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
         ctx.lineTo(x, height);
         ctx.stroke();
 
-        const mins = Math.floor(s / 60);
-        const secs = (s % 60).toFixed(s % 1 === 0 ? 0 : 1);
-        ctx.fillText(`${mins}:${secs.padStart(s % 1 === 0 ? 2 : 4, '0')}`, x + 4, height - 6);
+        const t = Math.round(s * 100) / 100;
+        const mins = Math.floor(t / 60);
+        const decimals = secStep < 1 ? (secStep < 0.5 ? 2 : 1) : 0;
+        const secs = (t % 60).toFixed(decimals);
+        ctx.fillText(`${mins}:${secs.padStart(decimals ? 3 + decimals : 2, '0')}`, x + 4, height - 6);
       }
     }
 
     // 1. Draw Waveform
     const peaks = result.waveformPeaks;
-    const numBuckets = peaks.length / 2;
+    const numBuckets = detail ? 0 : peaks.length / 2;   // detailed waveform from the audio when it is there
     const midY = height * 0.45;
     const waveAmp = height * 0.35;
+    if (detail) {
+      const key = `${scrollOffsetSec}|${visibleDuration}|${width}|${height}`;
+      let cache = waveCacheRef.current;
+      if (!cache || cache.key !== key) {
+        const off = cache?.canvas ?? document.createElement('canvas');
+        off.width = width;
+        off.height = height;
+        const octx = off.getContext('2d');
+        if (octx) {
+          octx.clearRect(0, 0, width, height);
+          drawDetailWave(octx, detail, scrollOffsetSec, visibleDuration, width, midY, waveAmp);
+        }
+        cache = { key, canvas: off };
+        waveCacheRef.current = cache;
+      }
+      ctx.drawImage(cache.canvas, 0, 0);
+    }
 
     ctx.strokeStyle = '#38bdf8';
     ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
@@ -190,8 +299,10 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     }
 
     ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    if (!detail) {
+      ctx.fill();
+      ctx.stroke();
+    }
 
     // 2. Draw Activation Functions (BAF / DAF) overlay
     const actCurve = result.activationCurve;
@@ -249,25 +360,28 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
 
     // 3. Draw Beat & Downbeat Markers
     if (showBeats) {
+      // label only every n-th bar (1, 2, 4, 8 ...) so the flags do not overlap; all bar lines stay
+      const barSec = medianBarSeconds(result.beats);
+      let labelEvery = 1;
+      while (labelEvery * barSec * pxPerSec < MIN_BAR_LABEL_PX && labelEvery < 1024) labelEvery *= 2;
+      const beatPx = (barSec / Math.max(1, result.timeSignature.numerator || 4)) * pxPerSec;
+      const barPx = barSec * pxPerSec;
+      const flags: { x: number; bar: number }[] = [];
       result.beats.forEach((b) => {
         if (b.time < scrollOffsetSec - 0.2 || b.time > scrollOffsetSec + visibleDuration + 0.2) return;
         const x = ((b.time - scrollOffsetSec) / visibleDuration) * width;
 
         if (b.isDownbeat) {
           // Downbeat (Bar marker): bold magenta/rose line
-          ctx.strokeStyle = '#f43f5e';
-          ctx.lineWidth = 2.5;
+          // dense bars (whole song): thin lines, so the waveform stays visible
+          ctx.strokeStyle = barPx >= 24 ? '#f43f5e' : 'rgba(244, 63, 94, 0.55)';
+          ctx.lineWidth = barPx >= 24 ? 2.5 : 1;
           ctx.beginPath();
           ctx.moveTo(x, 0);
           ctx.lineTo(x, height);
           ctx.stroke();
-
-          // Bar Flag
-          ctx.fillStyle = '#f43f5e';
-          ctx.fillRect(x - 1, 0, 48, 18);
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 10px Inter, sans-serif';
-          ctx.fillText(`Takt ${b.barIndex}`, x + 4, 13);
+          // Bar Flag (only every labelEvery-th bar, counted from bar 1), drawn after all lines
+          if ((b.barIndex - 1) % labelEvery === 0) flags.push({ x, bar: b.barIndex });
         } else {
           // Regular Beat: cyan / amber line
           ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
@@ -277,13 +391,21 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
           ctx.lineTo(x, height - 16);
           ctx.stroke();
 
-          if (zoom > 2) {
+          if (beatPx >= MIN_BEAT_LABEL_PX) {
             ctx.fillStyle = '#94a3b8';
             ctx.font = '9px Inter, monospace';
             ctx.fillText(`${b.beatInBar}`, x + 3, 34);
           }
         }
       });
+      ctx.font = 'bold 10px Inter, sans-serif';
+      for (const f of flags) {
+        const label = `Takt ${f.bar}`;
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillRect(f.x - 1, 0, Math.ceil(ctx.measureText(label).width) + 9, 18);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(label, f.x + 4, 13);
+      }
     }
 
     // 4. Loupe inspection bracket on main canvas when Loupe is active
@@ -343,6 +465,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     }
   }, [
     result,
+    detail,
     currentTime,
     zoom,
     scrollOffsetSec,
@@ -474,9 +597,10 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     ctx.lineTo(w, midY);
     ctx.stroke();
 
-    // Waveform envelope in loupe window
+    // Waveform in loupe window: detailed from the audio, else the envelope of the analysis peaks
     const peaks = result.waveformPeaks;
-    const numBuckets = peaks.length / 2;
+    const numBuckets = detail ? 0 : peaks.length / 2;
+    if (detail) drawDetailWave(ctx, detail, winStart, span, w, midY, waveAmp);
     if (numBuckets > 0) {
       const startBucket = Math.max(0, Math.floor((winStart / duration) * numBuckets) - 1);
       const endBucket = Math.min(numBuckets, Math.ceil((winEnd / duration) * numBuckets) + 1);
@@ -611,7 +735,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     ctx.moveTo(cursorX, 0);
     ctx.lineTo(cursorX, h);
     ctx.stroke();
-  }, [isLoupeActive, loupeSpan, hoverInfo, duration, result, showBaf, showDaf, showBeats, currentTime]);
+  }, [isLoupeActive, loupeSpan, hoverInfo, duration, result, detail, showBaf, showDaf, showBeats, currentTime]);
 
   // Resize listener
   useEffect(() => {
