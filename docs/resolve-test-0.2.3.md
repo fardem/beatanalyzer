@@ -9,13 +9,14 @@ aktualisieren**, Resolve neu starten.
 | 2 | Clip, der sich nicht analysieren lässt (z. B. Videodatei ohne Ton oder kaputte Datei), OK | Fehlermeldung; **OK bleibt grau**, nur Schließen |
 | 3 | Wie 2, dann anderen Clip im Media Pool wählen | OK wieder aktiv |
 | 4 | Analyse starten und **Abbrechen** | OK bleibt aktiv |
+| 5 | MP3-Clip auswählen (beide Wege: analysieren und JSON laden) | Hinweis „⚠ MP3: Resolve spielt MP3-Dateien etwa 50 ms später ab …“; OK bleibt aktiv. Bei WAV/FLAC kein Hinweis |
 
 ## Web-App
 
 | # | Was tun | Was soll passieren |
 |---|---|---|
-| 5 | m4a-Datei analysieren | Analyse über den Server (nicht „Browser-Analyse“) |
-| 6 | Fenster schmal (so dass die Knöpfe in eine zweite Zeile rutschen), abspielen | Höhe des Wellenform-Bereichs bleibt gleich |
+| 6 | m4a-Datei analysieren | Analyse über den Server (nicht „Browser-Analyse“) |
+| 7 | Fenster schmal (so dass die Knöpfe in eine zweite Zeile rutschen), abspielen | Höhe des Wellenform-Bereichs bleibt gleich |
 
 ## Für später
 

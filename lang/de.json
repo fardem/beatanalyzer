@@ -132,6 +132,7 @@
     "md_notice": "md_beat_this steht unter der Lizenz CC BY-NC 4.0 und darf nur für nicht-kommerzielle Zwecke genutzt werden, im Rahmen der CC-BY-NC-4.0-Lizenz: {url}",
     "md_confirm": "Ich nutze md_beat_this nur für nicht-kommerzielle Zwecke (CC BY-NC 4.0)",
     "md_confirm_needed": "Für md_beat_this das Lizenz-Häkchen setzen.",
-    "reason_md_not_installed": "md_beat_this nicht installiert"
+    "reason_md_not_installed": "md_beat_this nicht installiert",
+    "warn_mp3": "MP3: Resolve spielt MP3-Dateien etwa 50 ms später ab, als BeatAnalyzer sie analysiert; die Marker liegen so viel vor dem Beat. Für genaue Marker den Song als WAV oder FLAC verwenden."
   }
 }

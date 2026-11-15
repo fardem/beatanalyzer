@@ -4,6 +4,9 @@
 
 Rückmeldungen aus dem Test von 0.2.2.
 
+### Hinzugefügt
+- Resolve-Fenster: **Hinweis bei MP3** (beide Wege): Resolve spielt MP3-Dateien etwa 50 ms später ab, als BeatAnalyzer sie analysiert (Resolve rechnet die Verzögerung des Encoders am Anfang nicht heraus); die Marker liegen dort so viel vor dem Beat. Für genaue Marker den Song als WAV oder FLAC verwenden. Analysieren bleibt möglich.
+
 ### Behoben
 - **m4a/AAC ließ sich nicht analysieren** (Web-App und Resolve), wenn ffmpeg nicht über den `PATH` erreichbar war. Formate, die soundfile nicht kennt (m4a/AAC, ALAC, Opus, WMA …), liest der Server jetzt mit **PyAV** (bringt eigene FFmpeg-Bibliotheken mit, wird mitinstalliert); ohne PyAV mit dem installierten ffmpeg (Ordner aus den Einstellungen oder System-`PATH`, unter Windows ohne Konsolenfenster). Die Originaldatei wird nur gelesen; gelesen wird mit voller Auflösung bei der eigenen Abtastrate, die Verzögerung des Encoders am Anfang (MP3/AAC) wird wie bisher herausgerechnet. Ist ein Format nicht lesbar, nennt die Meldung die Abhilfe.
 - Resolve-Fenster: **Nach einem Analysefehler blieb OK aktiv.** Jetzt bleibt OK für diese Datei mit diesem Modell gesperrt (nur Schließen); ein anderer Clip oder ein anderes Modell geht. Gilt auch, wenn Python nicht startet oder die Zeit abläuft; nach Abbrechen bleibt OK aktiv.

@@ -133,6 +133,7 @@
     "md_notice": "md_beat_this, CC BY-NC 4.0 lisansı altındadır ve yalnızca ticari olmayan amaçlarla, CC BY-NC 4.0 lisansı çerçevesinde kullanılabilir: {url}",
     "md_confirm": "md_beat_this'i yalnızca ticari olmayan amaçlarla kullanıyorum (CC BY-NC 4.0)",
     "md_confirm_needed": "md_beat_this ile analiz için lisans kutusunu işaretleyin.",
-    "reason_md_not_installed": "md_beat_this kurulu değil"
+    "reason_md_not_installed": "md_beat_this kurulu değil",
+    "warn_mp3": "MP3: Resolve MP3 dosyalarını BeatAnalyzer'ın analiz ettiğinden yaklaşık 50 ms geç çalar; işaretçiler vuruştan bu kadar önce durur. Kesin işaretçiler için şarkıyı WAV veya FLAC olarak kullanın."
   }
 }

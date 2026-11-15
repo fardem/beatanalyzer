@@ -187,6 +187,20 @@ class DialogTests(unittest.TestCase):
         self.run_dialog(scenario)
         self.assertTrue(self.exited())
 
+    def test_json_for_an_mp3_clip_gets_the_hint(self):
+        self.lua.execute("MOCK.song.file = 'Müller Song.mp3'")
+        data = resolve_marker_data(trs.sample_result())
+        data["fileName"] = "Müller Song.mp3"
+        Path(self.json_path).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+        def scenario():
+            self.pick_json()
+            self.assertFalse(self.item("Warnings").Hidden)
+            self.assertIn("MP3", self.item("Warnings").Text)
+            self.assertTrue(self.item("OK").Enabled)
+            self.close()
+        self.run_dialog(scenario)
+
     def test_choose_json_shows_clip_and_explanation(self):
         def scenario():
             self.pick_json()
@@ -505,6 +519,24 @@ class AnalysisDialogTests(DialogTests):
             self.check("WayJson", True)
             self.assertFalse(self.item("WayAnalyze").Checked)
             self.assertFalse(self.item("Choose").Hidden)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_mp3_clip_gets_the_hint(self):
+        # test 0.2.2: Resolve plays MP3 about 50 ms later than BeatAnalyzer analyses it
+        def scenario():
+            self.select_song()
+            self.check("WayAnalyze", True)
+            self.tick(20)
+            self.assertTrue(self.item("Warnings").Hidden)              # WAV: no hint
+            self.lua.execute("MOCK.song.filepath = '/Musik/Müller Song.MP3'")
+            self.tick(25)
+            self.assertFalse(self.item("Warnings").Hidden)
+            self.assertIn("50 ms", self.item("Warnings").Text)
+            self.assertIn("WAV oder FLAC", self.item("Warnings").Text)
+            self.assertTrue(self.item("OK").Enabled)                    # only a hint, analysing is allowed
+            self.check("WayJson", True)                                 # the JSON way has its own warnings
+            self.tick(25)
             self.close()
         self.run_dialog(scenario)
 
