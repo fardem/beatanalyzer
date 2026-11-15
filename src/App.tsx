@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { AnalysisResult, BeatItem, PlaybackSpeed } from './types/analyzer';
+import { AlertTriangle, Settings } from 'lucide-react';
+import { AnalysisModel, AnalysisResult, BeatItem, PlaybackSpeed } from './types/analyzer';
 import { analyzeAudioFile } from './utils/audioAnalyzer';
 import { BeatPlayer } from './utils/audioPlayer';
+import { BackendHealth, getBackendHealth } from './utils/localBackend';
 import { Header } from './components/Header';
 import { UploadZone } from './components/UploadZone';
 import { MetricsCards } from './components/MetricsCards';
@@ -12,9 +14,14 @@ import { BeatTable } from './components/BeatTable';
 import { ExportModal } from './components/ExportModal';
 import { ModelInfoModal } from './components/ModelInfoModal';
 import { LocalSetupModal } from './components/LocalSetupModal';
+import { NonCommercialNoticeModal } from './components/NonCommercialNoticeModal';
 
 export default function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [selectedModel, setSelectedModel] = useState<AnalysisModel>('beat_this');
+  const [mdConfirmedInSession, setMdConfirmedInSession] = useState<boolean>(false);
+  const [showMdSetupModal, setShowMdSetupModal] = useState<boolean>(false);
+  const [backendHealth, setBackendHealth] = useState<BackendHealth | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [stageText, setStageText] = useState<string>('');
@@ -58,6 +65,10 @@ export default function App() {
       setActiveBeat(null);
     };
 
+    getBackendHealth().then((health) => {
+      if (health) setBackendHealth(health);
+    });
+
     return () => {
       player.destroy();
       playerRef.current = null;
@@ -68,10 +79,11 @@ export default function App() {
   const handleFileSelected = async (
     file: File | Blob,
     name: string,
-    opts: { smooth?: boolean; protect?: number; reanalysis?: boolean } = {}
+    opts: { smooth?: boolean; protect?: number; reanalysis?: boolean; model?: AnalysisModel } = {}
   ) => {
     const smooth = opts.smooth ?? true;
     const protectValue = opts.protect ?? 0.95;
+    const activeModel = opts.model ?? selectedModel;
     if (!opts.reanalysis) lastAudioRef.current = null;
     lastFileRef.current = { file, name };
     try {
@@ -98,6 +110,7 @@ export default function App() {
           requireServer: opts.reanalysis ?? false,
           protect: protectValue,
           audioBuffer: opts.reanalysis ? lastAudioRef.current ?? undefined : undefined,
+          model: activeModel,
         }
       );
 
@@ -186,6 +199,7 @@ export default function App() {
       {/* Header */}
       <Header
         result={result}
+        selectedModel={selectedModel}
         onReset={handleReset}
         onOpenExport={() => setShowExportModal(true)}
         onOpenModelInfo={() => setShowModelInfoModal(true)}
@@ -201,9 +215,40 @@ export default function App() {
             progress={progress}
             stageText={stageText}
             error={error}
+            selectedModel={selectedModel}
+            onSelectModel={(model) => {
+              if (model === 'md_beat_this' && !mdConfirmedInSession) {
+                setShowMdSetupModal(true);
+                return;
+              }
+              setSelectedModel(model);
+            }}
+            onOpenMdSetup={() => setShowMdSetupModal(true)}
+            backendHealth={backendHealth}
           />
         ) : (
           <div className="space-y-6 animate-in fade-in duration-300">
+            {result.selectedModel === 'md_beat_this' && (
+              <div className="px-3.5 py-2 rounded-xl bg-amber-950/35 border border-amber-600/60 text-xs flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <p className="text-amber-200 font-medium truncate">
+                    {result.engineInfo?.id === 'librosa'
+                      ? `Fallback aktiv (${result.engine}) — md_beat_this nur nicht-kommerziell (CC BY-NC 4.0).`
+                      : 'Analyse mit md_beat_this — nur für nicht-kommerzielle Nutzung (CC BY-NC 4.0).'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMdSetupModal(true)}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-300 hover:text-amber-200 underline underline-offset-2 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded"
+                >
+                  <Settings className="w-3 h-3" />
+                  <span>Einrichtung</span>
+                </button>
+              </div>
+            )}
+
             {/* 1. Metrics & Key Stats */}
             <MetricsCards
               result={result}
@@ -215,7 +260,10 @@ export default function App() {
                 // the same file once more with other smoothing; one analysis at a time
                 if (lastFileRef.current && !isAnalyzing) {
                   handleFileSelected(lastFileRef.current.file, lastFileRef.current.name, {
-                    smooth, protect: value, reanalysis: true,
+                    smooth,
+                    protect: value,
+                    reanalysis: true,
+                    model: result.selectedModel ?? selectedModel,
                   });
                 }
               }}
@@ -293,7 +341,28 @@ export default function App() {
       )}
 
       {showLocalSetupModal && (
-        <LocalSetupModal onClose={() => setShowLocalSetupModal(false)} />
+        <LocalSetupModal
+          backendHealth={backendHealth}
+          onHealthUpdated={setBackendHealth}
+          onClose={() => setShowLocalSetupModal(false)}
+        />
+      )}
+
+      {showMdSetupModal && (
+        <NonCommercialNoticeModal
+          backendHealth={backendHealth}
+          onHealthUpdated={setBackendHealth}
+          isInstalled={Boolean(backendHealth?.md_beat_this_installed)}
+          alreadyConfirmed={mdConfirmedInSession}
+          onConfirm={() => {
+            setMdConfirmedInSession(true);
+            setSelectedModel('md_beat_this');
+            setShowMdSetupModal(false);
+          }}
+          onCancel={() => {
+            setShowMdSetupModal(false);
+          }}
+        />
       )}
     </div>
   );

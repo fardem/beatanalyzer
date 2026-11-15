@@ -31,7 +31,15 @@ mimetypes.add_type("application/json", ".json")
 # Lade Analyzer
 ANALYZER_ERROR = ""   # why analyzer.py could not be loaded (e.g. a broken NumPy in venv)
 try:
-    from analyzer import analyze_audio_file, engine_status, clamp_protect, BEAT_THIS_AVAILABLE
+    from analyzer import (
+        analyze_audio_file,
+        engine_status,
+        clamp_protect,
+        normalize_model,
+        ffmpeg_available,
+        BEAT_THIS_AVAILABLE,
+        MD_BEAT_THIS_AVAILABLE,
+    )
 except Exception as _err:   # the name of an except variable is deleted after the block: keep the text
     ANALYZER_ERROR = str(_err) or type(_err).__name__
     print("=" * 70)
@@ -40,29 +48,46 @@ except Exception as _err:   # the name of an except variable is deleted after th
     print("[FEHLER] schliessen, den Ordner venv loeschen und install_and_run.bat erneut starten.")
     print("=" * 70)
     BEAT_THIS_AVAILABLE = False
+    MD_BEAT_THIS_AVAILABLE = False
 
-    def analyze_audio_file(p, f, smooth=True, protect=0.95):
+    def analyze_audio_file(p, f, smooth=True, protect=0.95, model="beat_this"):
         raise RuntimeError(f"Analyzer-Fehler (analyzer.py nicht geladen): {ANALYZER_ERROR}")
 
-    def engine_status():
+    def engine_status(model="beat_this"):
         return {"id": "librosa", "device": None, "gpu": None, "fallbackReason": "analyzer_failed", "model": None}
 
     def clamp_protect(value):
         return 0.95   # nothing is analysed anyway
 
+    def normalize_model(value):
+        return "md_beat_this" if value == "md_beat_this" else "beat_this"
+
+    def ffmpeg_available():
+        return False
+
+import ffmpeg_utils
 import i18n
 import resolve_plugin
 import settings
 import updater
 
+ffmpeg_utils.apply_ffmpeg_dir(settings.load().get("ffmpegDir"))
+
 
 def settings_payload() -> dict:
-    """Body of GET /api/settings: chosen language, the language it means, the languages with a file."""
-    language = settings.load()["language"]
+    """Body of GET /api/settings: language settings and optional custom ffmpeg directory."""
+    cfg = settings.load()
+    language = cfg["language"]
+    ffmpeg_dir = str(cfg.get("ffmpegDir") or "")
+    ff = ffmpeg_utils.apply_ffmpeg_dir(ffmpeg_dir)
     return {
         "language": language,
         "resolvedLanguage": i18n.resolve_language(language),
         "languages": [{"code": code, "name": name} for code, name in i18n.available()],
+        "ffmpegDir": ffmpeg_dir,
+        "ffmpegAvailable": ff["available"],
+        "ffmpegPath": ff["path"],
+        "ffmpegSource": ff["source"],
     }
 
 TEMP_DIR = tempfile.mkdtemp(prefix="beatthis_")
@@ -691,12 +716,26 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
+            md_status = engine_status("md_beat_this")
+            md_installed = md_status["id"] == "md_beat_this"
+            cfg = settings.load()
+            ffmpeg_dir = str(cfg.get("ffmpegDir") or "")
+            ff = ffmpeg_utils.apply_ffmpeg_dir(ffmpeg_dir)
             response_data = {
                 "status": "online",
                 "beat_this_installed": BEAT_THIS_AVAILABLE,
+                "md_beat_this_installed": md_installed,
+                "ffmpeg_available": ff["available"],
+                "ffmpeg_path": ff["path"],
+                "ffmpeg_dir": ffmpeg_dir,
+                "ffmpeg_source": ff["source"],
                 "cuda_available": cuda_avail,
                 "engine": "CPJKU beat_this Transformer" if BEAT_THIS_AVAILABLE else "Librosa MIR Fallback",
                 "engineInfo": engine_status(),
+                "models": {
+                    "beat_this": engine_status("beat_this"),
+                    "md_beat_this": md_status,
+                },
                 "version": APP_VERSION,
                 "python_version": sys.version.split()[0]
             }
@@ -798,7 +837,11 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
                 query = parse_qs(urlparse(self.path).query)
                 smooth = query.get("smoothBars", ["1"])[0] != "0"
                 protect = clamp_protect(query.get("protect", [None])[0])
-                result = analyze_audio_file(temp_path, filename, smooth=smooth, protect=protect)
+                model = normalize_model(query.get("model", ["beat_this"])[0])
+                if model != "beat_this":
+                    result = analyze_audio_file(temp_path, filename, smooth=smooth, protect=protect, model=model)
+                else:
+                    result = analyze_audio_file(temp_path, filename, smooth=smooth, protect=protect)
                 body = json.dumps(result).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -838,13 +881,24 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             self.send_error_json(500, f"Update fehlgeschlagen: {e}")
 
     def handle_settings(self):
-        """POST {"language": "de"}: save it and bring an installed Resolve script up to date."""
+        """POST {"language"?: ..., "ffmpegDir"?: ...}: validate, persist, and apply settings."""
         try:
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
-            if not isinstance(body, dict) or "language" not in body:
-                raise ValueError('Erwartet: {"language": "auto" | "en" | "de" | "tr"}')
-            result = resolve_plugin.set_language(str(body["language"]))
+            if not isinstance(body, dict) or ("language" not in body and "ffmpegDir" not in body):
+                raise ValueError('Erwartet: {"language": "auto" | "en" | "de" | "tr"} oder {"ffmpegDir": "..."}')
+
+            if "language" in body and str(body["language"]) not in settings.LANGUAGE_CHOICES:
+                raise ValueError(f"Unknown language: {body['language']!r} (allowed: {', '.join(settings.LANGUAGE_CHOICES)})")
+
+            if "ffmpegDir" in body:
+                normalized_dir, _ = ffmpeg_utils.validate_and_resolve_ffmpeg_dir(body["ffmpegDir"])
+                settings.save({"ffmpegDir": normalized_dir})
+
+            plugin_updated = False
+            if "language" in body:
+                result = resolve_plugin.set_language(str(body["language"]))
+                plugin_updated = bool(result.get("pluginUpdated"))
         except ValueError as e:   # json.JSONDecodeError is a ValueError
             self.send_error_json(400, str(e))
             return
@@ -852,7 +906,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             traceback.print_exc()
             self.send_error_json(500, f"Einstellungen nicht gespeichert: {e}")
             return
-        self.send_json(200, {**settings_payload(), "pluginUpdated": result["pluginUpdated"]})
+        self.send_json(200, {**settings_payload(), "pluginUpdated": plugin_updated})
 
     def send_json(self, status_code, data):
         body = json.dumps(data).encode("utf-8")

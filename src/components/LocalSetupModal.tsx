@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import { X, Terminal, Check, Copy, Laptop, FolderGit2, PlayCircle, Cpu } from 'lucide-react';
+import { BackendHealth } from '../utils/localBackend';
+import { FfmpegDirControl } from './FfmpegDirControl';
 
 interface LocalSetupModalProps {
   onClose: () => void;
+  backendHealth: BackendHealth | null;
+  onHealthUpdated?: (health: BackendHealth) => void;
 }
 
-export const LocalSetupModal: React.FC<LocalSetupModalProps> = ({ onClose }) => {
+export const LocalSetupModal: React.FC<LocalSetupModalProps> = ({
+  onClose,
+  backendHealth,
+  onHealthUpdated,
+}) => {
   const [copiedBatch, setCopiedBatch] = useState(false);
 
   const copyScript = (text: string) => {
@@ -118,6 +126,34 @@ export const LocalSetupModal: React.FC<LocalSetupModalProps> = ({ onClose }) => 
             <div className="text-[11px] text-slate-400">
               <strong className="text-slate-200">Automatische NVIDIA GPU/CUDA-Erkennung:</strong> Falls eine NVIDIA Grafikkarte mit CUDA vorhanden ist, nutzt PyTorch automatisch die GPU für extrem schnelle Transformer-Berechnungen in unter 1 Sekunde.
             </div>
+          </div>
+
+          {/* Optional md_beat_this note */}
+          <div className="p-3 rounded-lg bg-amber-950/25 border border-amber-800/50 space-y-2">
+            <div className="text-[11px] font-semibold text-amber-300">
+              Optional: Masked Diffusion (md_beat_this) — nur nicht-kommerzielle Nutzung (CC BY-NC 4.0)
+            </div>
+            <p className="text-[11px] text-slate-300">
+              Wenn du das optionale Modell{' '}
+              <a
+                href="https://github.com/fosfrancesco/md_beat_this/blob/main/README.md#installation"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan-400 underline"
+              >
+                fosfrancesco/md_beat_this
+              </a>{' '}
+              für nicht-kommerzielle Zwecke lokal nutzen möchtest, führe im BeatAnalyzer-Ordner manuell in deiner{' '}
+              <code className="text-indigo-300">venv</code>-Umgebung aus (mit installiertem{' '}
+              <code className="text-slate-200">ffmpeg</code>) und starte den Server danach neu:
+            </p>
+            <code className="block text-[11px] font-mono text-cyan-300 bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800 overflow-x-auto">
+              venv\Scripts\pip install https://github.com/fosfrancesco/md_beat_this/archive/main.zip
+            </code>
+            <code className="block text-[11px] font-mono text-cyan-300 bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800 overflow-x-auto">
+              venv/bin/pip install https://github.com/fosfrancesco/md_beat_this/archive/main.zip
+            </code>
+            <FfmpegDirControl backendHealth={backendHealth} onHealthUpdated={onHealthUpdated} />
           </div>
         </div>
 

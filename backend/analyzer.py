@@ -6,19 +6,30 @@ Führt Beat & Downbeat Tracking mit PyTorch / beat_this oder Librosa-Fallback du
 import math
 import hashlib
 import os
-import sys
+import shutil
 import tempfile
 import numpy as np
 import soundfile as sf
 import librosa
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+import ffmpeg_utils
+import settings
 
 BEAT_THIS_AVAILABLE = False
+MD_BEAT_THIS_AVAILABLE = False
 predictor_instance = None
+md_predictor_instance = None
 MODEL_LOAD_FAILED = False        # the last attempt to load the beat_this model failed
-PREDICTOR_DEVICE = None          # "cuda" or "cpu" of the loaded model
+MD_MODEL_LOAD_FAILED = False     # the last attempt to load the md_beat_this model failed
+PREDICTOR_DEVICE = None          # "cuda" or "cpu" of the loaded beat_this model
+MD_PREDICTOR_DEVICE = None       # "cuda" or "cpu" of the loaded md_beat_this model
 
-ENGINE_LABELS = {"beat_this": "CPJKU beat_this Transformer", "librosa": "Librosa MIR (Fallback)"}
+ALLOWED_MODELS = ("beat_this", "md_beat_this")
+ENGINE_LABELS = {
+    "beat_this": "CPJKU beat_this Transformer",
+    "md_beat_this": "Masked Diffusion md_beat_this (Non-Commercial)",
+    "librosa": "Librosa MIR (Fallback)",
+}
 
 try:
     # Versuche offiziellen CPJKU beat_this Import
@@ -30,6 +41,19 @@ try:
     print("[BeatAnalyzer Backend] CPJKU beat_this Transformer-Bibliothek erfolgreich geladen!")
 except Exception as e:
     print(f"[BeatAnalyzer Backend] Hinweis: CPJKU beat_this direkt nicht verfügbar ({e}). Verwende High-Performance MIR-Fallback.")
+
+try:
+    # Optionales Modell (CC BY-NC 4.0, nur nicht-kommerzielle Nutzung): fosfrancesco/md_beat_this
+    from md_beat_this.inference import Audio2Beats as MdAudio2Beats
+    MD_BEAT_THIS_AVAILABLE = True
+    print("[BeatAnalyzer Backend] Masked Diffusion md_beat_this (Non-Commercial) erfolgreich geladen!")
+except Exception as e:
+    print(f"[BeatAnalyzer Backend] Hinweis: md_beat_this nicht installiert ({e}).")
+
+
+def normalize_model(value: Any) -> str:
+    """Analysis model from query/CLI: 'beat_this' (default) or 'md_beat_this' (non-commercial)."""
+    return "md_beat_this" if value == "md_beat_this" else "beat_this"
 
 
 def get_predictor():
@@ -55,6 +79,35 @@ def get_predictor():
             predictor_instance = None
             MODEL_LOAD_FAILED = True
     return predictor_instance
+
+
+MD_BEAT_THIS_ATTRIBUTION = (
+    "Masked Diffusion (md_beat_this) by Francesco Foscarin, Filip Korzeniowski, Richard Vogl "
+    "(https://github.com/fosfrancesco/md_beat_this) — Licensed under CC BY-NC 4.0 (Non-Commercial Use Only)."
+)
+
+
+def ffmpeg_available() -> bool:
+    return bool(ffmpeg_utils.apply_ffmpeg_dir(settings.load().get("ffmpegDir"))["available"])
+
+
+def get_md_predictor():
+    global md_predictor_instance, MD_MODEL_LOAD_FAILED, MD_PREDICTOR_DEVICE
+    if not MD_BEAT_THIS_AVAILABLE:
+        return None
+    if md_predictor_instance is None:
+        try:
+            import torch
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            print(f"[BeatAnalyzer Backend] Initialisiere md_beat_this Audio2Beats (Non-Commercial) auf Device: {device}...")
+            md_predictor_instance = MdAudio2Beats(checkpoint_path="run1", device=device)
+            MD_MODEL_LOAD_FAILED, MD_PREDICTOR_DEVICE = False, device
+            print("[BeatAnalyzer Backend] md_beat_this Modell bereit für Inferenz.")
+        except Exception as err:
+            print(f"[BeatAnalyzer Backend] Fehler beim Laden von md_beat_this: {err}")
+            md_predictor_instance = None
+            MD_MODEL_LOAD_FAILED = True
+    return md_predictor_instance
 
 
 def _gpu_name() -> Optional[str]:
@@ -89,20 +142,24 @@ def engine_info(engine_id: str, fallback_reason: Optional[str] = None, device: O
     }
 
 
-def engine_status() -> Dict[str, Any]:
-    """What the next analysis would use, without loading the model."""
-    if not BEAT_THIS_AVAILABLE:
+def engine_status(model: str = "beat_this") -> Dict[str, Any]:
+    """What the next analysis would use for the given model, without loading the model."""
+    model_id = normalize_model(model)
+    available = MD_BEAT_THIS_AVAILABLE if model_id == "md_beat_this" else BEAT_THIS_AVAILABLE
+    failed = MD_MODEL_LOAD_FAILED if model_id == "md_beat_this" else MODEL_LOAD_FAILED
+    loaded_device = MD_PREDICTOR_DEVICE if model_id == "md_beat_this" else PREDICTOR_DEVICE
+    if not available:
         return engine_info("librosa", "not_installed")
-    if MODEL_LOAD_FAILED:
+    if failed:
         return engine_info("librosa", "model_load_failed")
-    if PREDICTOR_DEVICE:
-        return engine_info("beat_this", device=PREDICTOR_DEVICE)
+    if loaded_device:
+        return engine_info(model_id, device=loaded_device)
     try:
         import torch
         device = "cuda" if torch.cuda.is_available() else "cpu"
     except Exception:
         device = "cpu"
-    return engine_info("beat_this", device=device)
+    return engine_info(model_id, device=device)
 
 
 def load_audio_safely(file_path: str, target_sr: int = 44100):
@@ -129,6 +186,15 @@ def sigmoid(x: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-np.asarray(x, dtype=np.float64)))
 
 
+def _to_prob(x) -> np.ndarray:
+    arr = _to_numpy(x)
+    if arr.size == 0:
+        return arr
+    if float(np.min(arr)) < 0.0 or float(np.max(arr)) > 1.0:
+        return sigmoid(arr)
+    return arr
+
+
 def run_beat_this(predictor, y: np.ndarray, sr: int):
     """
     beat_this in its single steps (Audio2Beats = signal2spect + spect2frames + frames2beats): beats and downbeats
@@ -139,6 +205,21 @@ def run_beat_this(predictor, y: np.ndarray, sr: int):
     beats, downbeats = predictor.frames2beats(beat_logits, downbeat_logits)
     return ([float(b) for b in beats], [float(d) for d in downbeats],
             sigmoid(_to_numpy(beat_logits)), sigmoid(_to_numpy(downbeat_logits)))
+
+
+def run_md_beat_this(predictor, y: np.ndarray, sr: int):
+    """
+    md_beat_this (Masked Diffusion, CC BY-NC 4.0): uses framewise steps if exposed,
+    otherwise falls back to predictor(y, sr).
+    """
+    if hasattr(predictor, "signal2spect") and hasattr(predictor, "spect2frames") and hasattr(predictor, "frames2beats"):
+        spect = predictor.signal2spect(y, sr)
+        beat_out, downbeat_out = predictor.spect2frames(spect)
+        beats, downbeats = predictor.frames2beats(beat_out, downbeat_out)
+        return ([float(b) for b in beats], [float(d) for d in downbeats],
+                _to_prob(beat_out), _to_prob(downbeat_out))
+    beats, downbeats = predictor(y, sr)
+    return ([float(b) for b in beats], [float(d) for d in downbeats], None, None)
 
 
 def beat_confidence(time: float, is_downbeat: bool, beat_prob: np.ndarray, downbeat_prob: np.ndarray,
@@ -244,56 +325,68 @@ def _file_key(file_path: str) -> str:
 
 
 def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = True,
-                       protect: float = PROTECT_CONF) -> Dict[str, Any]:
+                       protect: float = PROTECT_CONF, model: str = "beat_this") -> Dict[str, Any]:
     """
-    Analysiert eine Audiodatei (MP3, WAV, AAC, FLAC) und liefert strukturierte
-    Beats, Downbeats, Tempo, Taktart und BAF/DAF-Aktivierungskurven.
+    Analysiert eine Audiodatei (MP3, WAV, AAC, FLAC) mit CPJKU beat_this oder
+    md_beat_this (nur nicht-kommerziell) und liefert strukturierte Beats, Downbeats,
+    Tempo, Taktart und BAF/DAF-Aktivierungskurven.
     """
-    predictor = get_predictor()
+    model_id = normalize_model(model)
+    ffmpeg_utils.apply_ffmpeg_dir(settings.load().get("ffmpegDir"))
+    if model_id == "md_beat_this":
+        predictor = get_md_predictor()
+        available = MD_BEAT_THIS_AVAILABLE
+        device = MD_PREDICTOR_DEVICE
+        runner = run_md_beat_this
+    else:
+        predictor = get_predictor()
+        available = BEAT_THIS_AVAILABLE
+        device = PREDICTOR_DEVICE
+        runner = run_beat_this
 
     protect = clamp_protect(protect)
     global _LAST
     key = _file_key(file_path)
     last = _LAST
-    cached_model = last[3] if last and last[0] == key else None
+    cached_model = last[4] if last and last[0] == key and last[1] == model_id else None
     # Lade Audio sicher mit soundfile / librosa (kompatibel mit Python 3.9 bis 3.13)
     if last and last[0] == key:
-        y, sr = last[1], last[2]
+        y, sr = last[2], last[3]
     else:
         y, sr = load_audio_safely(file_path, target_sr=44100)
-    model = None
+    model_cache = None
     duration = float(len(y) / sr)
 
     beats_sec: List[float] = []
     downbeats_sec: List[float] = []
     beat_prob: Optional[np.ndarray] = None
     downbeat_prob: Optional[np.ndarray] = None
-    info = engine_info("beat_this", device=PREDICTOR_DEVICE)
+    info = engine_info(model_id, device=device)
 
     if predictor is not None and cached_model is not None:
-        model = cached_model
-        print(f"[BeatAnalyzer Backend] Ergebnis von beat_this aus dem Speicher (nur Glättung neu): {original_filename}")
-        beats_sec, downbeats_sec, beat_prob, downbeat_prob = list(model[0]), list(model[1]), model[2], model[3]
+        model_cache = cached_model
+        print(f"[BeatAnalyzer Backend] Ergebnis von {model_id} aus dem Speicher (nur Glättung neu): {original_filename}")
+        beats_sec, downbeats_sec, beat_prob, downbeat_prob = list(model_cache[0]), list(model_cache[1]), model_cache[2], model_cache[3]
     elif predictor is not None:
         try:
-            print(f"[BeatAnalyzer Backend] Starte CPJKU Transformer Inferenz für: {original_filename}")
-            beats_sec, downbeats_sec, beat_prob, downbeat_prob = run_beat_this(predictor, y, sr)
-            model = (list(beats_sec), list(downbeats_sec), beat_prob, downbeat_prob)
+            print(f"[BeatAnalyzer Backend] Starte {model_id} Inferenz für: {original_filename}")
+            beats_sec, downbeats_sec, beat_prob, downbeat_prob = runner(predictor, y, sr)
+            model_cache = (list(beats_sec), list(downbeats_sec), beat_prob, downbeat_prob)
         except Exception as e:
             beat_prob = downbeat_prob = None
-            print(f"[BeatAnalyzer Backend] Fehler bei Transformer-Inferenz, wechsle auf Fallback: {e}")
+            print(f"[BeatAnalyzer Backend] Fehler bei {model_id}-Inferenz, wechsle auf Fallback: {e}")
             info = engine_info("librosa", "inference_failed")
             beats_sec, downbeats_sec = fallback_mir_track(y, sr)
     else:
-        info = engine_info("librosa", "not_installed" if not BEAT_THIS_AVAILABLE else "model_load_failed")
+        info = engine_info("librosa", "not_installed" if not available else "model_load_failed")
         beats_sec, downbeats_sec = fallback_mir_track(y, sr)
 
-    _LAST = (key, y, sr, model)
+    _LAST = (key, model_id, y, sr, model_cache)
 
-    # Kurven fuer die Web-App: Wahrscheinlichkeiten von beat_this, sonst die Onset-Staerke von librosa
+    # Kurven fuer die Web-App: Wahrscheinlichkeiten vom Modell, sonst die Onset-Staerke von librosa
     if beat_prob is not None:
         curve = activation_curve(beat_prob, downbeat_prob)
-        activation_source = "beat_this"
+        activation_source = model_id
     else:
         hop_length = int(sr / 100)  # 10 ms Frames
         onset_env = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop_length, aggregate=np.median)
@@ -329,7 +422,7 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
 
     # Taktart: haeufigste Beat-Anzahl zwischen zwei Downbeats und ihr Anteil an allen Takten
     beats_per_bar, bar_share = meter_from_beats(beats_sec, downbeats_sec)
-    if beat_prob is None:
+    if info["id"] == "librosa":
         bar_share = None   # librosa puts a downbeat on every 3rd/4th beat: a share of those bars says nothing
 
     # Erzeuge strukturierte Beat-Liste mit Takt & Zählzeit
@@ -406,9 +499,10 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
 
     file_format = original_filename.split(".")[-1].upper() if "." in original_filename else "AUDIO"
 
-    return {
+    analysis_result = {
         "engine": ENGINE_LABELS[info["id"]],
         "engineInfo": info,
+        "selectedModel": model_id,
         "metadata": {
             "fileName": original_filename,
             "fileSize": os.path.getsize(file_path),
@@ -440,6 +534,10 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
         "waveformPeaks": waveform_peaks,
         "waveformDuration": round(duration, 3)
     }
+    if info["id"] == "md_beat_this":
+        analysis_result["license"] = "CC BY-NC 4.0"
+        analysis_result["attribution"] = MD_BEAT_THIS_ATTRIBUTION
+    return analysis_result
 
 
 def fallback_mir_track(y: np.ndarray, sr: int):
@@ -500,4 +598,7 @@ def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) ->
     }
     if result.get("engineInfo"):
         data["engine"] = result["engineInfo"]
+    if (result.get("engineInfo") or {}).get("id") == "md_beat_this":
+        data["license"] = result.get("license") or "CC BY-NC 4.0"
+        data["attribution"] = result.get("attribution") or MD_BEAT_THIS_ATTRIBUTION
     return data

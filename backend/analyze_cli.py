@@ -11,6 +11,8 @@ import argparse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from analyzer import analyze_audio_file, resolve_marker_data
+import ffmpeg_utils
+import settings
 
 
 def main():
@@ -24,20 +26,36 @@ def main():
     parser.add_argument("--no-smooth-bars", help="Takte nicht glätten (wie beat_this sie liefert)", action="store_true")
     parser.add_argument("--protect", type=float, default=0.95,
                         help="Schutz klarer 1: eine 1, die beat_this so sicher hört, bleibt (0.5 bis 1.0, 1.0 = kein Schutz)")
+    parser.add_argument("--model", choices=["beat_this", "md_beat_this"], default="beat_this",
+                        help="Analyse-Modell: beat_this (Standard) oder md_beat_this (CC BY-NC 4.0, nur nicht-kommerziell)")
+    parser.add_argument("--ffmpeg-dir", default=None,
+                        help="Optionaler Ordner mit ausführbarem ffmpeg (falls ffmpeg nicht im System-PATH liegt)")
 
     args = parser.parse_args()
+
+    if args.ffmpeg_dir is not None:
+        try:
+            ffmpeg_utils.validate_and_resolve_ffmpeg_dir(args.ffmpeg_dir)
+        except ValueError as err:
+            print(f"Fehler bei --ffmpeg-dir: {err}")
+            sys.exit(1)
+    else:
+        ffmpeg_utils.apply_ffmpeg_dir(settings.load().get("ffmpegDir"))
 
     audio_path = args.audio_path
     if not os.path.exists(audio_path):
         print(f"Fehler: Datei nicht gefunden: {audio_path}")
         sys.exit(1)
 
+    if args.model == "md_beat_this":
+        print("Hinweis: md_beat_this steht unter CC BY-NC 4.0 (nur für nicht-kommerzielle Nutzung).")
+
     print(f"\n=======================================================")
     print(f" Analysiere: {os.path.basename(audio_path)}")
     print(f"=======================================================")
 
     result = analyze_audio_file(audio_path, os.path.basename(audio_path), smooth=not args.no_smooth_bars,
-                                protect=args.protect)
+                                protect=args.protect, model=args.model)
 
     print(f" Engine:           {result['engine']}")
     print(f" Dauer:            {result['metadata']['duration']} Sekunden")

@@ -13,3 +13,7 @@ torchaudio>=2.0.0
 
 # CPJKU beat_this Transformer Modell direkt von GitHub
 git+https://github.com/CPJKU/beat_this.git#egg=beat_this
+
+# Optional: Masked Diffusion (fosfrancesco/md_beat_this) - NUR nicht-kommerzielle Nutzung (CC BY-NC 4.0)!
+# Benötigt außerdem ffmpeg auf dem System:
+# https://github.com/fosfrancesco/md_beat_this/archive/main.zip
