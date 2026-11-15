@@ -617,6 +617,33 @@ class AnalysisDialogTests(DialogTests):
             self.close()
         self.run_dialog(scenario)
 
+    def test_md_beat_this_hint_does_not_change_the_height_every_second(self):
+        # Resolve 0.2.1: the clip line went from one line to two lines on every refresh, the window twitched
+        def scenario():
+            self.select_song()
+            self.check("WayAnalyze", True)
+            self.choose("Model", 1)
+            self.tick(5)
+            self.lua.execute("""
+              local real = UIMOCK.items.ClipInfo
+              UIMOCK.heights, UIMOCK.texts = {}, {}
+              UIMOCK.items.ClipInfo = setmetatable({}, {
+                __index = real,
+                __newindex = function(_, k, v)
+                  if k == "MinimumSize" then UIMOCK.heights[#UIMOCK.heights + 1] = v[2] end
+                  if k == "Text" then UIMOCK.texts[#UIMOCK.texts + 1] = v end
+                  real[k] = v
+                end })
+            """)
+            self.tick(60)                                      # about three refreshes
+            heights = list(self.ui.heights.values())
+            texts = list(self.ui.texts.values())
+            self.assertGreaterEqual(len(heights), 2)
+            self.assertEqual(len(set(heights)), 1, heights)
+            self.assertTrue(all("Lizenz-Häkchen" in t for t in texts), texts)
+            self.close()
+        self.run_dialog(scenario)
+
     def test_beat_this_job_and_saved_model_without_the_licence_box(self):
         def scenario():
             self.start_analysis()

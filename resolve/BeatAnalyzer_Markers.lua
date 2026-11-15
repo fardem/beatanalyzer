@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.2.1"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.2.2"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -2186,8 +2186,14 @@ function M.main()
     show_way()
     if analyze_way() then
       S.info = analysis_info()
-      set("ClipInfo", "Text", S.info.ok and S.info.clip_text or (S.info.error or ""))
-      fit("ClipInfo", get("ClipInfo", "Text"))
+      -- the hint for md_beat_this goes in at once: setting one line and then two every second made the window
+      -- lay itself out twice per refresh (it twitched, Resolve test 0.2.1)
+      local clip_text = S.info.ok and S.info.clip_text or (S.info.error or "")
+      if S.info.ok and not model_ok() then
+        clip_text = clip_text .. "\n" .. T("plugin.md_confirm_needed")
+      end
+      set("ClipInfo", "Text", clip_text)
+      fit("ClipInfo", clip_text)
       set("Warnings", "Hidden", true)
       set("Engine", "Hidden", true)
       S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
@@ -2221,10 +2227,8 @@ function M.main()
       relayout()
     end
     local ok = S.info ~= nil and S.info.ok == true
-    if analyze_way() and ok and not model_ok() then
-      set("ClipInfo", "Text", S.info.clip_text .. "\n" .. T("plugin.md_confirm_needed"))
-      fit("ClipInfo", get("ClipInfo", "Text"))
-      ok = false
+    if analyze_way() and not model_ok() then
+      ok = false   -- md_beat_this without the licence box (the hint is in ClipInfo)
     end
     set("OK", "Enabled", ok)
     set("Remove", "Enabled", #remove_clips() > 0)

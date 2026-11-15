@@ -4,7 +4,7 @@
 
 ## Stand
 
-- **main = 0.2.0** (Zusammenführung, PR fardem/beatanalyzer#19; Release 0.1.8 bleibt); 0.2.1 = Schnellauswahl 5/15/30/60 s, Release 0.2.0 entfällt (Release Notes 0.2.1 decken 0.1.5–0.2.1 ab), CI grün (Backend Windows/Ubuntu, Frontend mit `dist/`-Prüfung). Entwicklungs-Branch war
+- **main = 0.2.0** (Zusammenführung, PR fardem/beatanalyzer#19; Release 0.1.8 bleibt); 0.2.1 = Schnellauswahl 5/15/30/60 s; 0.2.2 = Zucken im Resolve-Fenster behoben, Songname in der Web-App. Releases 0.2.0/0.2.1 entfallen, Release Notes 0.2.2 decken 0.1.5–0.2.2 ab, CI grün (Backend Windows/Ubuntu, Frontend mit `dist/`-Prüfung). Entwicklungs-Branch war
   `claude/nifty-curie-vagvn5`.
 - **Fertig und in Resolve getestet:**
   - Teilprojekt 1 (Grundlage: Sprachdateien, `settings.json`, Analyse-Programm, echte Confidence/Kurven).
@@ -37,6 +37,11 @@
   Analyse-Programms, Modellwahl und Lizenzhinweis wie in der Web-App). In Resolve noch nicht getestet.
 - Noch zu prüfen: Texte der Web-App aus dem Gemini-Zweig sind nur deutsch (gehört zu Teilprojekt 4, Sprachen);
   `md_beat_this` selbst ist hier nicht installiert und nur mit nachgestellten Modulen getestet.
+
+- **Beats vor der Wellenform (Test 0.2.1, „Küçük Sevgilim“, MP3):** bei „Paramparça“ (FLAC) nicht. Vermutung:
+  Encoder-Verzögerung am Anfang von MP3-Dateien – Browser (Wellenform) und Server (soundfile/librosa) bzw. Resolve
+  dekodieren sie womöglich unterschiedlich. Prüfen: gleiche Datei als WAV, Versatz in ms messen; `md_beat_this`
+  rastert zudem auf 20 ms.
 
 ## 1. Teilprojekt 4 – Web-App (Gesamtkonzept Abschnitt 9)
 
