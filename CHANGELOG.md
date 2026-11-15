@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.8] – 2026-11-15
+
+Rückmeldungen aus dem Test von 0.2.7.
+
+### Hinzugefügt
+- **Loop** im Player (Knopf neben den Abspieltasten): 1. Klick wiederholt den **sichtbaren Ausschnitt** der Wellenform (z. B. nach `5s`), 2. Klick den **ganzen Song**, 3. Klick schaltet aus. Zeigt die Wellenform den ganzen Song, geht es gleich zum ganzen Song. Der Loop läuft lückenlos; in der Wellenform ist alles außerhalb abgedunkelt, die Grenzen sind gelb, in der Übersicht ist der Bereich markiert. Ein Sprung aus dem Ausschnitt heraus beendet den Loop.
+- **Lautstärke des Songs** (Regler „Song“ neben dem Metronom), damit sich Song und Klick abstimmen lassen.
+
+### Behoben
+- Kachel Taktart: Der Kasten „Anteil der Takte“ brach im Türkischen auf zwei Zeilen um und saß zu hoch. Er bleibt jetzt einzeilig und unten bündig mit der Taktart (türkisch „%97 ölçü“, „4/4'lük“ eine Stufe kleiner); ist die Kachel zu schmal, rutscht er in die nächste Zeile.
+
 ## [0.2.7] – 2026-11-15
 
 Teilprojekt 4 (Web-App), Schritt 2: Sprachen.

@@ -43,6 +43,11 @@ export default function App() {
   const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1.0);
   const [metronomeEnabled, setMetronomeEnabled] = useState<boolean>(true);
   const [metronomeVolume, setMetronomeVolume] = useState<number>(0.65);
+  const [musicVolume, setMusicVolume] = useState<number>(1.0);
+  // loop: off, the section the waveform shows at the click, or the whole song
+  const [loopMode, setLoopMode] = useState<'off' | 'view' | 'song'>('off');
+  const [loopRange, setLoopRange] = useState<{ start: number; end: number } | null>(null);
+  const viewRef = useRef<{ start: number; end: number } | null>(null);
 
   // Modals
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
@@ -121,6 +126,11 @@ export default function App() {
 
       lastAudioRef.current = audioBuffer;
       setAudioBuffer(audioBuffer);
+      if (!opts.reanalysis) {
+        setLoopMode('off');   // a new song: no loop (loadBuffer keeps no loop either)
+        setLoopRange(null);
+        playerRef.current?.setLoop(null);
+      }
       setResult(analysisResult);
       setSmoothBars(smooth); // only now: a failed re-analysis leaves box and slider as they were
       setProtect(protectValue);
@@ -149,10 +159,36 @@ export default function App() {
     setIsPlaying(false);
   }, []);
 
+  const applyLoop = useCallback((mode: 'off' | 'view' | 'song', range: { start: number; end: number } | null) => {
+    setLoopMode(mode);
+    setLoopRange(range);
+    playerRef.current?.setLoop(range);
+  }, []);
+
   const handleSeek = useCallback((targetTime: number) => {
     if (!playerRef.current) return;
+    // a jump out of the looped section ends the loop
+    if (loopRange && loopMode === 'view' && (targetTime < loopRange.start || targetTime >= loopRange.end)) {
+      applyLoop('off', null);
+    }
     playerRef.current.seek(targetTime);
     setCurrentTime(targetTime);
+  }, [loopRange, loopMode, applyLoop]);
+
+  // off -> section of the waveform (skipped when it shows the whole song) -> whole song -> off
+  const handleCycleLoop = useCallback(() => {
+    if (!result) return;
+    const dur = result.metadata.duration;
+    const view = viewRef.current;
+    const viewIsPart = view !== null && view.end - view.start < dur - 0.05;
+    if (loopMode === 'off' && viewIsPart && view) applyLoop('view', { start: view.start, end: view.end });
+    else if (loopMode !== 'song' && !(loopMode === 'off' && viewIsPart)) applyLoop('song', { start: 0, end: dur });
+    else applyLoop('off', null);
+  }, [result, loopMode, applyLoop]);
+
+  const handleSetMusicVolume = useCallback((vol: number) => {
+    setMusicVolume(vol);
+    playerRef.current?.setMusicVolume(vol);
   }, []);
 
   const handleSetSpeed = useCallback((speed: PlaybackSpeed) => {
@@ -282,6 +318,10 @@ export default function App() {
               <WaveformBeatVisualizer
                 result={result}
                 audioBuffer={audioBuffer}
+                loopRange={loopRange}
+                onViewChange={(start, end) => {
+                  viewRef.current = { start, end };
+                }}
                 currentTime={currentTime}
                 onSeek={handleSeek}
                 activeBeat={activeBeat}
@@ -304,6 +344,10 @@ export default function App() {
               onSetPlaybackSpeed={handleSetSpeed}
               onToggleMetronome={handleToggleMetronome}
               onSetMetronomeVolume={handleSetMetronomeVolume}
+              musicVolume={musicVolume}
+              onSetMusicVolume={handleSetMusicVolume}
+              loopMode={loopMode}
+              onCycleLoop={handleCycleLoop}
             />
 
             {/* 4. Tempo Curve Over Time */}

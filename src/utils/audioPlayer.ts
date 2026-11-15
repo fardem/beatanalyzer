@@ -18,6 +18,10 @@ export class BeatPlayer {
   private playbackRate: number = 1.0;
   private metronomeEnabled: boolean = true;
   private metronomeVolume: number = 0.6;
+  private musicVolume: number = 1.0;
+  // loop range in seconds (section of the waveform or the whole song); the source loops sample-exact
+  private loop: { start: number; end: number } | null = null;
+  private lastTickTime: number = 0;
 
   private beats: BeatItem[] = [];
   private nextBeatIndex: number = 0;
@@ -73,9 +77,14 @@ export class BeatPlayer {
     this.sourceNode = ctx.createBufferSource();
     this.sourceNode.buffer = this.audioBuffer;
     this.sourceNode.playbackRate.value = this.playbackRate;
+    if (this.loop) {
+      this.sourceNode.loop = true;
+      this.sourceNode.loopStart = this.loop.start;
+      this.sourceNode.loopEnd = this.loop.end;
+    }
 
     this.gainNode = ctx.createGain();
-    this.gainNode.gain.value = 1.0;
+    this.gainNode.gain.value = this.musicVolume;
 
     this.metronomeGain = ctx.createGain();
     this.metronomeGain.gain.value = this.metronomeEnabled ? this.metronomeVolume : 0;
@@ -89,6 +98,7 @@ export class BeatPlayer {
     this.isPlaying = true;
 
     this.updateNextBeatIndex(this.pauseOffset);
+    this.lastTickTime = this.pauseOffset;
 
     this.sourceNode.onended = () => {
       if (this.isPlaying && this.getCurrentTime() >= (this.audioBuffer?.duration || 0) - 0.1) {
@@ -157,12 +167,39 @@ export class BeatPlayer {
     }
   }
 
+  public setMusicVolume(vol: number) {
+    this.musicVolume = Math.max(0, Math.min(1, vol));
+    if (this.gainNode) this.gainNode.gain.value = this.musicVolume;
+  }
+
+  /** Loop a range (seconds) or stop looping (null). Outside the range playback jumps to its start. */
+  public setLoop(range: { start: number; end: number } | null) {
+    const dur = this.audioBuffer?.duration ?? 0;
+    this.loop = range && range.end - range.start > 0.05
+      ? { start: Math.max(0, range.start), end: Math.min(dur || range.end, range.end) }
+      : null;
+    let t = this.getCurrentTime();
+    if (this.loop && (t < this.loop.start || t >= this.loop.end)) t = this.loop.start;
+    if (this.isPlaying) {
+      this.play(t);   // a new source with the loop points
+    } else {
+      this.pauseOffset = t;
+      this.updateNextBeatIndex(t);
+      this.onTimeUpdate?.(t, t / (dur || 1));
+    }
+  }
+
   public getCurrentTime(): number {
     if (!this.isPlaying || !this.ctx) {
       return this.pauseOffset;
     }
-    const elapsed = (this.ctx.currentTime - this.startTime) * this.playbackRate;
-    return Math.max(0, elapsed);
+    const elapsed = Math.max(0, (this.ctx.currentTime - this.startTime) * this.playbackRate);
+    // the source started inside the loop: after loopEnd it continues at loopStart
+    if (this.loop && elapsed >= this.loop.end) {
+      const len = this.loop.end - this.loop.start;
+      return this.loop.start + ((elapsed - this.loop.end) % len);
+    }
+    return elapsed;
   }
 
   public getIsPlaying(): boolean {
@@ -195,6 +232,8 @@ export class BeatPlayer {
       if (!this.isPlaying || !this.audioBuffer) return;
 
       const curTime = this.getCurrentTime();
+      if (curTime < this.lastTickTime - 0.05) this.updateNextBeatIndex(curTime);   // the loop jumped back
+      this.lastTickTime = curTime;
       const progress = curTime / this.audioBuffer.duration;
       this.onTimeUpdate?.(curTime, progress);
 

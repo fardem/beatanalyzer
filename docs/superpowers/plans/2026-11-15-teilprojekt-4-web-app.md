@@ -29,6 +29,10 @@ Stand nach 0.2.5. Drei Schritte, jeder endet lauffähig mit eigener Version und 
 - [x] Kacheln Taktart und Taktanzahl nach Glossar 3.2 (TR: „Ölçü · 4/4'lük“, „Toplam · 124 ölçü“).
 - [x] Begriffe nach Glossar (z. B. „Taktanfänge“ in der Beat-Tabelle → Downbeats).
 
+## Zwischenstand 0.2.8
+
+- [x] Loop (Ausschnitt → ganzer Song → aus) und Lautstärke des Songs (Wunsch des Nutzers; Pegelanzeige bewusst nicht).
+
 ## Schritt 3 – Resolve-Fenster an die Web-App angleichen (0.3.0 = Teilprojekt 4 fertig)
 
 - Begriffe, Anzeige des Analyse-Programms und Modellwahl/Lizenzhinweis wie in der Web-App.
