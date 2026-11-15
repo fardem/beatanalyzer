@@ -4,7 +4,7 @@
 
 ## Stand
 
-- **main = 0.1.8**, CI grün (Backend Windows/Ubuntu, Frontend mit `dist/`-Prüfung). Entwicklungs-Branch war
+- **main = 0.1.8** (bleibt so; 0.1.9 = Zusammenführung auf `claude/sharp-cannon-8l5zqr`, PR fardem/beatanalyzer#19), CI grün (Backend Windows/Ubuntu, Frontend mit `dist/`-Prüfung). Entwicklungs-Branch war
   `claude/nifty-curie-vagvn5`.
 - **Fertig und in Resolve getestet:**
   - Teilprojekt 1 (Grundlage: Sprachdateien, `settings.json`, Analyse-Programm, echte Confidence/Kurven).
@@ -17,7 +17,7 @@
 - Testergebnisse und Nutzerentscheidungen: `docs/superpowers/notes/2026-11-14-resolve-test-tp3.md`,
   `docs/superpowers/notes/2026-11-12-rueckmeldung-glaett-regler.md`.
 
-## 0. Zusammenführung mit der parallelen Entwicklung (2026-11-15)
+## 0. Version 0.1.9 – Zusammenführung mit der parallelen Entwicklung (2026-11-15)
 
 - Der Zweig aus Google AI Studio (`fardem/BeatAnalyzer_test`, Basis 0.1.4, Protokoll
   `docs/gemini weiterentwicklung 0.1.4.md`) ist per 3-Wege-Merge in 0.1.8 übernommen: Modell `md_beat_this`
