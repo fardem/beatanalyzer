@@ -41,8 +41,7 @@
 - **MP3 in Resolve (0.2.4 umgesetzt):** Resolve spielt Xing/Info-Rahmen und Encoder-Verzögerung mit ab (gemessen
   ≈ 48 ms im Bildschirmfoto, berechnet 51,18 ms = 1152 + 576 + 529 Samples bei 44,1 kHz). `backend/mp3_offset.py`
   liest den Wert aus dem MP3-Kopf → `resolveOffset` in Analyse und Marker-JSON → Skript verschiebt Marker/Subtitles
-  auf MP3-Clips. Annahme „Resolve spielt den Xing-Rahmen als Stille“ ist durch den Test in Resolve zu bestätigen
-  (`docs/resolve-test-0.2.4.md`). m4a/AAC (Priming 2112 Samples, Edit-Liste) in Resolve noch zu prüfen.
+  auf MP3-Clips. Im Test 0.2.4 in Resolve bestätigt (Marker der MP3 auf dem Beat, Rest innerhalb eines halben Frames). m4a/AAC (Priming 2112 Samples, Edit-Liste) in Resolve noch zu prüfen.
 
 ## 1. Teilprojekt 4 – Web-App (Gesamtkonzept Abschnitt 9)
 
