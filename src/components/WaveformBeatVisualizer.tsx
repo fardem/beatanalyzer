@@ -18,6 +18,11 @@ const LOUPE_CANVAS_HEIGHT_PX = 82;
 const LOUPE_TOTAL_HEIGHT_PX = 108;
 const QUICK_WINDOWS_SEC = [5, 15, 30, 60] as const; // quick selection of the visible window around the playhead
 
+function formatSongLength(seconds: number): string {
+  const total = Math.round(Math.max(0, seconds));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
 function formatLoupeTime(seconds: number): string {
   const safe = Math.max(0, seconds);
   const mins = Math.floor(safe / 60);
@@ -821,8 +826,16 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     <div className="space-y-3">
       {/* Visualizer Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-300">Wellenform & Beat Grid</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs font-semibold text-slate-300 whitespace-nowrap shrink-0">Wellenform & Beat Grid</span>
+          {/* the analysed song: long names are cut, the full name is in the tooltip */}
+          <span
+            className="text-xs text-slate-400 truncate min-w-0 max-w-[48ch]"
+            title={`${result.metadata.fileName} · ${formatSongLength(duration)}`}
+          >
+            · <span className="text-slate-200 font-medium">{result.metadata.fileName}</span>
+            <span className="text-slate-500 tabular-nums"> · {formatSongLength(duration)}</span>
+          </span>
           {activeBeat && (
             <span
               className={`text-[11px] px-2 py-0.5 rounded-full font-bold transition-all ${

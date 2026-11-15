@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.2] – 2026-11-15
+
+Rückmeldungen aus dem Test von 0.2.1.
+
+### Behoben
+- Resolve-Fenster: **Zucken bei `md_beat_this` ohne Lizenz-Häkchen.** Die Clip-Zeile wurde jede Sekunde erst mit einer, dann mit zwei Zeilen (Hinweis „Lizenz-Häkchen setzen“) gesetzt; das Fenster ordnete sich dabei zweimal neu an. Der Text wird jetzt in einem Schritt mit der endgültigen Höhe gesetzt.
+
+### Hinzugefügt
+- Web-App: **Songname** in der Kopfzeile der Wellenform („Wellenform & Beat Grid · Song.mp3 · 4:55“); lange Namen werden gekürzt, der volle Name steht im Tooltip.
+
 ## [0.2.1] – 2026-11-15
 
 ### Geändert
