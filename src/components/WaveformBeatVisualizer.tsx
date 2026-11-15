@@ -16,7 +16,7 @@ const LOUPE_MAX_WINDOW_SEC = 12.0;
 const LOUPE_WIDTH_PX = 264;
 const LOUPE_CANVAS_HEIGHT_PX = 82;
 const LOUPE_TOTAL_HEIGHT_PX = 108;
-const QUICK_WINDOW_SEC = 20;
+const QUICK_WINDOWS_SEC = [5, 15, 30, 60] as const; // quick selection of the visible window around the playhead
 
 function formatLoupeTime(seconds: number): string {
   const safe = Math.max(0, seconds);
@@ -59,9 +59,11 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   } | null>(null);
 
   const duration = result.metadata.duration || 1;
-  const maxZoom = Math.max(16.0, duration / 5);
+  // the smallest quick window (5 s) must stay reachable on long songs
+  const maxZoom = Math.max(16.0, duration / QUICK_WINDOWS_SEC[0]);
   const visibleDuration = duration / zoom;
-  const is20sActive = duration > QUICK_WINDOW_SEC && Math.abs(visibleDuration - QUICK_WINDOW_SEC) < 0.25;
+  const activeQuickWindow =
+    QUICK_WINDOWS_SEC.find((sec) => duration > sec && Math.abs(visibleDuration - sec) < 0.25) ?? null;
 
   const hasDafCurve = result.activationCurve.some((pt) => pt.downbeatActivation !== null);
   const isMdModel = result.engineInfo?.id === 'md_beat_this' || result.selectedModel === 'md_beat_this';
@@ -786,13 +788,14 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     setScrollOffsetSec(nextOffset);
   };
 
-  const handleZoomTo20s = () => {
-    if (duration <= QUICK_WINDOW_SEC) return;
-    if (is20sActive) {
+  // a second click on the active window shows the whole file again
+  const handleQuickWindow = (windowSec: number) => {
+    if (duration <= windowSec) return;
+    if (activeQuickWindow === windowSec) {
       handleResetZoom();
       return;
     }
-    const targetZoom = Math.min(maxZoom, duration / QUICK_WINDOW_SEC);
+    const targetZoom = Math.min(maxZoom, duration / windowSec);
     const nextVisibleDur = duration / targetZoom;
     const nextOffset = Math.max(0, Math.min(currentTime - nextVisibleDur / 2, duration - nextVisibleDur));
     setZoom(targetZoom);
@@ -932,26 +935,33 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
             <div className="w-px h-3.5 bg-slate-800 mx-0.5 shrink-0" aria-hidden="true" />
-            <button
-              type="button"
-              onClick={handleZoomTo20s}
-              disabled={duration <= QUICK_WINDOW_SEC}
-              aria-pressed={is20sActive}
-              className={`px-2 py-0.5 rounded text-[11px] font-mono tabular-nums font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
-                is20sActive
-                  ? 'bg-cyan-900/70 text-cyan-200 border border-cyan-700/70'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-              title={
-                duration <= QUICK_WINDOW_SEC
-                  ? 'Track ist kürzer als 20 Sekunden'
-                  : is20sActive
-                  ? 'Zurück zur Gesamtansicht'
-                  : '20-Sekunden-Detailansicht um Playhead zentrieren'
-              }
-            >
-              20s
-            </button>
+            {QUICK_WINDOWS_SEC.map((sec) => {
+              const active = activeQuickWindow === sec;
+              const tooShort = duration <= sec;
+              return (
+                <button
+                  key={sec}
+                  type="button"
+                  onClick={() => handleQuickWindow(sec)}
+                  disabled={tooShort}
+                  aria-pressed={active}
+                  className={`px-1.5 py-0.5 rounded text-[11px] font-mono tabular-nums font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
+                    active
+                      ? 'bg-cyan-900/70 text-cyan-200 border border-cyan-700/70'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title={
+                    tooShort
+                      ? `Track ist kürzer als ${sec} Sekunden`
+                      : active
+                      ? 'Zurück zur Gesamtansicht'
+                      : `${sec}-Sekunden-Ausschnitt um die Abspielposition`
+                  }
+                >
+                  {sec}s
+                </button>
+              );
+            })}
             <button
               type="button"
               onClick={handleResetZoom}

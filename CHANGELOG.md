@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.1] – 2026-11-15
+
+### Geändert
+- Web-App, Wellenform: **Schnellauswahl `5s | 15s | 30s | 60s`** statt nur `20s`. Jeder Knopf zeigt einen Ausschnitt dieser Länge um die Abspielposition; ein zweiter Klick auf den aktiven Knopf zeigt wieder die ganze Datei. Knöpfe für Längen, die der Song nicht hat, sind gesperrt. Die Zoomgrenze reicht bei langen Songs bis 5 s.
+
 ## [0.2.0] – 2026-11-15
 
 Zusammenführung mit der parallelen Entwicklung aus Google AI Studio (`fardem/BeatAnalyzer_test`, Basis 0.1.4;
