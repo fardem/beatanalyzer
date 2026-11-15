@@ -26,7 +26,7 @@
   bleiben englisch, Takt/Taktart/Taktanzahl werden übersetzt (TR: Taktart „Ölçü · 4/4'lük“, Taktanzahl
   „Toplam · 124 ölçü“; Endungen 2→'lik, 4→'lük, 8→'lik, 16→'lık).
 - **Export „DaVinci Resolve“:** Auswahl „Nur Downbeats“ entfällt; Hinweis, dass die Farben im Resolve-Fenster
-  eingestellt werden. `--only-downbeats` der Kommandozeile bleibt.
+  eingestellt werden braucht nciuht, das entgfällt im web app komplett. `--only-downbeats` der Kommandozeile bleibt.
 - **Anzeige des Analyse-Programms** (Konzept Abschnitt 8): beat_this/librosa, CUDA/CPU, Grafikkarte, Grund für den
   Ersatz; `engineInfo` (mit `model`) liefert der Server schon.
 - **Server zuerst statt Browser:** Heute dekodiert die Web-App die Datei im Browser und rechnet still im Browser
