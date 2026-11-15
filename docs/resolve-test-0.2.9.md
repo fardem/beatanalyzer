@@ -5,7 +5,7 @@ Vorher: main holen, `start.bat`.
 | # | Was tun | Was soll passieren |
 |---|---|---|
 | 1 | Song abspielen (Fenster wie gewohnt) | Player bleibt einzeilig, springt bei Downbeats nicht mehr; Anzeige oben „Takt 35“, darunter „Downbeat (Beat 1)“ bzw. „Beat 2“ |
-| 2 | Loop-Knopf mehrmals klicken | „Loop“ → „Ausschnitt“ → „Ganzer Song“ → „Loop“; die Zeile bewegt sich dabei nicht |
+| 2 | Loop-Knopf mehrmals klicken | Symbol grau (aus) → gelb mit „A-B“ (Ausschnitt) → grün (ganzer Song) → grau; Tooltip nennt jeweils den Zustand und was der nächste Klick tut; die Zeile bewegt sich nicht |
 | 3 | `15s`, Loop „Ausschnitt“, abspielen, dann den blauen Rahmen in der Übersicht nach rechts ziehen | Wiedergabe springt an die linke Kante des Rahmens und wiederholt bis zur rechten Kante |
 | 4 | Während Loop „Ausschnitt“ läuft | Ansicht bleibt stehen (kein Mitscrollen) |
 | 5 | Mit `+`/`–` zoomen bei Loop „Ausschnitt“ | Loop passt sich dem neuen sichtbaren Bereich an |

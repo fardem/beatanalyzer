@@ -165,20 +165,27 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             <FastForward className="w-4 h-4" />
           </button>
 
-          {/* Loop: off -> section of the waveform -> whole song -> off */}
+          {/* Loop: off -> section of the waveform -> whole song -> off. A symbol instead of text (wish of the user);
+              the mode is in the tooltip and shown by colour and the small "A-B" for the section */}
           <button
             onClick={onCycleLoop}
             aria-pressed={loopMode !== 'off'}
-            className={`flex items-center gap-1 px-2 py-1.5 rounded-xl text-[11px] font-semibold transition-colors cursor-pointer w-[6.75rem] shrink-0 overflow-hidden ${
+            aria-label={`${t('web.player.loop_off')}: ${t(`web.player.loop_${loopMode}`)}`}
+            className={`relative w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border transition-colors cursor-pointer ${
               loopMode === 'off'
-                ? 'text-slate-400 hover:text-white hover:bg-slate-800'
-                : 'text-amber-200 bg-amber-950/60 border border-amber-700/70'
+                ? 'text-slate-400 border-transparent hover:text-white hover:bg-slate-800'
+                : loopMode === 'view'
+                ? 'text-amber-300 bg-amber-950/60 border-amber-700/70'
+                : 'text-emerald-300 bg-emerald-950/60 border-emerald-700/70'
             }`}
             title={t(`web.player.loop_${loopMode}_tip`)}
           >
-            {/* fixed width: the label of the mode must not move the row */}
-            <Repeat className="w-4 h-4 shrink-0" />
-            <span className="truncate">{t(`web.player.loop_${loopMode}`)}</span>
+            <Repeat className="w-[18px] h-[18px]" strokeWidth={2.25} />
+            {loopMode === 'view' && (
+              <span className="absolute -bottom-1 -right-1 px-0.5 rounded bg-amber-500 text-[8px] leading-[10px] font-bold text-slate-950">
+                A-B
+              </span>
+            )}
           </button>
 
           {/* Time Display */}
