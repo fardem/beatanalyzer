@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { BackendHealth } from '../utils/localBackend';
 import { FfmpegDirControl } from './FfmpegDirControl';
+import { useI18n } from '../i18n';
 
 interface NonCommercialNoticeModalProps {
   onConfirm: () => void;
@@ -33,6 +34,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
   isInstalled = false,
   alreadyConfirmed = false,
 }) => {
+  const { t } = useI18n();
   const backendConnected = Boolean(backendHealth);
   const [copiedTarget, setCopiedTarget] = useState<'win' | 'unix' | null>(null);
   const [accepted, setAccepted] = useState(alreadyConfirmed);
@@ -59,7 +61,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
             </div>
             <div>
               <h2 id="nc-modal-title" className="text-sm sm:text-base font-bold text-white">
-                Hinweis zur nicht-kommerziellen Nutzung
+                {t('web.nc.title')}
               </h2>
               <p className="text-[11px] text-amber-300/90 font-medium">
                 Masked Diffusion (md_beat_this) · CC BY-NC 4.0
@@ -69,7 +71,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
           <button
             onClick={onCancel}
             className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            aria-label="Schließen"
+            aria-label={t('web.common.close')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -80,34 +82,18 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
           <div className="p-4 rounded-xl bg-amber-950/35 border border-amber-700/60 space-y-2.5">
             <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
               <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Nur für nicht-kommerzielle Zwecke nutzbar</span>
+              <span>{t('web.nc.only_nc')}</span>
             </div>
-            <p className="text-amber-100/90 leading-relaxed">
-              Das Modell <strong className="text-white">Masked Diffusion (md_beat_this)</strong> darf{' '}
-              <strong className="text-amber-300 underline decoration-amber-500/60 underline-offset-2">
-                ausschließlich genutzt werden, wenn eine nicht-kommerzielle Nutzung vorliegt
-              </strong>
-              . Code, Modellgewichte, Vorhersagen und Aktivierungen von{' '}
-              <code className="text-amber-300 bg-slate-950/80 px-1.5 py-0.5 rounded font-mono">
-                fosfrancesco/md_beat_this
-              </code>{' '}
-              stehen unter <strong className="text-white">CC BY-NC 4.0</strong> (Namensnennung + Nicht-kommerziell).
-            </p>
+            <p className="text-amber-100/90 leading-relaxed">{t('web.nc.intro')}</p>
             <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-300">
               <li>
-                <strong className="text-white">Privat / Test / Forschung:</strong> Rein private, nicht-kommerzielle
-                Tests oder Forschung mit Namensnennung (BY) sind von CC BY-NC 4.0 abgedeckt.
+                <strong className="text-white">{t('web.nc.private_title')}</strong> {t('web.nc.private_text')}
               </li>
               <li>
-                <strong className="text-white">Social Media:</strong> Monetarisierte Kanäle, Werbung, Sponsorings,
-                Affiliate-Links sowie Firmen- oder Creator-Promotion sind kommerziell und{' '}
-                <strong className="text-amber-300">nicht erlaubt</strong>. Für Social Media empfiehlt sich im Zweifel{' '}
-                <strong className="text-cyan-300">CPJKU beat_this</strong> (MIT-Lizenz).
+                <strong className="text-white">{t('web.nc.social_title')}</strong> {t('web.nc.social_text')}
               </li>
               <li>
-                <strong className="text-white">Namensnennung (Attribution):</strong> Bei Weitergabe oder Veröffentlichung
-                müssen die Autoren (Francesco Foscarin, Filip Korzeniowski, Richard Vogl) und die Lizenz genannt werden
-                — BeatAnalyzer fügt dies in JSON-Exports automatisch hinzu.
+                <strong className="text-white">{t('web.nc.attribution_title')}</strong> {t('web.nc.attribution_text')}
               </li>
             </ul>
           </div>
@@ -116,7 +102,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 text-slate-200 font-semibold">
                 <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Manuelle Installation in deiner Python-Umgebung (venv)</span>
+                <span>{t('web.nc.install_title')}</span>
               </div>
               <a
                 href={README_URL}
@@ -132,16 +118,10 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
             {backendConnected && isInstalled ? (
               <div className="flex items-center gap-2 text-emerald-300 text-[11px]">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>md_beat_this ist in deiner lokalen Python-Umgebung bereits installiert und einsatzbereit.</span>
+                <span>{t('web.nc.installed')}</span>
               </div>
             ) : (
-              <p className="text-[11px] text-slate-400">
-                BeatAnalyzer lädt keine CC BY-NC 4.0-Pakete automatisch herunter. Um{' '}
-                <code className="text-slate-200">md_beat_this</code> lokal zu nutzen, führe im{' '}
-                <strong className="text-slate-200">BeatAnalyzer-Ordner</strong> einen der folgenden Befehle aus (vorher
-                Basis-Setup über <code className="text-slate-200">install_and_run.bat</code> /{' '}
-                <code className="text-slate-200">.sh</code> einmal durchlaufen lassen) und starte den Server danach neu:
-              </p>
+              <p className="text-[11px] text-slate-400">{t('web.nc.install_text')}</p>
             )}
 
             <FfmpegDirControl backendHealth={backendHealth} onHealthUpdated={onHealthUpdated} />
@@ -149,7 +129,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
             <div className="space-y-2">
               <div className="space-y-1">
                 <div className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
-                  Windows (CMD / PowerShell im BeatAnalyzer-Ordner)
+                  {t('web.nc.windows')}
                 </div>
                 <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2">
                   <code className="text-[11px] text-cyan-300 font-mono truncate flex-1">{INSTALL_CMD_WIN}</code>
@@ -157,7 +137,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
                     type="button"
                     onClick={() => handleCopy(INSTALL_CMD_WIN, 'win')}
                     className="shrink-0 p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                    title="Windows-Befehl kopieren"
+                    title={t('web.nc.copy_cmd')}
                   >
                     {copiedTarget === 'win' ? (
                       <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -170,7 +150,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
 
               <div className="space-y-1">
                 <div className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
-                  Linux / macOS (Terminal im BeatAnalyzer-Ordner)
+                  {t('web.nc.unix')}
                 </div>
                 <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2">
                   <code className="text-[11px] text-cyan-300 font-mono truncate flex-1">{INSTALL_CMD_UNIX}</code>
@@ -178,7 +158,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
                     type="button"
                     onClick={() => handleCopy(INSTALL_CMD_UNIX, 'unix')}
                     className="shrink-0 p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                    title="Linux/macOS-Befehl kopieren"
+                    title={t('web.nc.copy_cmd')}
                   >
                     {copiedTarget === 'unix' ? (
                       <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -195,9 +175,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
           {alreadyConfirmed ? (
             <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-950/30 border border-emerald-700/50 text-[11px] text-emerald-300">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>
-                Nicht-kommerzielle Nutzung (<strong className="text-white">CC BY-NC 4.0</strong>) ist für diese Sitzung bestätigt.
-              </span>
+              <span>{t('web.nc.confirmed')}</span>
             </div>
           ) : (
             <label className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-950/90 border border-amber-700/50 hover:border-amber-500/70 transition-colors cursor-pointer select-none">
@@ -207,12 +185,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
                 onChange={(e) => setAccepted(e.target.checked)}
                 className="mt-0.5 h-4 w-4 rounded border-amber-600 bg-slate-900 text-amber-400 focus:ring-amber-400 cursor-pointer shrink-0"
               />
-              <span className="text-[11px] text-slate-200 leading-relaxed">
-                Ich bestätige, dass ich <strong className="text-white">Masked Diffusion (md_beat_this)</strong>{' '}
-                ausschließlich für <strong className="text-amber-300">nicht-kommerzielle Zwecke</strong> gemäß{' '}
-                <strong className="text-white">CC BY-NC 4.0</strong> nutze und bei Veröffentlichung die erforderliche
-                Namensnennung (Attribution) beachte.
-              </span>
+              <span className="text-[11px] text-slate-200 leading-relaxed">{t('web.nc.confirm_text')}</span>
             </label>
           )}
         </div>
@@ -225,7 +198,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
               onClick={onCancel}
               className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors cursor-pointer"
             >
-              Fertig
+              {t('web.nc.done')}
             </button>
           ) : (
             <>
@@ -234,7 +207,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
                 onClick={onCancel}
                 className="px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors cursor-pointer"
               >
-                Abbrechen
+                {t('web.common.cancel')}
               </button>
               <button
                 type="button"
@@ -242,7 +215,7 @@ export const NonCommercialNoticeModal: React.FC<NonCommercialNoticeModalProps> =
                 onClick={onConfirm}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-950 bg-amber-400 hover:bg-amber-300 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed shadow-lg shadow-amber-950/50 transition-colors cursor-pointer"
               >
-                Bestätigen (nur nicht-kommerzielle Nutzung)
+                {t('web.nc.confirm')}
               </button>
             </>
           )}

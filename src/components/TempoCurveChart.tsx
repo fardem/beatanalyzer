@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useI18n } from '../i18n';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
 import { TrendingUp } from 'lucide-react';
 
@@ -13,6 +14,7 @@ export const TempoCurveChart: React.FC<TempoCurveChartProps> = ({
   currentTime,
   onSeek,
 }) => {
+  const { t, num } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredBeat, setHoveredBeat] = useState<BeatItem | null>(null);
 
@@ -61,12 +63,12 @@ export const TempoCurveChart: React.FC<TempoCurveChartProps> = ({
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5 font-semibold text-slate-300">
           <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Dynamische Tempo-Kurve (BPM-Verlauf über Zeit)</span>
+          <span>{t('web.tempo.title')}</span>
         </div>
         <div className="text-[11px] text-slate-400 font-mono">
-          Spanne: <span className="text-white font-semibold">{result.minBpm.toFixed(1)}</span> -{' '}
-          <span className="text-white font-semibold">{result.maxBpm.toFixed(1)} BPM</span> • Ø{' '}
-          <span className="text-cyan-400 font-bold">{result.averageBpm.toFixed(1)} BPM</span>
+          {t('web.tempo.range')} <span className="text-white font-semibold">{num(result.minBpm, 1)}</span> –{' '}
+          <span className="text-white font-semibold">{num(result.maxBpm, 1)} BPM</span> • Ø{' '}
+          <span className="text-cyan-400 font-bold">{num(result.averageBpm, 1)} BPM</span>
         </div>
       </div>
 
@@ -138,7 +140,7 @@ export const TempoCurveChart: React.FC<TempoCurveChartProps> = ({
             fontSize="9"
             fontFamily="monospace"
           >
-            Ø {result.averageBpm.toFixed(1)}
+            Ø {num(result.averageBpm, 1)}
           </text>
 
           {/* Area under curve */}
@@ -187,7 +189,7 @@ export const TempoCurveChart: React.FC<TempoCurveChartProps> = ({
 
         {hoveredBeat && (
           <div className="absolute top-2 right-4 px-2 py-1 rounded bg-slate-800 text-[11px] font-mono text-cyan-300 border border-slate-700 shadow-md">
-            Takt {hoveredBeat.barIndex} ({hoveredBeat.time.toFixed(2)}s): {hoveredBeat.instantBpm.toFixed(1)} BPM
+            {t('output.marker_downbeat', { bar: hoveredBeat.barIndex })} ({num(hoveredBeat.time, 2)} s): {num(hoveredBeat.instantBpm, 1)} BPM
           </div>
         )}
       </div>

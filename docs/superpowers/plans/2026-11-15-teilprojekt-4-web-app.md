@@ -19,16 +19,19 @@ Stand nach 0.2.5. Drei Schritte, jeder endet lauffähig mit eigener Version und 
       damit ein beschäftigter Server nicht still durch die Browser-Analyse ersetzt wird.
 - [x] Detailstufe der Wellenform: erledigt mit der Schnellauswahl 5/15/30/60 s (0.2.1).
 
-## Schritt 2 – Sprachen (0.2.7)
+## Schritt 2 – Sprachen (0.2.7) – erledigt
 
-- Texte aller Komponenten über `t()` aus `lang/*.json` (neuer Abschnitt `web`), Zahlen über `Intl.NumberFormat`
+- [x] `src/i18n.tsx`: Sprachdateien, `t()`, `num`/`pct`/`meter`, Sprachwahl (Server `/api/settings`, sonst Browser).
+- [x] Texte aller Komponenten über `t()` aus `lang/*.json` (neuer Abschnitt `web`), Zahlen über `Intl.NumberFormat`
   mit der Sprache aus `_meta`.
-- Sprachwahl in der Kopfzeile (System, Deutsch, English, Türkçe), gespeichert über `/api/settings`; ändert auch die
+- [x] Sprachwahl in der Kopfzeile (System, Deutsch, English, Türkçe), gespeichert über `/api/settings`; ändert auch die
   Sprache des Resolve-Skripts (wie heute).
-- Kacheln Taktart und Taktanzahl nach Glossar 3.2 (TR: „Ölçü · 4/4'lük“, „Toplam · 124 ölçü“).
-- Begriffe nach Glossar (z. B. „Taktanfänge“ in der Beat-Tabelle → Downbeats).
+- [x] Kacheln Taktart und Taktanzahl nach Glossar 3.2 (TR: „Ölçü · 4/4'lük“, „Toplam · 124 ölçü“).
+- [x] Begriffe nach Glossar (z. B. „Taktanfänge“ in der Beat-Tabelle → Downbeats).
 
 ## Schritt 3 – Resolve-Fenster an die Web-App angleichen (0.3.0 = Teilprojekt 4 fertig)
 
 - Begriffe, Anzeige des Analyse-Programms und Modellwahl/Lizenzhinweis wie in der Web-App.
 - Danach Teilprojekt 5 (README).
+
+Offen nach Schritt 2: Meldungen des Servers (`backend/server.py`, `analyzer.py`) sind noch deutsch; türkische Texte vom Nutzer zu prüfen.

@@ -15,6 +15,7 @@ import {
 import { AnalysisModel } from '../types/analyzer';
 import { BackendHealth } from '../utils/localBackend';
 import { SAMPLE_TRACKS, generateSampleWavBlob } from '../utils/sampleTracks';
+import { useI18n } from '../i18n';
 
 interface UploadZoneProps {
   onFileSelected: (file: File | Blob, name: string) => void;
@@ -39,6 +40,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
   onOpenMdSetup,
   backendHealth,
 }) => {
+  const { t, pctValue } = useI18n();
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,16 +91,16 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800/60 text-cyan-400 text-xs font-semibold tracking-wide uppercase">
           <Sparkles className="w-3.5 h-3.5" />
-          State-of-the-Art Music Information Retrieval
+          {t('web.upload.badge')}
         </div>
         <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-          Musik analysieren mit{' '}
+          {t('web.upload.title')}{' '}
           <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
             BeatAnalyzer
           </span>
         </h2>
         <p className="text-slate-400 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
-          Präzise Lokalisierung von Takten, Beats und Downbeats basierend auf der CPJKU-Transformer-Architektur. Unterstützt MP3, WAV, AAC und FLAC.
+          {t('web.upload.intro')}
         </p>
       </div>
 
@@ -108,11 +110,11 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           <div className="flex items-center gap-2">
             <Cpu className="w-4 h-4 text-cyan-400" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              Analyse-Modell auswählen
+              {t('web.upload.choose_model')}
             </h3>
           </div>
           <span className="text-[11px] text-slate-500">
-            {backendHealth ? 'Lokaler Python-Server verbunden' : 'Browser-Analyse aktiv'}
+            {backendHealth ? t('web.upload.server_connected') : t('web.upload.browser_active')}
           </span>
         </div>
 
@@ -135,17 +137,17 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-bold text-white">CPJKU beat_this</span>
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
-                    MIT-Lizenz
+                    {t('web.upload.mit')}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Standard-Transformer für Beat &amp; Downbeat Tracking. Kommerziell &amp; privat nutzbar.
+                  {t('web.upload.beat_this_text')}
                 </p>
                 {backendHealth && (
                   <p className="text-[11px] text-slate-500 pt-0.5">
-                    Lokal:{' '}
+                    {t('web.upload.local')}{' '}
                     <span className={beatThisInstalledOnServer ? 'text-emerald-400' : 'text-slate-400'}>
-                      {beatThisInstalledOnServer ? 'installiert' : 'nicht installiert (Librosa-Fallback)'}
+                      {beatThisInstalledOnServer ? t('web.upload.installed') : t('web.upload.not_installed_librosa')}
                     </span>
                   </p>
                 )}
@@ -176,17 +178,17 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-bold text-white">Masked Diffusion (md_beat_this)</span>
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-950/90 text-amber-300 border border-amber-700/70">
-                    Nur nicht-kommerziell
+                    {t('web.upload.nc_only')}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Kohärentes Beat-Tracking per Masked Diffusion (<span className="font-mono text-slate-300">CC BY-NC 4.0</span>).
+                  {t('web.upload.md_text')} (<span className="font-mono text-slate-300">CC BY-NC 4.0</span>).
                 </p>
                 {backendHealth && (
                   <p className="text-[11px] text-slate-500 pt-0.5">
-                    Lokal:{' '}
+                    {t('web.upload.local')}{' '}
                     <span className={mdInstalledOnServer ? 'text-emerald-400' : 'text-amber-300'}>
-                      {mdInstalledOnServer ? 'installiert' : 'nicht installiert (Fallback aktiv)'}
+                      {mdInstalledOnServer ? t('web.upload.installed') : t('web.upload.not_installed_fallback')}
                     </span>
                   </p>
                 )}
@@ -198,8 +200,8 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
                 type="button"
                 disabled={isAnalyzing}
                 onClick={onOpenMdSetup}
-                aria-label="md_beat_this und FFmpeg einrichten"
-                title="Modell & FFmpeg einrichten"
+                aria-label={t('web.upload.md_setup')}
+                title={t('web.upload.md_setup')}
                 className="p-2 rounded-lg text-slate-400 hover:text-amber-300 hover:bg-amber-950/60 border border-transparent hover:border-amber-700/60 transition-colors cursor-pointer disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
               >
                 <Settings className="w-4 h-4" />
@@ -218,7 +220,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           <div className="px-3.5 py-2 rounded-xl bg-amber-950/35 border border-amber-600/60 text-xs flex items-center gap-2">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <p className="text-amber-200 font-medium">
-              Hinweis: md_beat_this darf ausschließlich nicht-kommerziell genutzt werden (CC BY-NC 4.0).
+              {t('web.upload.md_notice')}
             </p>
           </div>
         )}
@@ -229,7 +231,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
         <div className="p-4 rounded-xl bg-rose-950/50 border border-rose-800/80 text-rose-300 text-sm flex items-start gap-3 shadow-lg">
           <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-rose-200">Analysefehler</p>
+            <p className="font-semibold text-rose-200">{t('web.upload.error_title')}</p>
             <p className="text-xs text-rose-300/90 mt-0.5">{error}</p>
           </div>
         </div>
@@ -248,9 +250,9 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           </div>
 
           <div className="space-y-2 max-w-md mx-auto">
-            <h3 className="text-lg font-bold text-white">Audiodatei wird analysiert...</h3>
+            <h3 className="text-lg font-bold text-white">{t('web.upload.analysing')}</h3>
             <p className="text-xs text-cyan-300 font-mono h-5 transition-all">
-              {stageText || 'Verarbeite Spektraldaten...'}
+              {stageText || t('web.upload.analysing')}
             </p>
 
             <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-700/60 mt-4">
@@ -260,9 +262,9 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
               ></div>
             </div>
             <div className="flex justify-between text-[11px] text-slate-500 font-mono pt-1">
-              <span>Spektral-Flux</span>
-              <span>{Math.round(progress)}%</span>
-              <span>Downbeat Tracker</span>
+              <span>Beats</span>
+              <span>{pctValue(progress)}</span>
+              <span>Downbeats</span>
             </div>
           </div>
         </div>
@@ -294,13 +296,13 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
 
             <div className="space-y-1">
               <p className="text-base font-semibold text-white">
-                Audiodatei hier ablegen oder{' '}
+                {t('web.upload.drop')}{' '}
                 <span className="text-cyan-400 underline underline-offset-4 decoration-cyan-500/50 group-hover:decoration-cyan-400">
-                  durchsuchen
+                  {t('web.upload.browse')}
                 </span>
               </p>
               <p className="text-xs text-slate-400">
-                Wähle eine Musikdatei zur automatischen Takt- und Beat-Erkennung
+                {t('web.upload.drop_hint')}
               </p>
             </div>
 
@@ -325,10 +327,10 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           <div className="flex items-center gap-2">
             <FileAudio className="w-4 h-4 text-cyan-400" />
             <h3 className="text-sm font-bold text-slate-200">
-              Oder sofort mit Demo-Tracks ausprobieren:
+              {t('web.upload.demo_title')}
             </h3>
           </div>
-          <span className="text-xs text-slate-500">Klick zum direkten Testen</span>
+          <span className="text-xs text-slate-500">{t('web.upload.demo_hint')}</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -352,7 +354,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">
-                    {sample.genre} • <span className="text-indigo-300 font-mono">{sample.meter}</span>
+                    {t(`web.sample.${sample.id}`)} • <span className="text-indigo-300 font-mono">{sample.meter}</span>
                   </p>
                 </div>
               </div>

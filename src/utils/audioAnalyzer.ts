@@ -1,5 +1,12 @@
 import { AnalysisModel, AnalysisResult, AudioMetadata, BeatItem, ActivationPoint } from '../types/analyzer';
 
+/** An error whose text comes from the language files (key under web.*), translated where it is shown. */
+export class LocalizedError extends Error {
+  constructor(public key: string, public params: Record<string, string | number> = {}) {
+    super(key);
+  }
+}
+
 /**
  * Advanced Music Beat & Downbeat Analyzer
  * Modeled on CPJKU beat_this (Beat & Downbeat Tracking with Transformers)
@@ -11,7 +18,8 @@ import { AnalysisModel, AnalysisResult, AudioMetadata, BeatItem, ActivationPoint
 export async function analyzeAudioFile(
   file: File | Blob,
   fileName: string = 'audio.mp3',
-  onProgress?: (progress: number, stage: string) => void,
+  // stage: key under web.progress.* of the language files, params for its placeholders
+  onProgress?: (progress: number, stage: string, params?: Record<string, string | number>) => void,
   // requireServer: no silent fallback to the browser analysis (re-analysis of a server result)
   // protect: protection of clear "1"s for the smoothing (0.5 ... 1); audioBuffer: already decoded, skip decoding
   options: {
@@ -29,25 +37,23 @@ export async function analyzeAudioFile(
     if (options.audioBuffer) {
       audioBuffer = options.audioBuffer;
     } else {
-      onProgress?.(5, 'Lade Audiodatei in Speicher...');
+      onProgress?.(5, 'web.progress.load');
       const arrayBuffer = await file.arrayBuffer();
-      onProgress?.(15, 'Dekodiere Audioformat (MP3 / WAV / AAC / FLAC)...');
+      onProgress?.(15, 'web.progress.decode');
       const audioCtx = new (window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
     }
   } catch (err) {
     console.error('AudioContext decode error:', err);
-    throw new Error(
-      `Die Audiodatei konnte nicht dekodiert werden (${fileName}). Bitte stelle sicher, dass es eine gültige MP3-, WAV-, AAC- oder FLAC-Datei ist.`
-    );
+    throw new LocalizedError('web.error.decode', { file: fileName });
   }
 
   const duration = audioBuffer.duration;
   const sampleRate = audioBuffer.sampleRate;
   const channels = audioBuffer.numberOfChannels;
 
-  onProgress?.(30, 'Generiere Wellenform-Daten...');
+  onProgress?.(30, 'web.progress.waveform');
   const waveformPeaks = extractWaveformPeaks(audioBuffer, 2400);
 
   // Prüfe, ob das lokale Python Backend aktiv ist (z.B. via install_and_run.bat)
@@ -58,11 +64,11 @@ export async function analyzeAudioFile(
   try {
     const healthCheck = await fetch('/api/health', { signal: AbortSignal.timeout(3000) });
     if (healthCheck.ok) {
-      onProgress?.(40, `Verbinde mit lokaler Python ${modelLabel} Engine...`);
+      onProgress?.(40, 'web.progress.connect', { model: modelLabel });
       const formData = new FormData();
       formData.append('audio', file, fileName);
 
-      onProgress?.(65, `Führe ${modelLabel} Inferenz aus...`);
+      onProgress?.(65, 'web.progress.inference', { model: modelLabel });
       const params = new URLSearchParams();
       if (options.smoothBars === false) params.set('smoothBars', '0');
       if (options.protect !== undefined) params.set('protect', String(options.protect));
@@ -81,12 +87,12 @@ export async function analyzeAudioFile(
         };
       } else {
         const body = await apiResp.json().catch(() => null);
-        serverError = new Error(
-          `Analyse im lokalen Server fehlgeschlagen: ${body?.error || `Server-Fehler ${apiResp.status}`}`
-        );
+        serverError = new LocalizedError('web.error.server_failed', {
+          message: body?.error || `HTTP ${apiResp.status}`,
+        });
       }
     } else if (options.requireServer) {
-      throw new Error('Der lokale Server antwortet nicht.');
+      throw new LocalizedError('web.error.no_server');
     }
   } catch (err) {
     if (options.requireServer) throw err;
@@ -95,24 +101,24 @@ export async function analyzeAudioFile(
   if (serverError) throw serverError;
 
   if (pythonResult) {
-    onProgress?.(100, `Analyse via ${modelLabel} erfolgreich abgeschlossen!`);
+    onProgress?.(100, 'web.progress.done_model', { model: modelLabel });
     return { result: pythonResult, audioBuffer };
   }
 
-  onProgress?.(45, 'Berechne Spektral-Flux & Multi-Band Transienten (Client Engine)...');
+  onProgress?.(45, 'web.progress.browser_flux');
   const monoChannel = downmixToMono(audioBuffer);
 
-  onProgress?.(60, 'Generiere Beat Activation Function (BAF) & Downbeat Activation (DAF)...');
+  onProgress?.(60, 'web.progress.browser_activation');
   const { baf, daf, frameRate, hopSize } = computeActivationFunctions(
     monoChannel,
     sampleRate,
     duration
   );
 
-  onProgress?.(75, 'Schätze Grundtempo & Autokorrelations-Resonanz...');
+  onProgress?.(75, 'web.progress.browser_tempo');
   const globalBpmEstimate = estimateTempoFromActivation(baf, frameRate);
 
-  onProgress?.(85, 'Dynamisches Beat & Downbeat Tracking (DP-Tracker)...');
+  onProgress?.(85, 'web.progress.browser_tracking');
   const { beats, downbeats, timeSig, swingRatio } = trackBeatsAndDownbeats(
     baf,
     daf,
@@ -121,7 +127,7 @@ export async function analyzeAudioFile(
     globalBpmEstimate
   );
 
-  onProgress?.(95, 'Berechne Tempo-Stabilität und Statistiken...');
+  onProgress?.(95, 'web.progress.browser_stats');
   const bpms = beats.map((b) => b.instantBpm).filter((b) => b > 30 && b < 300);
   const averageBpm = bpms.length > 0 ? bpms.reduce((a, b) => a + b, 0) / bpms.length : globalBpmEstimate;
   const sortedBpms = [...bpms].sort((a, b) => a - b);
@@ -151,10 +157,10 @@ export async function analyzeAudioFile(
   const totalBars = downbeats.length;
   const totalBeats = beats.length;
 
-  onProgress?.(100, 'Analyse erfolgreich abgeschlossen!');
+  onProgress?.(100, 'web.progress.done');
 
   const result: AnalysisResult = {
-    engine: model === 'md_beat_this' ? 'Browser MIR (Fallback für md_beat_this)' : 'Browser MIR (Fallback)',
+    engine: model === 'md_beat_this' ? 'Browser MIR (Fallback, md_beat_this)' : 'Browser MIR (Fallback)',
     engineInfo: { id: 'librosa', device: null, gpu: null, fallbackReason: 'not_installed' },
     selectedModel: model,
     metadata,

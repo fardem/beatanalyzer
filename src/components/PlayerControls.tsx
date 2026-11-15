@@ -10,6 +10,7 @@ import {
   Fingerprint,
 } from 'lucide-react';
 import { BeatItem, PlaybackSpeed } from '../types/analyzer';
+import { useI18n } from '../i18n';
 
 interface PlayerControlsProps {
   isPlaying: boolean;
@@ -44,6 +45,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   onToggleMetronome,
   onSetMetronomeVolume,
 }) => {
+  const { t, num, pctValue } = useI18n();
   // Tap tempo state
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [tappedBpm, setTappedBpm] = useState<number | null>(null);
@@ -117,7 +119,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           <button
             onClick={() => onSeek(0)}
             className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Zum Anfang springen"
+            title={t('web.player.to_start')}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -125,7 +127,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           <button
             onClick={() => onSeek(Math.max(0, currentTime - 5))}
             className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            title="5 Sekunden zurück"
+            title={t('web.player.back5')}
           >
             <Rewind className="w-4 h-4" />
           </button>
@@ -133,7 +135,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           <button
             onClick={isPlaying ? onPause : onPlay}
             className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            title={isPlaying ? 'Pause (Leertaste)' : 'Abspielen (Leertaste)'}
+            title={isPlaying ? t('web.player.pause') : t('web.player.play')}
           >
             {isPlaying ? (
               <Pause className="w-5 h-5 fill-current" />
@@ -145,7 +147,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           <button
             onClick={() => onSeek(Math.min(duration, currentTime + 5))}
             className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            title="5 Sekunden vor"
+            title={t('web.player.fwd5')}
           >
             <FastForward className="w-4 h-4" />
           </button>
@@ -180,7 +182,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     activeBeat.isDownbeat ? 'text-rose-400' : 'text-cyan-300'
                   }`}
                 >
-                  Takt {activeBeat.barIndex}
+                  {t('output.marker_downbeat', { bar: activeBeat.barIndex })}
                 </span>
                 <span className="text-slate-500">•</span>
                 {/* glossary: Downbeat stays English; the downbeat is beat 1 of the bar */}
@@ -195,7 +197,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 </span>
               </div>
             ) : (
-              <span className="text-slate-500 font-mono">Bereit zum Abspielen</span>
+              <span className="text-slate-500 font-mono">{t('web.player.ready')}</span>
             )}
           </div>
         </div>
@@ -211,7 +213,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                   ? 'text-cyan-400 hover:text-cyan-300 bg-cyan-950/50'
                   : 'text-slate-500 hover:text-slate-300'
               }`}
-              title={metronomeEnabled ? 'Metronom-Klick stummschalten' : 'Metronom-Klick aktivieren'}
+              title={metronomeEnabled ? t('web.player.metronome_off') : t('web.player.metronome_on')}
             >
               {metronomeEnabled ? (
                 <Volume2 className="w-4 h-4" />
@@ -220,7 +222,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
               )}
             </button>
 
-            <span className="text-xs font-medium text-slate-300 hidden sm:inline">Metronom</span>
+            <span className="text-xs font-medium text-slate-300 hidden sm:inline">{t('web.player.metronome')}</span>
 
             <input
               type="range"
@@ -231,7 +233,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
               onChange={(e) => onSetMetronomeVolume(parseFloat(e.target.value))}
               disabled={!metronomeEnabled}
               className="w-16 accent-cyan-400 cursor-pointer disabled:opacity-30"
-              title="Metronom-Lautstärke"
+              title={t('web.player.metronome_volume')}
             />
           </div>
 
@@ -260,22 +262,22 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           <button
             onClick={handleTap}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 active:scale-95 transition-all cursor-pointer"
-            title="Im Takt der Musik mitklicken zur Tempoverifikation"
+            title={t('web.player.tap_tip')}
           >
             <Fingerprint className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-semibold">Tap-Tempo Test</span>
+            <span className="font-semibold">{t('web.player.tap')}</span>
           </button>
           <span className="text-slate-400 hidden sm:inline">
-            Tippe mit dem Rhythmus, um das erkannte Tempo zu vergleichen
+            {t('web.player.tap_hint')}
           </span>
         </div>
 
         {tappedBpm && (
           <div className="flex items-center gap-2 bg-slate-950 px-3 py-1 rounded-lg border border-slate-800 font-mono">
-            <span className="text-slate-400">Dein Tap:</span>
+            <span className="text-slate-400">{t('web.player.your_tap')}</span>
             <span className="text-cyan-400 font-bold">{tappedBpm} BPM</span>
             <span className="text-slate-600">vs</span>
-            <span className="text-white font-bold">{globalBpm.toFixed(0)} BPM</span>
+            <span className="text-white font-bold">{num(globalBpm, 0)} BPM</span>
             {tapDiffPercent !== null && (
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
@@ -284,7 +286,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     : 'bg-amber-950 text-amber-300 border border-amber-800'
                 }`}
               >
-                {tapDiffPercent}% Übereinstimmung
+                {t('web.player.match', { pct: pctValue(tapDiffPercent) })}
               </span>
             )}
           </div>

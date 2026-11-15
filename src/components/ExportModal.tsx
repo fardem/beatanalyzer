@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useI18n } from '../i18n';
 import { AnalysisResult } from '../types/analyzer';
 import {
   generateAudacityLabels,
@@ -34,6 +35,7 @@ interface ExportModalProps {
 type TabType = 'davinci' | 'audacity' | 'json' | 'midi' | 'csv';
 
 export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => {
+  const { t, num, meter } = useI18n();
   const [activeTab, setActiveTab] = useState<TabType>('davinci');
   const [copied, setCopied] = useState(false);
   const [copiedAttribution, setCopiedAttribution] = useState(false);
@@ -83,7 +85,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90">
           <div className="flex items-center gap-2">
             <Download className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-base font-bold text-white">Analyse-Ergebnisse & Marker exportieren</h2>
+            <h2 className="text-base font-bold text-white">{t('web.export.title')}</h2>
           </div>
           <button
             onClick={onClose}
@@ -164,7 +166,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
                   <div className="font-semibold">
-                    CC BY-NC 4.0 · Namensnennung (Attribution) bei Veröffentlichung erforderlich
+                    {t('web.export.attribution_required')}
                   </div>
                   <div className="text-[11px] text-amber-200/80">{attributionText}</div>
                 </div>
@@ -177,12 +179,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
                 {copiedAttribution ? (
                   <>
                     <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Kopiert!</span>
+                    <span>{t('web.export.copied')}</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5" />
-                    <span>Attribution kopieren</span>
+                    <span>{t('web.export.copy_attribution')}</span>
                   </>
                 )}
               </button>
@@ -194,12 +196,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
               <div className="p-3.5 rounded-xl bg-gradient-to-r from-rose-950/40 to-slate-900 border border-rose-800/40 space-y-1.5">
                 <div className="flex items-center gap-2 text-rose-300 font-bold text-sm">
                   <Film className="w-4 h-4 text-rose-400" />
-                  <span>DaVinci Resolve: Marker am Audio-Clip</span>
+                  <span>{t('web.export.resolve_title')}</span>
                 </div>
                 <p className="text-slate-400 text-xs leading-relaxed">
-                  Exportiert eine Marker-JSON. Das Skript <strong>BeatAnalyzer_Markers.lua</strong> setzt daraus in Resolve
-                  einen Marker pro Beat auf den Clip im Media Pool. Die Marker erscheinen auf jeder Verwendung des
-                  Clips in jeder Timeline. Die Bildrate liest das Skript aus dem Clip.
+                  {t('web.export.resolve_intro')}
                 </p>
               </div>
 
@@ -209,43 +209,39 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
                 <div className="flex items-center gap-1.5 text-cyan-300 font-semibold">
                   <Info className="w-4 h-4 text-cyan-400" />
-                  <span>So kommen die Marker in DaVinci Resolve Studio:</span>
+                  <span>{t('web.export.resolve_steps')}</span>
                 </div>
                 <ol className="list-decimal pl-5 space-y-1 text-slate-300 leading-relaxed">
                   <li>
-                    Einmalig: das Skript in Resolve installieren (Feld oben).
+                    {t('web.export.step_install')}
                   </li>
                   <li>
-                    <strong>Marker-JSON herunterladen</strong>.
+                    <strong>{t('web.export.step_download')}</strong>
                   </li>
                   <li>
-                    In Resolve den Audio-Clip im <strong>Media Pool</strong> auswählen. Ohne Auswahl sucht das Skript
-                    den Clip mit dem Dateinamen <code className="text-rose-300">{result.metadata.fileName}</code>.
+                    {t('web.export.step_select')} <code className="text-rose-300">{result.metadata.fileName}</code>.
                   </li>
                   <li>
                     <code className="text-rose-300 bg-slate-900 px-1.5 py-0.5 rounded">
                       Workspace → Scripts → BeatAnalyzer_Markers
                     </code>{' '}
-                    und die JSON wählen.
+                    {t('web.export.step_open', { way: t('plugin.way_json') })}
                   </li>
                 </ol>
                 {result.resolveOffset ? (
                   // test 0.2.4: the correction for MP3 was not visible anywhere in the web app
                   <p className="rounded-lg border border-cyan-800/60 bg-cyan-950/40 px-3 py-2 text-cyan-200 leading-relaxed">
-                    <strong>MP3:</strong> Resolve spielt MP3-Dateien{' '}
-                    {Math.round(result.resolveOffset * 1000)} ms später ab, als sie analysiert wurden. Die JSON
-                    enthält diesen Ausgleich; das Skript setzt Marker und Subtitles auf dem MP3-Clip entsprechend
-                    später und meldet es.
+                    <strong>MP3:</strong> {t('web.export.mp3_offset', { ms: Math.round(result.resolveOffset * 1000) })}
                   </p>
                 ) : null}
                 <p className="text-slate-500 leading-relaxed">
-                  Ein neuer Lauf ersetzt die Marker des letzten Laufs. Von Hand gesetzte Marker bleiben. Zusätzlich legt das Skript den Untertitel-Clip <code className="text-rose-300">{result.metadata.fileName.replace(/\.[^/.]+$/, '')}.srt</code> mit Typ, Takt, Zeit, Tempo und Konfidenz pro Beat im Media-Pool-Ordner <strong>BeatAnalyzer</strong> an. Ist eine Timeline mit dem Song offen, kommen die Untertitel auf die Spur <strong>BeatAnalyzer - Song</strong> unter den Song.
+                  {t('web.export.resolve_more', { srt: `${result.metadata.fileName.replace(/\.[^/.]+$/, '')}.srt` })}
                 </p>
               </div>
 
               <div className="space-y-1.5 font-mono">
                 <div className="flex justify-between items-center text-[11px] text-slate-400">
-                  <span>JSON-Vorschau:</span>
+                  <span>{t('web.export.preview')}</span>
                   <span>{result.totalBeats} Marker</span>
                 </div>
                 <pre className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] overflow-x-auto text-rose-300 max-h-36">
@@ -260,9 +256,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
           {activeTab === 'audacity' && (
             <div className="space-y-2">
               <div className="text-slate-400 leading-relaxed font-sans text-xs">
-                Audacity Label Track: Importiere diese Textdatei in Audacity (
-                <span className="text-cyan-300 font-mono">Spuren → Textspuren importieren</span>
-                ), um Marker exakt auf den Beats zu sehen.
+                {t('web.export.audacity')}
               </div>
               <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-[11px] overflow-x-auto text-emerald-300 max-h-72">
                 {audacityContent}
@@ -274,8 +268,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
           {activeTab === 'json' && (
             <div className="space-y-2">
               <div className="flex justify-between items-center text-slate-400">
-                <span>CPJKU beat_this kompatible JSON-Struktur</span>
-                <span>{result.totalBeats} Beats, {result.totalBars} Takte</span>
+                <span>{t('web.export.json_title')}</span>
+                <span>{t('web.export.json_count', { beats: result.totalBeats, bars: result.totalBars })}</span>
               </div>
               <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-[11px] overflow-x-auto text-cyan-300 max-h-72">
                 {jsonContent}
@@ -290,14 +284,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
                 <Music2 className="w-6 h-6" />
               </div>
               <div className="font-sans space-y-1">
-                <h4 className="text-sm font-bold text-white">Standard MIDI Click-Track Datei</h4>
+                <h4 className="text-sm font-bold text-white">{t('web.export.midi_title')}</h4>
                 <p className="text-xs text-slate-400 max-w-md mx-auto">
-                  Enthält Tempo ({result.globalBpm.toFixed(1)} BPM), Taktart (
-                  {result.timeSignature.name}) und Woodblock-Percussion Noten (Kanal 10) für jeden Beat und akzentuierten Downbeat.
+                  {t('web.export.midi_text', { bpm: num(result.globalBpm, 1), meter: meter(result.timeSignature.name) })}
                 </p>
               </div>
               <div className="text-[11px] text-slate-500 font-mono">
-                Kompatibel mit: Logic Pro, Ableton Live, FL Studio, Cubase, Reaper, Pro Tools
+                {t('web.export.midi_compat')}
               </div>
             </div>
           )}
@@ -306,7 +299,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
           {activeTab === 'csv' && (
             <div className="space-y-2">
               <div className="text-slate-400 font-sans text-xs">
-                CSV-Format für Excel, Google Sheets, Python Pandas oder Audio-DAWs.
+                {t('web.export.csv')}
               </div>
               <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-[11px] overflow-x-auto text-amber-300 max-h-72">
                 {csvContent}
@@ -333,7 +326,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors cursor-pointer"
             >
               {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? 'Kopiert!' : 'In Zwischenablage kopieren'}</span>
+              <span>{copied ? t('web.export.copied') : t('web.export.copy')}</span>
             </button>
           ) : (
             <div />
@@ -344,7 +337,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
             >
-              Schließen
+              {t('web.common.close')}
             </button>
             <button
               onClick={handleDownload}
@@ -356,9 +349,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
             >
               <Download className="w-4 h-4" />
               <span>
-                {activeTab === 'davinci'
-                  ? 'Marker-JSON herunterladen'
-                  : 'Datei herunterladen'}
+                {activeTab === 'davinci' ? t('web.export.download_markers') : t('web.export.download')}
               </span>
             </button>
           </div>

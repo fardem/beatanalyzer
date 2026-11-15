@@ -1,5 +1,6 @@
 import React from 'react';
-import { Activity, BookOpen, Download, RefreshCw, ExternalLink, Terminal } from 'lucide-react';
+import { Activity, BookOpen, Download, RefreshCw, ExternalLink, Terminal, Languages } from 'lucide-react';
+import { LANGS, LangSetting, languageName, useI18n } from '../i18n';
 import { AnalysisModel, AnalysisResult, EngineInfo } from '../types/analyzer';
 import { UpdateBadge } from './UpdateBadge';
 
@@ -23,8 +24,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenModelInfo,
   onOpenLocalSetup,
 }) => {
+  const { t, setting, setSetting } = useI18n();
   const activeModel = result?.selectedModel ?? selectedModel;
-  const engine = engineLabel(result, serverEngine ?? null, activeModel);
+  const engine = engineLabel(result, serverEngine ?? null, activeModel, t);
 
   return (
     <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3.5 transition-all">
@@ -55,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="flex flex-wrap items-center gap-x-3">
               <p className="text-xs text-slate-400">
-                Präzise Beat- & Downbeat-Erkennung für MP3, WAV, AAC & FLAC
+                {t('web.header.subtitle')}
               </p>
               <UpdateBadge />
             </div>
@@ -64,22 +66,44 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
+          {/* language of the web app and of the Resolve script (stored by the server) */}
+          <label
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-slate-300 bg-slate-800/80 border border-slate-700/80"
+            title={t('web.header.language_tip')}
+          >
+            <Languages className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="sr-only">{t('web.header.language')}</span>
+            <select
+              value={setting}
+              onChange={(e) => setSetting(e.target.value as LangSetting)}
+              className="bg-transparent text-slate-200 focus:outline-none cursor-pointer"
+              aria-label={t('web.header.language')}
+            >
+              <option value="auto" className="bg-slate-900">{t('web.header.language_system')}</option>
+              {LANGS.map((code) => (
+                <option key={code} value={code} className="bg-slate-900">
+                  {languageName(code)}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <button
             onClick={onOpenLocalSetup}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-cyan-300 hover:text-white bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-800/80 transition-colors shadow-sm cursor-pointer"
-            title="Anleitung zur lokalen Ausführung mit install_and_run.bat"
+            title={t('web.header.local_tip')}
           >
             <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Lokal starten (.bat)</span>
+            <span className="hidden sm:inline">{t('web.header.local')}</span>
           </button>
 
           <button
             onClick={onOpenModelInfo}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-750 border border-slate-700/80 transition-colors shadow-sm"
-            title="Architektur & CPJKU beat_this Dokumentation"
+            title={t('web.header.model_info_tip')}
           >
             <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Modell-Info</span>
+            <span className="hidden sm:inline">{t('web.header.model_info')}</span>
           </button>
 
           <a
@@ -87,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors"
-            title="GitHub Repository öffnen"
+            title={t('web.header.github_tip')}
           >
             <span className="hidden md:inline">GitHub</span>
             <ExternalLink className="w-3.5 h-3.5" />
@@ -100,16 +124,16 @@ export const Header: React.FC<HeaderProps> = ({
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 shadow-md shadow-indigo-900/30 transition-all cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Exportieren</span>
+                <span>{t('web.header.export')}</span>
               </button>
 
               <button
                 onClick={onReset}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors cursor-pointer"
-                title="Neue Audiodatei analysieren"
+                title={t('web.header.new_file_tip')}
               >
                 <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-                <span className="hidden sm:inline">Neue Datei</span>
+                <span className="hidden sm:inline">{t('web.header.new_file')}</span>
               </button>
             </>
           )}
@@ -119,35 +143,30 @@ export const Header: React.FC<HeaderProps> = ({
   );
 };
 
-const REASONS: Record<string, string> = {
-  not_installed: 'nicht installiert',
-  model_load_failed: 'Modell nicht geladen',
-  inference_failed: 'Analyse gescheitert',
-  analyzer_failed: 'Analyzer nicht geladen',
-};
-
 // "beat_this · CUDA (RTX 5080)", "md_beat_this · CPU", "librosa (Ersatz) – beat_this nicht installiert",
 // "Browser-Analyse (Ersatz) – kein Server"
 function engineLabel(
   result: AnalysisResult | null,
   serverEngine: EngineInfo | null,
-  model: AnalysisModel
+  model: AnalysisModel,
+  t: (key: string, params?: Record<string, string | number>) => string
 ): { text: string; tip: string; tone: 'ok' | 'nc' | 'fallback' } {
   if (result && result.engine?.startsWith('Browser')) {
-    return { text: 'Browser-Analyse (Ersatz) – kein Server', tip: 'Ohne lokalen Server rechnet der Browser grob nach.', tone: 'fallback' };
+    return { text: t('web.engine.browser_result'), tip: t('web.engine.browser_tip'), tone: 'fallback' };
   }
   const info = result ? result.engineInfo ?? null : serverEngine;
   if (!info) {
     return result
-      ? { text: result.engine || 'unbekannt', tip: '', tone: 'ok' }
-      : { text: 'kein Server – Browser-Analyse', tip: 'Ohne lokalen Server rechnet der Browser grob nach (start.bat starten).', tone: 'fallback' };
+      ? { text: result.engine || '?', tip: '', tone: 'ok' }
+      : { text: t('web.engine.no_server'), tip: t('web.engine.no_server_tip'), tone: 'fallback' };
   }
   if (info.id === 'librosa') {
-    const reason = info.fallbackReason ? REASONS[info.fallbackReason] ?? info.fallbackReason : '';
-    const what = info.fallbackReason === 'not_installed' ? `${model} ${reason}` : reason;
-    return { text: `librosa (Ersatz)${what ? ` – ${what}` : ''}`, tip: 'librosa erkennt keine Downbeats: jeder 4. Beat gilt als „1“.', tone: 'fallback' };
+    const reason = info.fallbackReason ? t(`web.engine.reason_${info.fallbackReason}`, { model }) : '';
+    return { text: `${t('web.engine.librosa')}${reason ? ` – ${reason}` : ''}`, tip: t('web.engine.librosa_tip'), tone: 'fallback' };
   }
   const dev = info.device ? info.device.toUpperCase() + (info.gpu ? ` (${info.gpu.replace(/^NVIDIA (GeForce )?/, '')})` : '') : '';
-  const licence = info.model ? `${info.model.name}: Lizenz ${info.model.license}${info.model.commercial ? '' : ' – nur nicht-kommerziell'}` : '';
+  const licence = info.model
+    ? t(info.model.commercial ? 'web.engine.licence' : 'web.engine.licence_nc', { name: info.model.name, license: info.model.license })
+    : '';
   return { text: `${info.id}${dev ? ` · ${dev}` : ''}`, tip: licence, tone: info.id === 'md_beat_this' ? 'nc' : 'ok' };
 }

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { AlertTriangle, Settings } from 'lucide-react';
 import { AnalysisModel, AnalysisResult, BeatItem, PlaybackSpeed } from './types/analyzer';
-import { analyzeAudioFile } from './utils/audioAnalyzer';
+import { analyzeAudioFile, LocalizedError } from './utils/audioAnalyzer';
+import { useI18n } from './i18n';
 import { BeatPlayer } from './utils/audioPlayer';
 import { BackendHealth, getBackendHealth } from './utils/localBackend';
 import { Header } from './components/Header';
@@ -17,6 +18,7 @@ import { LocalSetupModal } from './components/LocalSetupModal';
 import { NonCommercialNoticeModal } from './components/NonCommercialNoticeModal';
 
 export default function App() {
+  const { t, pctValue } = useI18n();
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [selectedModel, setSelectedModel] = useState<AnalysisModel>('beat_this');
   const [mdConfirmedInSession, setMdConfirmedInSession] = useState<boolean>(false);
@@ -24,7 +26,8 @@ export default function App() {
   const [backendHealth, setBackendHealth] = useState<BackendHealth | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
-  const [stageText, setStageText] = useState<string>('');
+  const [stage, setStage] = useState<{ key: string; params?: Record<string, string | number> }>({ key: '' });
+  const stageText = stage.key ? t(stage.key, stage.params) : '';
   const [error, setError] = useState<string | null>(null);
   // the decoded audio, for a detailed waveform (the peaks in the result are too coarse when zoomed in)
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -92,7 +95,7 @@ export default function App() {
       setError(null);
       setIsAnalyzing(true);
       setProgress(5);
-      setStageText('Lade Audiodatei...');
+      setStage({ key: 'web.progress.load' });
       if (playerRef.current) {
         playerRef.current.stop();
       }
@@ -103,9 +106,9 @@ export default function App() {
       const { result: analysisResult, audioBuffer } = await analyzeAudioFile(
         file,
         name,
-        (pct, stage) => {
+        (pct, key, params) => {
           setProgress(pct);
-          setStageText(stage);
+          setStage({ key, params });
         },
         {
           smoothBars: smooth,
@@ -126,7 +129,8 @@ export default function App() {
       }
     } catch (err: unknown) {
       console.error('Analysis error:', err);
-      const msg = err instanceof Error ? err.message : 'Ein unerwarteter Fehler ist aufgetreten.';
+      const msg =
+        err instanceof LocalizedError ? t(err.key, err.params) : err instanceof Error ? err.message : t('web.error.unexpected');
       setError(msg);
     } finally {
       setIsAnalyzing(false);
@@ -238,8 +242,8 @@ export default function App() {
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <p className="text-amber-200 font-medium truncate">
                     {result.engineInfo?.id === 'librosa'
-                      ? `Fallback aktiv (${result.engine}) — md_beat_this nur nicht-kommerziell (CC BY-NC 4.0).`
-                      : 'Analyse mit md_beat_this — nur für nicht-kommerzielle Nutzung (CC BY-NC 4.0).'}
+                      ? t('web.app.md_fallback', { engine: result.engine ?? '' })
+                      : t('web.app.md_active')}
                   </p>
                 </div>
                 <button
@@ -248,7 +252,7 @@ export default function App() {
                   className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-300 hover:text-amber-200 underline underline-offset-2 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded"
                 >
                   <Settings className="w-3 h-3" />
-                  <span>Einrichtung</span>
+                  <span>{t('web.app.setup')}</span>
                 </button>
               </div>
             )}
@@ -258,7 +262,7 @@ export default function App() {
               result={result}
               smoothBars={smoothBars}
               protect={protect}
-              busyText={isAnalyzing ? `${stageText} (${Math.round(progress)} %)` : null}
+              busyText={isAnalyzing ? `${stageText} (${pctValue(progress)})` : null}
               error={error}
               onChangeSmoothing={(smooth, value) => {
                 // the same file once more with other smoothing; one analysis at a time
@@ -323,7 +327,7 @@ export default function App() {
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950/80 py-4 px-6 text-center text-xs text-slate-500">
         <p>
-          BeatAnalyzer • Inspiriert von{' '}
+          BeatAnalyzer • {t('web.app.footer_inspired')}{' '}
           <a
             href="https://github.com/CPJKU/beat_this"
             target="_blank"
@@ -332,7 +336,7 @@ export default function App() {
           >
             CPJKU/beat_this
           </a>{' '}
-          (Johannes Kepler Universität Linz) • Unterstützt MP3, WAV, AAC & FLAC
+          (Johannes Kepler Universität Linz) • {t('web.app.footer_formats')}
         </p>
       </footer>
 

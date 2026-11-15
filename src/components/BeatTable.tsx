@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useI18n } from '../i18n';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
 import { Search, Play, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 
@@ -15,6 +16,7 @@ export const BeatTable: React.FC<BeatTableProps> = ({
   onSeek,
   onUpdateBeats,
 }) => {
+  const { t, num } = useI18n();
   const [filterType, setFilterType] = useState<'all' | 'downbeats'>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -26,7 +28,7 @@ export const BeatTable: React.FC<BeatTableProps> = ({
     if (filterType === 'downbeats' && !b.isDownbeat) return false;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      const matchBar = `takt ${b.barIndex}`.includes(term) || `${b.barIndex}` === term;
+      const matchBar = `${b.barIndex}` === term || `${b.barIndex}`.startsWith(term);
       const matchTime = b.time.toFixed(2).includes(term);
       return matchBar || matchTime;
     }
@@ -91,14 +93,14 @@ export const BeatTable: React.FC<BeatTableProps> = ({
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
           <h3 className="text-sm font-bold text-white">
-            Erkannte Beat- & Takt-Tabelle ({filteredBeats.length})
+            {t('web.table.title', { n: filteredBeats.length })}
           </h3>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <label
             className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none"
-            title="Blättert beim Abspielen selbst auf die Seite des laufenden Beats"
+            title={t('web.table.follow_tip')}
           >
             <input
               type="checkbox"
@@ -106,7 +108,7 @@ export const BeatTable: React.FC<BeatTableProps> = ({
               checked={follow}
               onChange={(e) => setFollow(e.target.checked)}
             />
-            Mitlaufen
+            {t('web.table.follow')}
           </label>
 
           {/* Filter toggle */}
@@ -122,7 +124,7 @@ export const BeatTable: React.FC<BeatTableProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Alle Beats ({result.totalBeats})
+              {t('web.table.all', { n: result.totalBeats })}
             </button>
             <button
               onClick={() => {
@@ -135,7 +137,7 @@ export const BeatTable: React.FC<BeatTableProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Nur Downbeats / Taktanfänge ({result.totalBars})
+              {t('web.table.downbeats', { n: result.totalBars })}
             </button>
           </div>
 
@@ -144,7 +146,7 @@ export const BeatTable: React.FC<BeatTableProps> = ({
             <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Takt filtern..."
+              placeholder={t('web.table.search')}
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -161,13 +163,13 @@ export const BeatTable: React.FC<BeatTableProps> = ({
         <table className="w-full text-left text-xs text-slate-300">
           <thead className="bg-slate-950/80 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
             <tr>
-              <th className="py-2.5 px-3">Takt.Beat</th>
-              <th className="py-2.5 px-3">Zeitpunkt</th>
-              <th className="py-2.5 px-3">Intervall</th>
+              <th className="py-2.5 px-3">{t('web.table.col_bar_beat')}</th>
+              <th className="py-2.5 px-3">{t('web.table.col_time')}</th>
+              <th className="py-2.5 px-3">{t('web.table.col_interval')}</th>
               <th className="py-2.5 px-3">Tempo</th>
-              <th className="py-2.5 px-3">Typ</th>
-              <th className="py-2.5 px-3">Konfidenz</th>
-              <th className="py-2.5 px-3 text-right">Aktion</th>
+              <th className="py-2.5 px-3">{t('web.table.col_type')}</th>
+              <th className="py-2.5 px-3">Confidence</th>
+              <th className="py-2.5 px-3 text-right">{t('web.table.col_action')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -182,7 +184,7 @@ export const BeatTable: React.FC<BeatTableProps> = ({
                   }`}
                 >
                   <td className="py-2 px-3 font-sans">
-                    <span className="font-bold text-white">Takt {b.barIndex}</span>
+                    <span className="font-bold text-white">{t('output.marker_downbeat', { bar: b.barIndex })}</span>
                     <span className="text-slate-500 mx-1">•</span>
                     <span className={b.isDownbeat ? 'text-rose-400 font-bold' : 'text-slate-300'}>
                       Beat {b.beatInBar}
@@ -200,7 +202,7 @@ export const BeatTable: React.FC<BeatTableProps> = ({
 
                   <td className="py-2 px-3">
                     <span className="font-semibold text-cyan-400">
-                      {b.instantBpm.toFixed(1)}
+                      {num(b.instantBpm, 1)}
                     </span>{' '}
                     <span className="text-[10px] text-slate-500">BPM</span>
                   </td>
@@ -239,28 +241,28 @@ export const BeatTable: React.FC<BeatTableProps> = ({
                     <button
                       onClick={() => onSeek(b.time)}
                       className="p-1 rounded bg-slate-800 hover:bg-cyan-600 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                      title="Abspielen ab diesem Beat"
+                      title={t('web.table.play_from')}
                     >
                       <Play className="w-3 h-3 fill-current" />
                     </button>
                     <button
                       onClick={() => handleNudge(b.id, -0.01)}
                       className="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-400 hover:text-white transition-colors cursor-pointer"
-                      title="-10ms justieren"
+                      title={t('web.table.nudge_back')}
                     >
                       -10ms
                     </button>
                     <button
                       onClick={() => handleNudge(b.id, 0.01)}
                       className="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-400 hover:text-white transition-colors cursor-pointer"
-                      title="+10ms justieren"
+                      title={t('web.table.nudge_fwd')}
                     >
                       +10ms
                     </button>
                     <button
                       onClick={() => handleToggleDownbeat(b.id)}
                       className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-400 hover:text-white transition-colors cursor-pointer"
-                      title="Downbeat Status umschalten"
+                      title={t('web.table.toggle_downbeat')}
                     >
                       1/X
                     </button>
@@ -276,7 +278,7 @@ export const BeatTable: React.FC<BeatTableProps> = ({
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
           <span>
-            Seite {currentPage} von {totalPages}
+            {t('web.table.page', { page: currentPage, pages: totalPages })}
           </span>
           <div className="flex items-center gap-1">
             <button
