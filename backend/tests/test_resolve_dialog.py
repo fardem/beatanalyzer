@@ -187,6 +187,20 @@ class DialogTests(unittest.TestCase):
         self.run_dialog(scenario)
         self.assertTrue(self.exited())
 
+    def test_json_for_an_mp3_clip_gets_the_hint(self):
+        self.lua.execute("MOCK.song.file = 'Müller Song.mp3'")
+        data = resolve_marker_data(trs.sample_result())
+        data["fileName"] = "Müller Song.mp3"
+        Path(self.json_path).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+        def scenario():
+            self.pick_json()
+            self.assertFalse(self.item("Warnings").Hidden)
+            self.assertIn("MP3", self.item("Warnings").Text)
+            self.assertTrue(self.item("OK").Enabled)
+            self.close()
+        self.run_dialog(scenario)
+
     def test_choose_json_shows_clip_and_explanation(self):
         def scenario():
             self.pick_json()
@@ -508,6 +522,24 @@ class AnalysisDialogTests(DialogTests):
             self.close()
         self.run_dialog(scenario)
 
+    def test_mp3_clip_gets_the_hint(self):
+        # test 0.2.2: Resolve plays MP3 about 50 ms later than BeatAnalyzer analyses it
+        def scenario():
+            self.select_song()
+            self.check("WayAnalyze", True)
+            self.tick(20)
+            self.assertTrue(self.item("Warnings").Hidden)              # WAV: no hint
+            self.lua.execute("MOCK.song.filepath = '/Musik/Müller Song.MP3'")
+            self.tick(25)
+            self.assertFalse(self.item("Warnings").Hidden)
+            self.assertIn("50 ms", self.item("Warnings").Text)
+            self.assertIn("WAV oder FLAC", self.item("Warnings").Text)
+            self.assertTrue(self.item("OK").Enabled)                    # only a hint, analysing is allowed
+            self.check("WayJson", True)                                 # the JSON way has its own warnings
+            self.tick(25)
+            self.close()
+        self.run_dialog(scenario)
+
     def test_analyze_way_shows_the_selected_clip(self):
         def scenario():
             self.select_song()
@@ -698,10 +730,34 @@ class AnalysisDialogTests(DialogTests):
             self.python_writes(done="error")
             self.tick(25)
             self.assertIn("kaputt", self.item("Status").Text)
+            # Resolve test 0.2.2 (m4a): after an error OK stays off for this file, only Close
+            self.assertFalse(self.item("OK").Enabled)
+            self.tick(60)                                       # also after the next refreshes
+            self.assertFalse(self.item("OK").Enabled)
+            self.assertIn("kaputt", self.item("Status").Text)
+            self.assertTrue(self.item("Close").Enabled)
+            self.choose("Model", 1)                             # another model may be tried
+            self.check("MdConfirm", True)
+            self.assertTrue(self.item("OK").Enabled)
+            self.choose("Model", 0)
+            self.assertFalse(self.item("OK").Enabled)
+            self.lua.execute("MOCK.selected = {}")              # another clip may be analysed
+            self.tick(25)
+            self.lua.execute("MOCK.song.filepath = '/Musik/Anderer Song.wav'; MOCK.selected = { MOCK.song }")
+            self.tick(25)
             self.assertTrue(self.item("OK").Enabled)
             self.close()
         self.run_dialog(scenario)
         self.assertEqual(self.markers(self.mock.song), {})
+
+    def test_cancel_keeps_ok(self):
+        def scenario():
+            self.start_analysis()
+            self.click("Cancel")
+            self.tick(25)
+            self.assertTrue(self.item("OK").Enabled)
+            self.close()
+        self.run_dialog(scenario)
 
     def test_python_does_not_start(self):
         def scenario():
@@ -709,7 +765,7 @@ class AnalysisDialogTests(DialogTests):
             self.lua.execute("os.time = (function(t) return function() return t() + 120 end end)(os.time)")
             self.tick(25)
             self.assertIn("Python ist nicht gestartet", self.item("Status").Text)
-            self.assertTrue(self.item("OK").Enabled)
+            self.assertFalse(self.item("OK").Enabled)                # like an error: only Close
             self.close()
         self.run_dialog(scenario)
 

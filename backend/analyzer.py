@@ -164,15 +164,62 @@ def engine_status(model: str = "beat_this") -> Dict[str, Any]:
     return engine_info(model_id, device=device)
 
 
+def decode_with_av(file_path: str):
+    """Decode any format FFmpeg knows (m4a/AAC, ALAC, Opus, WMA, ...) with PyAV, which brings its own FFmpeg
+    libraries: no ffmpeg needs to be installed. Float samples at the file's own sample rate (no loss from a 16-bit
+    step), mono; the original file is only read. FFmpeg drops the encoder delay (gapless info) like soundfile does."""
+    import av   # optional: without it librosa.load (needs ffmpeg in PATH) is the last resort
+    with av.open(file_path) as container:
+        stream = next(s for s in container.streams if s.type == "audio")
+        sr = stream.codec_context.sample_rate or stream.rate
+        resampler = av.AudioResampler(format="flt", layout="mono", rate=sr)
+        chunks = []
+        for frame in container.decode(stream):
+            for out in resampler.resample(frame):
+                chunks.append(out.to_ndarray().reshape(-1))
+        for out in resampler.resample(None):   # flush
+            chunks.append(out.to_ndarray().reshape(-1))
+    if not chunks:
+        raise RuntimeError(f"keine Audiodaten in {os.path.basename(file_path)}")
+    return np.concatenate(chunks).astype(np.float32), int(sr)
+
+
+def decode_with_ffmpeg(file_path: str, target_sr: int):
+    """Decode with an installed ffmpeg (the folder from settings.json or the system PATH), mono float at target_sr.
+    Used when PyAV is missing; on Windows without a console window (the Resolve job runs under pythonw)."""
+    import subprocess
+    status = ffmpeg_utils.apply_ffmpeg_dir(settings.load().get("ffmpegDir"))
+    if not status["available"]:
+        raise RuntimeError("kein ffmpeg gefunden")
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    proc = subprocess.run([status["path"], "-v", "error", "-nostdin", "-i", file_path, "-map", "0:a:0",
+                           "-f", "f32le", "-ac", "1", "-ar", str(target_sr), "-"],
+                          capture_output=True, creationflags=flags)
+    if proc.returncode != 0 or not proc.stdout:
+        detail = proc.stderr.decode("utf-8", "replace").strip().splitlines()
+        raise RuntimeError(f"ffmpeg: {detail[-1] if detail else 'keine Audiodaten'}")
+    return np.frombuffer(proc.stdout, dtype=np.float32).copy(), target_sr
+
+
 def load_audio_safely(file_path: str, target_sr: int = 44100):
+    """WAV/FLAC/MP3/OGG with soundfile; other formats (m4a/AAC, ALAC, Opus, WMA, ...) with PyAV, without PyAV with an
+    installed ffmpeg. All of them drop the encoder delay of MP3/AAC (gapless info). The original file is only read."""
     try:
         data, sr = sf.read(file_path, always_2d=True)
         mono = np.mean(data, axis=1)
-        if sr != target_sr:
-            mono = librosa.resample(mono.astype(np.float32), orig_sr=sr, target_sr=target_sr)
-        return mono.astype(np.float32), target_sr
-    except Exception:
-        return librosa.load(file_path, sr=target_sr, mono=True)
+    except Exception as sf_err:
+        try:
+            mono, sr = decode_with_av(file_path)
+        except ImportError:
+            try:
+                return decode_with_ffmpeg(file_path, target_sr)
+            except Exception as ff_err:
+                raise RuntimeError(
+                    f"Format von {os.path.basename(file_path)} nicht lesbar ({sf_err}; {ff_err}). "
+                    "PyAV installieren (venv: pip install av) oder ffmpeg einrichten.") from ff_err
+    if sr != target_sr:
+        mono = librosa.resample(np.asarray(mono, dtype=np.float32), orig_sr=sr, target_sr=target_sr)
+    return np.asarray(mono, dtype=np.float32), target_sr
 
 
 FPS = 50   # frames per second of the framewise beat_this predictions

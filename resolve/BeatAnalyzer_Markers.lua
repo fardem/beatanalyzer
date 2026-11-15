@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.2.2"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.2.3"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -157,6 +157,7 @@ local BA = {
       ["plugin.wait"] = "Please wait – the window closes only at the end.",
       ["plugin.wait_short"] = "Please wait …",
       ["plugin.warn_length"] = "The clip's duration ({clip}) differs from the analysed file ({json}).",
+      ["plugin.warn_mp3"] = "MP3: Resolve plays MP3 files about 50 ms later than BeatAnalyzer analyses them; the markers lie that much before the beat. For exact markers use the song as WAV or FLAC.",
       ["plugin.warn_other_file"] = "The selected clip is not '{file}' from the JSON.",
       ["plugin.way_analyze"] = "Analyse the selected clip",
       ["plugin.way_json"] = "Load JSON",
@@ -1492,6 +1493,12 @@ local function clip_seconds(clip, fallback_fps)
 end
 
 -- Everything the window needs to know about a marker JSON before OK. info.ok = OK may be pressed.
+-- Resolve plays MP3 files without dropping the encoder delay at the start (≈ 50 ms, measured in test 0.2.2);
+-- BeatAnalyzer drops it, so markers on an MP3 clip lie that much before the audible beat.
+function M.is_mp3(name)
+  return tostring(name or ""):lower():match("%.mp3$") ~= nil
+end
+
 function M.prepare(path)
   local info = { ok = false, warnings = {} }
   local text = read_file(path)
@@ -1539,6 +1546,12 @@ function M.prepare(path)
         info.warnings[#info.warnings + 1] = T("plugin.warn_other_file", { file = info.file_name })
         break
       end
+    end
+  end
+  for _, clip in ipairs(clips) do
+    if M.is_mp3(api(clip, "GetClipProperty", "File Name")) then
+      info.warnings[#info.warnings + 1] = T("plugin.warn_mp3")
+      break
     end
   end
   local json_seconds = tonumber(data.duration)
@@ -2194,7 +2207,11 @@ function M.main()
       end
       set("ClipInfo", "Text", clip_text)
       fit("ClipInfo", clip_text)
-      set("Warnings", "Hidden", true)
+      local mp3 = S.info.ok and M.is_mp3(S.info.path)
+      local warn = mp3 and ("⚠ " .. T("plugin.warn_mp3")) or ""
+      set("Warnings", "Text", warn)
+      fit("Warnings", warn)
+      set("Warnings", "Hidden", not mp3)
       set("Engine", "Hidden", true)
       S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
       local explain, explain_tip = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
@@ -2229,6 +2246,9 @@ function M.main()
     local ok = S.info ~= nil and S.info.ok == true
     if analyze_way() and not model_ok() then
       ok = false   -- md_beat_this without the licence box (the hint is in ClipInfo)
+    end
+    if analyze_way() and ok and S.failed and S.failed.path == S.info.path and S.failed.model == model_value() then
+      ok = false   -- this file failed with this model: only Close, another clip or another model
     end
     set("OK", "Enabled", ok)
     set("Remove", "Enabled", #remove_clips() > 0)
@@ -2282,7 +2302,10 @@ function M.main()
     return table.concat(lines, "\n")
   end
 
-  local function end_analysis(text)
+  -- failed: the analysis of this file with this model failed (error, no start, timeout); OK stays off for it, so
+  -- the window can only be closed or another clip / model chosen (Resolve test 0.2.2: m4a error, OK was active)
+  local function end_analysis(text, failed)
+    S.failed = failed and S.analysis and { path = S.analysis.path, model = S.analysis.model } or nil
     S.state, S.analysis = "select", nil
     set("Cancel", "Hidden", true)
     lock(false)
@@ -2307,7 +2330,8 @@ function M.main()
       return
     end
     -- project, timeline and clip are fixed at OK (spec 6.2), also for the markers without a subtitle track
-    S.analysis = { dir = dir, started = G_os.time(), clip = info.clip, marker_timeline = current_timeline(),
+    S.analysis = { dir = dir, started = G_os.time(), clip = info.clip, path = info.path, model = model_value(),
+                   marker_timeline = current_timeline(),
                    timeline = get("Timeline", "Checked") and current_timeline() or false }
     S.state = "analyze"
     lock(true)
@@ -2341,14 +2365,14 @@ function M.main()
       else
         M.remove_job(a.dir)
       end
-      end_analysis(text)
+      end_analysis(text, r.state ~= "cancelled")
       return
     end
     local job, err = M.start(r.markers_path, { colors = read_colors(), timeline = a.timeline, clips = { a.clip },
                                                marker_timeline = a.marker_timeline })
     if not job then
       M.remove_job(a.dir)
-      end_analysis(tostring(err))
+      end_analysis(tostring(err), true)
       return
     end
     local engine = M.engine_text(job.data.engine)
