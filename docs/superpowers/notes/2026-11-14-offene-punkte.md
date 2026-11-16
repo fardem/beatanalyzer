@@ -63,6 +63,12 @@
   unter 15 s bleiben ganz sichtbar; zurück mit „Ganze Datei anzeigen“. Dazu: Takt-Beschriftungen und Zeitachse
   überlappen bei vielen Takten.
 
+### Sammlung aus dem Test 0.2.14 (noch nicht bauen – erst nach allen Tests des Nutzers)
+
+- **„BeatAnalyzer-Marker entfernen“:** Nach dem Klick bleibt der Knopf klickbar, und man sieht nicht, ob der Befehl
+  angenommen wurde. Fehlt: (a) Rückmeldung sofort nach dem Klick, (b) optische Sperre des Knopfs, solange die
+  Rückfrage bzw. das Entfernen läuft.
+
 ## 2. Teilprojekt 5 – README (Gesamtkonzept Abschnitt 10)
 
 - Ablauf von 0.1.x statt 0.0.5 (Resolve-Fenster mit beiden Wegen, Glätten, Farben, Entfernen, Sprachen, Anzeige
@@ -75,6 +81,7 @@
   beat_this hört die „1“; mit „Glätten“ gleichmäßig an der gehörten „1“, Neuansatz nach Edits.
 - Aussage „mit NVIDIA-Grafikkarte über CUDA“ prüfen (installiert die Standardinstallation die CPU-Fassung?).
 - Abschnitt „Modelle und Lizenzen“ ist schon da (0.1.7).
+- **Screenshot des Resolve-Fensters (Lua-Dialog) fehlt** in der README – aus der letzten Version (0.3.0) machen.
 - **Hauptsprache des Repos wird Englisch:** README, Doku und Code-Kommentare auf Englisch. Der **CHANGELOG nur
   englisch** (keine deutsche oder türkische Fassung). Die englischen Release Notes (`docs/releases/0.2.12.md`) verweisen dann ohne Hinweis auf eine deutsche Fassung.
 - **README in drei Sprachen:** `README.md` englisch (Hauptsprache), dazu deutsch und türkisch (z. B.
