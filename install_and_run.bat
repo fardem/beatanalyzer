@@ -6,7 +6,7 @@ color 0B
 
 set "LOGFILE=%~dp0install_log.txt"
 
-:: Initialisiere Log-Datei mit Zeitstempel
+:: Start the log file with a time stamp
 echo ====================================================================== > "%LOGFILE%"
 echo  BeatAnalyzer Windows Installation Log >> "%LOGFILE%"
 echo  Started: %DATE% %TIME% >> "%LOGFILE%"
@@ -27,35 +27,35 @@ echo ======================================================================
 echo.
 
 :: ----------------------------------------------------------------------
-:: 1. PRÜFE PYTHON INSTALLATION
+:: 1. CHECK THE PYTHON INSTALLATION
 :: ----------------------------------------------------------------------
 echo [1/6] Looking for an installed Python...
 echo [1/6] Looking for Python... >> "%LOGFILE%"
 
 set "PY_CMD="
 
-:: Teste zuerst 'py' (Windows Python Launcher)
+:: First try 'py' (Windows Python Launcher)
 py -3 --version >nul 2>&1
 if !errorlevel! equ 0 (
     set "PY_CMD=py -3"
     goto :python_found
 )
 
-:: Teste 'python'
+:: Try 'python'
 python --version >nul 2>&1
 if !errorlevel! equ 0 (
     set "PY_CMD=python"
     goto :python_found
 )
 
-:: Teste 'python3'
+:: Try 'python3'
 python3 --version >nul 2>&1
 if !errorlevel! equ 0 (
     set "PY_CMD=python3"
     goto :python_found
 )
 
-:: Häufige Windows Installationspfade durchsuchen
+:: Search the usual Windows installation folders
 if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" set "PY_CMD=%LOCALAPPDATA%\Programs\Python\Python312\python.exe" & goto :python_found
 if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" set "PY_CMD=%LOCALAPPDATA%\Programs\Python\Python311\python.exe" & goto :python_found
 if exist "%LOCALAPPDATA%\Programs\Python\Python310\python.exe" set "PY_CMD=%LOCALAPPDATA%\Programs\Python\Python310\python.exe" & goto :python_found
@@ -63,7 +63,7 @@ if exist "C:\Python312\python.exe" set "PY_CMD=C:\Python312\python.exe" & goto :
 if exist "C:\Python311\python.exe" set "PY_CMD=C:\Python311\python.exe" & goto :python_found
 if exist "C:\Python310\python.exe" set "PY_CMD=C:\Python310\python.exe" & goto :python_found
 
-:: Wenn Python nicht gefunden wurde:
+:: Python not found:
 color 0C
 echo.
 echo ======================================================================
@@ -90,7 +90,7 @@ echo [OK] Command used: !PY_CMD!
 echo Python command: !PY_CMD! (!PY_VER!) >> "%LOGFILE%"
 
 :: ----------------------------------------------------------------------
-:: 2. ISOLIERTE UMGEBUNG (VENV) ERSTELLEN
+:: 2. CREATE THE PYTHON ENVIRONMENT (VENV)
 :: ----------------------------------------------------------------------
 echo.
 echo [2/6] Setting up the Python environment (venv)...
@@ -118,7 +118,7 @@ if not exist "venv\Scripts\activate.bat" (
 )
 
 :: ----------------------------------------------------------------------
-:: 3. VENV AKTIVIEREN & PIP AKTUALISIEREN
+:: 3. ACTIVATE VENV & UPDATE PIP
 :: ----------------------------------------------------------------------
 echo.
 echo [3/6] Activating venv and updating pip...
@@ -141,7 +141,7 @@ echo [OK] pip is up to date.
 echo [OK] pip updated. >> "%LOGFILE%"
 
 :: ----------------------------------------------------------------------
-:: 4. ABHÄNGIGKEITEN INSTALLIEREN (SCHRITTWEISE FÜR MAXIMALE STABILITÄT)
+:: 4. INSTALL THE PACKAGES (STEP BY STEP)
 :: ----------------------------------------------------------------------
 echo.
 echo [4/6] Installing audio, PyTorch and server packages...
@@ -193,7 +193,7 @@ if !errorlevel! equ 0 (
 )
 
 :: ----------------------------------------------------------------------
-:: 5. FUNKTIONSTEST DER UMGEBUNG
+:: 5. TEST THE ENVIRONMENT
 :: ----------------------------------------------------------------------
 echo.
 echo [5/6] Checking the Python environment...
@@ -243,14 +243,14 @@ if !errorlevel! neq 0 (
 )
 
 :: ----------------------------------------------------------------------
-:: DAVINCI RESOLVE SKRIPT (nur wenn Resolve installiert ist)
+:: DAVINCI RESOLVE SCRIPT (only if Resolve is installed)
 :: ----------------------------------------------------------------------
 echo.
 echo Checking DaVinci Resolve and installing/updating BeatAnalyzer_Markers.lua...
 !VENV_PY! backend\resolve_plugin.py auto
 
 :: ----------------------------------------------------------------------
-:: 6. SERVER STARTEN UND BROWSER ÖFFNEN
+:: 6. START THE SERVER AND OPEN THE BROWSER
 :: ----------------------------------------------------------------------
 echo.
 echo [6/6] Starting the BeatAnalyzer server...
@@ -262,13 +262,13 @@ echo  To stop, press CTRL + C in this console window.
 echo ======================================================================
 echo.
 
-:: Oeffne Browser mit kleiner Verzoegerung
+:: Open the browser after a short delay
 start "" http://localhost:8000
 
 echo Starting backend\server.py ... >> "%LOGFILE%"
 !VENV_PY! backend\server.py
 
-:: Falls der Server abstuerzt oder beendet wird:
+:: When the server crashes or stops:
 echo.
 echo ======================================================================
 echo The server stopped.
