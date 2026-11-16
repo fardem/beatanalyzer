@@ -2234,6 +2234,8 @@ function M.main()
   local win = disp:AddWindow({ ID = "BeatAnalyzerWin", WindowTitle = T("plugin.title", { version = VERSION }),
                               Geometry = geometry, MinimumSize = WIN_MIN, StyleSheet = DIALOG_STYLE },
     ui:VGroup({ Spacing = 6,
+      -- Resolve ignores the requested width (and Resize) and sizes the window by its content, so the width changed
+      -- with every song name. An empty row with a minimum width holds the window at least that wide.
       ui:Label({ ID = "WidthGuard", Text = "", Weight = 0, MinimumSize = { WIN_MIN[1] - 20, 1 } }),
 
       -- 0. Pinned Context Overview (Clip + Timeline at a glance)
@@ -2359,6 +2361,7 @@ function M.main()
     end
     return n
   end
+  -- Resolve does not grow a wrapped label with its text: reserve the lines it needs at the current width.
   local function fit(id, text, min_lines, extra_inset, extra_h)
     local per_line = math.max(24, math.floor((window_width() - 90 - (extra_inset or 0)) / CHAR_PX))
     local lines = 0
@@ -2377,6 +2380,8 @@ function M.main()
     set(id, "MinimumSize", { 0, h })
     set(id, "MaximumSize", { 9999, h })
   end
+  -- The UIManager lays a window out for another size than it draws (WhisperX Workbench): lay out now
+  -- and once more on the next tick.
   local function relayout()
     pcall(function() win:RecalcLayout() end)
     S.relayout = true
@@ -2459,6 +2464,7 @@ function M.main()
   local function model_value()
     return S.model == "md_beat_this" and "md_beat_this" or "beat_this"
   end
+  -- md_beat_this may only analyse once its licence box is ticked
   local function model_ok()
     return model_value() ~= "md_beat_this" or get("MdConfirm", "Checked") == true
   end
@@ -2635,6 +2641,8 @@ function M.main()
     show_way()
     if analyze_way() then
       S.info = analysis_info()
+      -- the hint for md_beat_this goes in at once: setting one line and then two every second made the window
+      -- lay itself out twice per refresh (it twitched, Resolve test 0.2.1)
       local clip_text = S.info.ok and S.info.clip_text or (S.info.error or "")
       if S.info.ok and not model_ok() then
         clip_text = clip_text .. "\\n" .. T("plugin.md_confirm_needed")
@@ -2703,7 +2711,7 @@ function M.main()
       ok = false
     end
     if analyze_way() and ok and S.failed and S.failed.path == S.info.path and S.failed.model == model_value() then
-      ok = false
+      ok = false   -- this file failed with this model: only Close, another clip or another model (Resolve test 0.2.2)
     end
     S.ok_ready = ok
     sync_buttons()
@@ -2844,7 +2852,7 @@ function M.main()
     status(S.last_result_msg)
     lock(true)
     log(S.job.msg)
-    if S.close_requested then
+    if S.close_requested then   -- Resolve closed the window during the work: end now that it is done
       save()
       disp:ExitLoop()
     end
