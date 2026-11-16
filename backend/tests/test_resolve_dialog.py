@@ -565,6 +565,25 @@ class AnalysisDialogTests(DialogTests):
             self.close()
         self.run_dialog(scenario)
 
+    def test_status_colours_follow_the_meaning(self):
+        # colours as in the web app: green = done, red = error, amber = question before removing
+        def scenario():
+            self.start_analysis()
+            self.python_writes(done="error")
+            self.tick(25)
+            self.assertIn("#FDA4AF", self.item("Status").StyleSheet)          # rose-300: error
+            self.lua.execute("MOCK.song.filepath = '/Musik/Anderer Song.wav'")
+            self.tick(25)
+            self.click("OK")
+            self.python_writes(done="ok")
+            self.tick(60)
+            self.assertIn("#6EE7B7", self.item("Status").StyleSheet)          # emerald-300: done
+            self.click("Remove")
+            self.assertIn("#FDE68A", self.item("Status").StyleSheet)          # amber-200: question
+            self.close()
+            self.close()
+        self.run_dialog(scenario)
+
     def test_window_opens_on_the_way_used_last(self):
         def scenario():
             self.way("json")
@@ -683,8 +702,8 @@ class AnalysisDialogTests(DialogTests):
             self.assertFalse(self.item("ModelBeatThis").Hidden)
             self.assertEqual(self.item("ModelBeatThis").Text, "beat_this (MIT)\nStandard · auch kommerziell")
             self.assertEqual(self.item("ModelMd").Text, "md_beat_this (CC BY-NC 4.0)\nNur nicht-kommerziell")
-            self.assertIn("#E05A47", self.item("ModelBeatThis").StyleSheet)   # beat_this is the chosen one
-            self.assertNotIn("#E05A47", self.item("ModelMd").StyleSheet)
+            self.assertIn("#06B6D4", self.item("ModelBeatThis").StyleSheet)   # beat_this chosen: cyan as in the web app
+            self.assertNotIn("#F59E0B", self.item("ModelMd").StyleSheet)
             self.assertTrue(self.item("MdConfirm").Hidden)
             self.assertTrue(self.item("MdNotice").Hidden)
             self.close()
@@ -762,7 +781,7 @@ class AnalysisDialogTests(DialogTests):
 
         def again():
             self.way("analyze")
-            self.assertIn("#E05A47", self.item("ModelMd").StyleSheet)        # md_beat_this was remembered
+            self.assertIn("#F59E0B", self.item("ModelMd").StyleSheet)        # md_beat_this remembered: amber
             self.assertFalse(self.item("MdConfirm").Hidden)
             self.assertFalse(self.item("MdConfirm").Checked)   # asked again in every window
             self.close()
