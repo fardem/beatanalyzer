@@ -70,6 +70,20 @@
 - **„BeatAnalyzer-Marker entfernen“:** Nach dem Klick bleibt der Knopf klickbar, und man sieht nicht, ob der Befehl
   angenommen wurde. Fehlt: (a) Rückmeldung sofort nach dem Klick, (b) optische Sperre des Knopfs, solange die
   Rückfrage bzw. das Entfernen läuft.
+- **Reiter-Text abgeschnitten** (Screenshots 0.2.14, gesperrter Zustand): „usgewählten Clip analysierei“ – der Reiter
+  ist für den fetten Text zu schmal (min-width 155 px); Breite nach Text bzw. kein Fettdruck.
+- **Falsche MP3-Warnung beim Weg „JSON laden“** (Test 10, „01. Mensch.mp3“, md_beat_this): Die JSON hat kein
+  `resolveOffset`. Ursache: Das MP3 hat keinen Xing/Info-Frame → Versatz 0 → der Server schreibt das Feld nicht →
+  das Skript hält die JSON für alt/Browser und warnt. Die Marker liegen trotzdem richtig (ohne Xing-Frame verschiebt
+  Resolve nicht; die Web-App verschiebt nichts). Abhilfe: Server schreibt bei MP3 immer `resolveOffset` (auch 0);
+  das Skript warnt nur, wenn das Feld fehlt, und zeigt bei 0 „kein Ausgleich nötig“.
+- **FLAC „03. Serseri.flac“** (Test 9): Web-App meldet „lässt sich im Browser nicht dekodieren“; Resolve importiert
+  die Datei auch nicht, Windows/Navidrome spielen sie. Ursache 1: Die Web-App dekodiert jede Datei zuerst im Browser
+  (Wiedergabe, Wellenform) und bricht dort ab, auch wenn der Server sie lesen könnte. Abhilfe: bei laufendem Server
+  dekodieren lassen (z. B. Server liefert WAV für Wiedergabe/Wellenform). Ursache 2 (warum Resolve/Browser ablehnen)
+  offen – Angaben zur Datei vom Nutzer nötig (Abtastrate, Bittiefe, Kanäle, ID3-Tag vor dem FLAC?).
+- Eindruck Farben (Test 3): passt zur Web-App, „vielleicht ein wenig zu viel gleiche Farben in unterschiedlichen
+  Tönen“ – beobachten, keine Änderung verlangt.
 
 ## 2. Teilprojekt 5 – README (Gesamtkonzept Abschnitt 10)
 
