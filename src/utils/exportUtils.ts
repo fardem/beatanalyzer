@@ -194,7 +194,8 @@ export function generateResolveMarkerJson(
     })),
     ...(result.engineInfo ? { engine: result.engineInfo } : {}),
     // seconds Resolve plays this MP3 later (Xing frame + encoder delay); the script moves the markers
-    ...(result.resolveOffset ? { resolveOffset: result.resolveOffset } : {}),
+    // also 0: the server checked the MP3 and Resolve plays it on time (without the field the script warns)
+    ...(result.resolveOffset !== undefined && result.resolveOffset !== null ? { resolveOffset: result.resolveOffset } : {}),
     ...(isMdBeatThis
       ? {
           license: result.license ?? 'CC BY-NC 4.0',

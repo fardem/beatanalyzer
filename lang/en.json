@@ -68,6 +68,7 @@
     "remove_done": "Removed: {markers} markers, {tracks} Subtitle Track(s), {srt} Subtitle clip(s).",
     "remove_nothing": "Nothing from BeatAnalyzer found on '{song}'.",
     "btn_remove_yes": "Remove",
+    "msg_removing": "Removing BeatAnalyzer markers …",
     "title": "BeatAnalyzer {version}",
     "json_none": "No JSON chosen.",
     "btn_choose": "Choose …",
@@ -139,7 +140,8 @@
     "warn_mp3": "MP3: Resolve plays MP3 files about 50 ms later than BeatAnalyzer analyses them. This JSON has no correction (older JSON or analysed in the browser): the markers lie that much before the beat. Analyse again with the server or use the song as WAV or FLAC.",
     "note_mp3": "MP3: Resolve plays MP3 files about 50 ms later; BeatAnalyzer moves the markers to match.",
     "msg_mp3_shift": "MP3: markers moved by {ms} ms (Resolve plays MP3 that much later).",
-    "note_mp3_json": "MP3: the markers are set {ms} ms later (Resolve plays MP3 files that much later)."
+    "note_mp3_json": "MP3: the markers are set {ms} ms later (Resolve plays MP3 files that much later).",
+    "note_mp3_json_zero": "MP3: no correction needed (the file has no encoder delay; Resolve plays it on time)."
   },
   "web": {
     "app": {
@@ -170,6 +172,7 @@
     },
     "error": {
       "decode": "The browser cannot decode the audio file “{file}”. Supported: MP3, WAV, AAC/M4A, FLAC and OGG.",
+      "decode_flac_id3": "The FLAC file “{file}” starts with an ID3 tag (as used in MP3). FLAC does not allow this; browsers and DaVinci Resolve reject such files. Remove the tag, e.g.: ffmpeg -i \"{file}\" -map 0 -c copy fixed.flac",
       "no_server": "The local server does not answer.",
       "server_failed": "Analysis in the local server failed: {message}",
       "unexpected": "An unexpected error occurred."

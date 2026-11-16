@@ -63,7 +63,7 @@
   unter 15 s bleiben ganz sichtbar; zurück mit „Ganze Datei anzeigen“. Dazu: Takt-Beschriftungen und Zeitachse
   überlappen bei vielen Takten.
 
-### Sammlung aus dem Test 0.2.14 (noch nicht bauen – erst nach allen Tests des Nutzers)
+### Sammlung aus dem Test 0.2.14 – umgesetzt in 0.3.0 (außer: Farben beobachten; Server dekodiert für den Browser)
 
 - **Testlisten:** immer nur eine Liste in der neuesten `docs/resolve-test-<version>.md`, offene Punkte älterer
   Versionen werden dort übernommen und die ältere Liste gelöscht (Wunsch des Nutzers).

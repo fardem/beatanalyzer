@@ -68,6 +68,7 @@
     "remove_done": "Entfernt: {markers} Marker, {tracks} Subtitle Track(s), {srt} Subtitle-Clip(s).",
     "remove_nothing": "Nichts von BeatAnalyzer an „{song}“ gefunden.",
     "btn_remove_yes": "Entfernen",
+    "msg_removing": "BeatAnalyzer-Marker werden entfernt …",
     "title": "BeatAnalyzer {version}",
     "json_none": "Keine JSON gewählt.",
     "btn_choose": "Auswählen …",
@@ -139,7 +140,8 @@
     "warn_mp3": "MP3: Resolve spielt MP3-Dateien etwa 50 ms später ab, als BeatAnalyzer sie analysiert. Diese JSON enthält keinen Ausgleich (ältere JSON oder im Browser analysiert): Die Marker liegen so viel vor dem Beat. Mit dem Server neu analysieren oder den Song als WAV oder FLAC verwenden.",
     "note_mp3": "MP3: Resolve spielt MP3-Dateien etwa 50 ms später ab; BeatAnalyzer setzt die Marker entsprechend später.",
     "msg_mp3_shift": "MP3: Marker um {ms} ms nach hinten gesetzt (so viel später spielt Resolve MP3 ab).",
-    "note_mp3_json": "MP3: Die Marker werden {ms} ms später gesetzt (so viel später spielt Resolve MP3-Dateien ab)."
+    "note_mp3_json": "MP3: Die Marker werden {ms} ms später gesetzt (so viel später spielt Resolve MP3-Dateien ab).",
+    "note_mp3_json_zero": "MP3: kein Ausgleich nötig (die Datei hat keinen Encoder-Vorlauf; Resolve spielt sie ohne Verzögerung ab)."
   },
   "web": {
     "app": {
@@ -170,6 +172,7 @@
     },
     "error": {
       "decode": "Die Audiodatei „{file}“ lässt sich im Browser nicht dekodieren. Unterstützt werden MP3, WAV, AAC/M4A, FLAC und OGG.",
+      "decode_flac_id3": "Die FLAC-Datei „{file}“ beginnt mit einem ID3-Tag (wie bei MP3). Das ist im FLAC-Format nicht vorgesehen; Browser und DaVinci Resolve lehnen solche Dateien ab. Tag entfernen, z. B.: ffmpeg -i \"{file}\" -map 0 -c copy neu.flac",
       "no_server": "Der lokale Server antwortet nicht.",
       "server_failed": "Analyse im lokalen Server fehlgeschlagen: {message}",
       "unexpected": "Ein unerwarteter Fehler ist aufgetreten."

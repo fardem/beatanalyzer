@@ -33,7 +33,11 @@ Stand nach 0.2.5. Drei Schritte, jeder endet lauffähig mit eigener Version und 
 
 - [x] Loop (Ausschnitt → ganzer Song → aus) und Lautstärke des Songs (Wunsch des Nutzers; Pegelanzeige bewusst nicht).
 
-## Schritt 3 – Resolve-Fenster an die Web-App angleichen (0.3.0 = Teilprojekt 4 fertig)
+## Schritt 3 – Resolve-Fenster an die Web-App angleichen (0.3.0 = Teilprojekt 4 fertig) – erledigt
+
+Umgesetzt in 0.2.13 (Design-Entwurf des Nutzers mit Gemini: Reiter, Modell-Kacheln, Abschnitte), 0.2.14 (Farben der
+Web-App) und 0.3.0 (Korrekturen aus dem Test 0.2.14). Teilprojekt 4 ist damit fertig; weiter mit Teilprojekt 5.
+
 
 - Begriffe, Anzeige des Analyse-Programms und Modellwahl/Lizenzhinweis wie in der Web-App.
 - Danach Teilprojekt 5 (README).

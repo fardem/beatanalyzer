@@ -127,6 +127,8 @@ class AnalyzerTests(unittest.TestCase):
         result = {"metadata": {"fileName": "a.mp3", "duration": 1.0}, "globalBpm": 120.0,
                   "timeSignature": {"name": "4/4"}, "beats": [], "resolveOffset": 0.05118}
         self.assertEqual(resolve_marker_data(result)["resolveOffset"], 0.05118)
+        result["resolveOffset"] = 0.0   # MP3 without Xing frame: checked, no shift; the field stays
+        self.assertEqual(resolve_marker_data(result)["resolveOffset"], 0.0)
         del result["resolveOffset"]
         self.assertNotIn("resolveOffset", resolve_marker_data(result))
 

@@ -33,12 +33,14 @@ export async function analyzeAudioFile(
   const model: AnalysisModel = options.model === 'md_beat_this' ? 'md_beat_this' : 'beat_this';
   const modelLabel = model === 'md_beat_this' ? 'Masked Diffusion md_beat_this' : 'CPJKU beat_this';
   let audioBuffer: AudioBuffer;
+  let head: Uint8Array | null = null;
   try {
     if (options.audioBuffer) {
       audioBuffer = options.audioBuffer;
     } else {
       onProgress?.(5, 'web.progress.load');
       const arrayBuffer = await file.arrayBuffer();
+      head = new Uint8Array(arrayBuffer.slice(0, 4 * 1024 * 1024)); // an ID3 tag may hold a cover picture
       onProgress?.(15, 'web.progress.decode');
       const audioCtx = new (window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
@@ -46,6 +48,9 @@ export async function analyzeAudioFile(
     }
   } catch (err) {
     console.error('AudioContext decode error:', err);
+    // Resolve test 0.2.14: a whole album of FLAC files had an ID3 tag in front of "fLaC"; browser and Resolve
+    // refused them. Say so instead of the general message.
+    if (head && isFlacWithId3(head)) throw new LocalizedError('web.error.decode_flac_id3', { file: fileName });
     throw new LocalizedError('web.error.decode', { file: fileName });
   }
 
@@ -651,4 +656,13 @@ function downsampleActivationCurve(
   }
 
   return points;
+}
+
+/** FLAC with an ID3v2 tag in front of the "fLaC" marker (not allowed by the format). */
+export function isFlacWithId3(head: Uint8Array): boolean {
+  if (head.length < 14 || head[0] !== 0x49 || head[1] !== 0x44 || head[2] !== 0x33) return false; // "ID3"
+  const size = ((head[6] & 0x7f) << 21) | ((head[7] & 0x7f) << 14) | ((head[8] & 0x7f) << 7) | (head[9] & 0x7f);
+  const start = 10 + size + (head[5] & 0x10 ? 10 : 0);
+  if (start + 4 > head.length) return false;
+  return head[start] === 0x66 && head[start + 1] === 0x4c && head[start + 2] === 0x61 && head[start + 3] === 0x43;
 }

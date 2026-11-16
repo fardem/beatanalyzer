@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.2.14"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.3.0"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -113,6 +113,7 @@ local BA = {
       ["plugin.msg_not_imported"] = "Resolve did not import {path}",
       ["plugin.msg_not_json"] = "The file is not a BeatAnalyzer marker JSON.",
       ["plugin.msg_other_file"] = "Note: the selected clip is not '{file}' from the JSON.",
+      ["plugin.msg_removing"] = "Removing BeatAnalyzer markers …",
       ["plugin.msg_skipped"] = "{n} markers skipped (outside the clip or not accepted by Resolve).",
       ["plugin.msg_srt_import"] = "Subtitles: {why} - import {path} by hand",
       ["plugin.msg_srt_ok"] = "Subtitles: {srt} in media pool bin '{bin}'",
@@ -132,6 +133,7 @@ local BA = {
       ["plugin.msg_tl_write"] = "Timeline: cannot write {path}",
       ["plugin.note_mp3"] = "MP3: Resolve plays MP3 files about 50 ms later; BeatAnalyzer moves the markers to match.",
       ["plugin.note_mp3_json"] = "MP3: the markers are set {ms} ms later (Resolve plays MP3 files that much later).",
+      ["plugin.note_mp3_json_zero"] = "MP3: no correction needed (the file has no encoder delay; Resolve plays it on time).",
       ["plugin.reason_analyzer_failed"] = "the analyzer could not be loaded",
       ["plugin.reason_inference_failed"] = "analysis with beat_this failed",
       ["plugin.reason_md_not_installed"] = "md_beat_this not installed",
@@ -1560,6 +1562,8 @@ function M.prepare(path)
       local off = tonumber(data.resolveOffset)
       if off and off > 0 then   -- shown before OK (test 0.2.4: the correction was not visible on this way)
         info.notes[#info.notes + 1] = T("plugin.note_mp3_json", { ms = fmt_num(off * 1000, 0) })
+      elseif off then   -- checked by the server: this MP3 has no encoder delay frame, Resolve plays it on time
+        info.notes[#info.notes + 1] = T("plugin.note_mp3_json_zero")
       else
         info.warnings[#info.warnings + 1] = T("plugin.warn_mp3")   -- older JSON or browser analysis: no offset
       end
@@ -2038,10 +2042,11 @@ local function tab_css(sel_bg, sel_fg, sel_border, fg)
     .. "; border: 1px solid " .. C.slate800 .. "; padding: 6px 18px; min-width: 155px; margin-right: 6px;"
     .. " border-radius: 6px; } QTabBar::tab:hover { color: " .. C.slate200 .. "; border-color: " .. C.slate700
     .. "; } QTabBar::tab:selected { background-color: " .. sel_bg .. "; color: " .. sel_fg .. "; border: 1px solid "
-    .. sel_border .. "; font-weight: bold; }"
+    .. sel_border .. "; }"
 end
 
--- the two ways (web app: chosen tab bg-cyan-950, text-cyan-300, border-cyan-800)
+-- the two ways (web app: chosen tab bg-cyan-950, text-cyan-300, border-cyan-800). Not bold: Qt sizes a tab for
+-- the normal font, so bold text was cut off ("usgewählten Clip analysierei", Resolve test 0.2.14).
 local TAB_ACTIVE_CSS = tab_css(C.cyan950, C.cyan300, C.cyan800, C.slate400)
 local TAB_MUTED_CSS = tab_css(C.slate800, C.slate400, C.slate700, C.slate600)
 
@@ -2426,6 +2431,19 @@ function M.main()
       set("Close", "Enabled", true)
       set("Close", "Text", T("plugin.btn_cancel"))
       set("Close", "StyleSheet", NEUTRAL_BTN_CSS)
+    elseif S.state == "removing" then   -- the removal runs on the next ticks: everything locked, nothing to click
+      set("WayTabs", "StyleSheet", TAB_MUTED_CSS)
+      set("Choose", "StyleSheet", DISABLED_BTN_CSS)
+      set("Remove", "Hidden", true)
+      set("RemoveYes", "Hidden", false)
+      set("RemoveYes", "Enabled", false)
+      set("RemoveYes", "StyleSheet", DISABLED_BTN_CSS)
+      set("Cancel", "Hidden", true)
+      set("OK", "Hidden", true)
+      set("Close", "Hidden", false)
+      set("Close", "Enabled", false)
+      set("Close", "Text", T("plugin.btn_cancel"))
+      set("Close", "StyleSheet", DISABLED_BTN_CSS)
     elseif S.state == "analyze" then
       set("WayTabs", "StyleSheet", TAB_MUTED_CSS)
       set("Choose", "StyleSheet", DISABLED_BTN_CSS)
@@ -2768,7 +2786,23 @@ function M.main()
       S.relayout = false
       pcall(function() win:RecalcLayout() end)
     end
-    if S.state == "work" then
+    if S.state == "removing" then
+      -- Resolve test 0.2.14: removing ran inside the click, the window did not repaint and the button looked
+      -- unanswered. Now the click locks the window and shows "removing …"; the work starts two ticks later.
+      S.remove_wait = (S.remove_wait or 0) - 1
+      if S.remove_wait <= 0 then
+        local okr, done = pcall(M.remove, S.remove_clips, S.remove_tl)
+        S.state = "select"
+        lock(false)
+        refresh()
+        if okr then
+          status(done.text, "done")
+        else
+          log("Error:", done)
+          status(tostring(done), "error")
+        end
+      end
+    elseif S.state == "work" then
       local ok, done = pcall(S.job.step)
       if not ok then
         log("Error:", done)
@@ -2901,13 +2935,14 @@ function M.main()
     if S.state ~= "confirm" then
       return
     end
-    local done = M.remove(S.remove_clips, S.remove_tl)
-    status(done.text, "done")
-    S.state = "select"
-    lock(false)
-    refresh()
+    S.state, S.remove_wait = "removing", 2
+    lock(true)
+    status(T("plugin.msg_removing"))
   end
   win.On.Close.Clicked = function()
+    if S.state == "removing" then
+      return
+    end
     if S.state == "confirm" then
       local back = S.confirm_from or "select"
       S.confirm_from = nil
