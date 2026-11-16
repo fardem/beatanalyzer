@@ -114,6 +114,10 @@
 - Wege: (a) Lua-Skript ohne Fenster (ausgewählter Clip + neueste JSON aus festem Ordner, Meldungen in der Konsole) –
   ob die Marker-API in Free geht, ist zu prüfen; (b) ohne Skript: Web-App exportiert Marker als EDL und Subtitles
   als SRT zum Import von Hand.
+- **Wunsch des Nutzers (nach 0.3.0, „eins nach dem anderen“):** am liebsten **Marker auf dem Clip** auch in Free;
+  zusätzlich/ersatzweise **SRT-Export in der Web-App** zum Import von Hand. Zu prüfen: welcher Import-Weg in Free
+  Marker auf den Clip bringt (Resolve importiert Marker von Hand nur auf die Timeline, z. B. aus EDL – auf den Clip
+  vermutlich nur per Skript); erst recherchieren und in Resolve Free testen, dann entscheiden.
 
 ## 4. Zurückgestellte Kleinigkeiten
 
