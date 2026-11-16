@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.2.13"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.2.14"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -1981,160 +1981,91 @@ local SWATCH_HEX = {
   Lemon = "#FACC15", Sand = "#D6B88D", Cocoa = "#8B5E3C", Cream = "#F3E8D2",
 }
 
-local PRIMARY_BTN_CSS = [[
-  QPushButton {
-    background-color: #E05A47;
-    color: #FFFFFF;
-    border: 1px solid #E05A47;
-    border-radius: 4px;
-    padding: 6px 16px;
-    font-weight: bold;
-  }
-  QPushButton:hover {
-    background-color: #EB6B59;
-    border-color: #EB6B59;
-  }
-]]
+-- Colours of the web app (Tailwind; the same meaning gets the same colour in both):
+--   slate = surface and text, cyan = main action / chosen / note (beat_this, MP3), amber = licence of
+--   md_beat_this, rose = remove / error, emerald = done. Resolve's marker colours (SWATCH_HEX) stay as they are.
+local C = {
+  slate950 = "#020617", slate900 = "#0F172A", slate800 = "#1E293B", slate700 = "#334155", slate600 = "#475569",
+  slate500 = "#64748B", slate400 = "#94A3B8", slate300 = "#CBD5E1", slate200 = "#E2E8F0", slate100 = "#F1F5F9",
+  cyan950 = "#083344", cyan800 = "#155E75", cyan500 = "#06B6D4", cyan400 = "#22D3EE", cyan300 = "#67E8F9",
+  cyan200 = "#A5F3FC",
+  amber500 = "#F59E0B", amber400 = "#FBBF24", amber200 = "#FDE68A",
+  rose600 = "#E11D48", rose500 = "#F43F5E", rose300 = "#FDA4AF",
+  emerald300 = "#6EE7B7",
+  -- web app tints (colour/alpha over slate-900, as the browser mixes them)
+  cyanTint = "#0D2133",     -- bg-cyan-950/35 (chosen beat_this tile)
+  cyanNoteBg = "#0C2234",   -- bg-cyan-950/40 (MP3 note)
+  cyanNoteBd = "#134257",   -- border-cyan-800/60
+  amberTint = "#1F181E",    -- bg-amber-950/30 (chosen md_beat_this tile)
+  amberNoteBg = "#22181C",  -- bg-amber-950/35 (licence notice)
+  amberNoteBd = "#885114",  -- border-amber-600/60
+  roseNoteBg = "#2E0F1F",   -- bg-rose-950/50 (error)
+  roseNoteBd = "#7F1D3A",   -- border-rose-800/80
+  emeraldBg = "#0A2A2A",    -- bg-emerald-950/50 (done)
+  emeraldBd = "#0F5C4A",    -- border-emerald-800/60
+}
 
-local NEUTRAL_BTN_CSS = [[
-  QPushButton {
-    background-color: #26262C;
-    color: #E4E4E7;
-    border: 1px solid #3C3C46;
-    border-radius: 4px;
-    padding: 6px 14px;
-  }
-  QPushButton:hover {
-    background-color: #303038;
-    border-color: #4E4E5A;
-  }
-]]
+local function btn_css(bg, fg, border, hover_bg, bold)
+  return "QPushButton { background-color: " .. bg .. "; color: " .. fg .. "; border: 1px solid " .. border
+    .. "; border-radius: 6px; padding: 6px 14px;" .. (bold and " font-weight: bold;" or "") .. " }"
+    .. (hover_bg and (" QPushButton:hover { background-color: " .. hover_bg .. "; }") or "")
+end
 
-local DISABLED_BTN_CSS = [[
-  QPushButton {
-    background-color: #1E1E24;
-    color: #6B6B76;
-    border: 1px solid #2C2C34;
-    border-radius: 4px;
-    padding: 6px 14px;
-  }
-]]
+-- main action (web app: bg-cyan-500, text-slate-950, hover cyan-400)
+local PRIMARY_BTN_CSS = btn_css(C.cyan500, C.slate950, C.cyan500, C.cyan400, true)
+-- secondary (web app: bg-slate-800, border-slate-700, hover slate-700)
+local NEUTRAL_BTN_CSS = btn_css(C.slate800, C.slate200, C.slate700, C.slate700, false)
+local DISABLED_BTN_CSS = btn_css(C.slate900, C.slate600, C.slate800, nil, false)
+-- remove (web app: rose)
+local DANGER_BTN_CSS = btn_css(C.rose600, "#FFFFFF", C.rose600, C.rose500, true)
 
-local DANGER_BTN_CSS = [[
-  QPushButton {
-    background-color: #991B1B;
-    color: #FFFFFF;
-    border: 1px solid #DC2626;
-    border-radius: 4px;
-    padding: 6px 14px;
-    font-weight: bold;
-  }
-  QPushButton:hover {
-    background-color: #B91C1C;
-  }
-]]
+local function tile_css(bg, fg, border, width, hover_bg, bold)
+  return "QPushButton { background-color: " .. bg .. "; color: " .. fg .. "; border: " .. width .. "px solid "
+    .. border .. "; border-radius: 8px; padding: 6px 12px;" .. (bold and " font-weight: bold;" or "") .. " }"
+    .. (hover_bg and (" QPushButton:hover { background-color: " .. hover_bg .. "; border-color: " .. C.slate600
+                      .. "; }") or "")
+end
 
-local MODEL_ACTIVE_CSS = [[
-  QPushButton {
-    background-color: #2D2022;
-    color: #FFFFFF;
-    border: 2px solid #E05A47;
-    border-radius: 5px;
-    padding: 6px 12px;
-    font-weight: bold;
-  }
-  QPushButton:hover {
-    background-color: #352427;
-  }
-]]
+-- model tiles as in the web app: beat_this chosen = cyan, md_beat_this chosen = amber, not chosen = slate
+local MODEL_BT_ACTIVE_CSS = tile_css(C.cyanTint, C.slate100, C.cyan500, 2, nil, true)
+local MODEL_MD_ACTIVE_CSS = tile_css(C.amberTint, C.slate100, C.amber500, 2, nil, true)
+local MODEL_IDLE_CSS = tile_css(C.slate900, C.slate400, C.slate700, 1, C.slate800, false)
+local MODEL_MUTED_SELECTED_CSS = tile_css(C.slate800, C.slate400, C.slate600, 1, nil, false)
+local MODEL_MUTED_IDLE_CSS = tile_css(C.slate900, C.slate600, C.slate800, 1, nil, false)
 
-local MODEL_IDLE_CSS = [[
-  QPushButton {
-    background-color: #222227;
-    color: #A1A1AA;
-    border: 1px solid #383842;
-    border-radius: 5px;
-    padding: 6px 12px;
-  }
-  QPushButton:hover {
-    background-color: #292930;
-    color: #E4E4E7;
-    border-color: #4E4E5A;
-  }
-]]
+local function tab_css(sel_bg, sel_fg, sel_border, fg)
+  return "QTabBar { font-size: 12px; } QTabBar::tab { background-color: " .. C.slate900 .. "; color: " .. fg
+    .. "; border: 1px solid " .. C.slate800 .. "; padding: 6px 18px; min-width: 155px; margin-right: 6px;"
+    .. " border-radius: 6px; } QTabBar::tab:hover { color: " .. C.slate200 .. "; border-color: " .. C.slate700
+    .. "; } QTabBar::tab:selected { background-color: " .. sel_bg .. "; color: " .. sel_fg .. "; border: 1px solid "
+    .. sel_border .. "; font-weight: bold; }"
+end
 
-local MODEL_MUTED_SELECTED_CSS = [[
-  QPushButton {
-    background-color: #24242B;
-    color: #9CA3AF;
-    border: 1px solid #3E3E48;
-    border-radius: 5px;
-    padding: 6px 12px;
-  }
-]]
+-- the two ways (web app: chosen tab bg-cyan-950, text-cyan-300, border-cyan-800)
+local TAB_ACTIVE_CSS = tab_css(C.cyan950, C.cyan300, C.cyan800, C.slate400)
+local TAB_MUTED_CSS = tab_css(C.slate800, C.slate400, C.slate700, C.slate600)
 
-local MODEL_MUTED_IDLE_CSS = [[
-  QPushButton {
-    background-color: #1C1C21;
-    color: #6B6B76;
-    border: 1px solid #2A2A32;
-    border-radius: 5px;
-    padding: 6px 12px;
-  }
-]]
+local SECTION_HDR_CSS = "background-color: " .. C.slate800 .. "; border-top: 1px solid " .. C.slate700
+  .. "; border-bottom: 1px solid " .. C.slate800 .. "; padding: 4px 8px; color: " .. C.slate300
+  .. "; font-weight: bold; font-size: 11px;"
 
-local TAB_ACTIVE_CSS = [[
-  QTabBar {
-    font-size: 12px;
-  }
-  QTabBar::tab {
-    background-color: #222227;
-    color: #A1A1AA;
-    border: 1px solid #32323A;
-    padding: 6px 18px;
-    min-width: 155px;
-    margin-right: 6px;
-    border-radius: 4px;
-  }
-  QTabBar::tab:hover {
-    color: #F4F4F6;
-    border-color: #464652;
-  }
-  QTabBar::tab:selected {
-    background-color: #E05A47;
-    color: #FFFFFF;
-    border-color: #E05A47;
-  }
-]]
+local function box_css(bg, border, fg)
+  return "background-color: " .. bg .. "; border: 1px solid " .. border .. "; border-radius: 6px; padding: 5px 10px;"
+    .. " color: " .. fg .. ";"
+end
+local NOTE_CSS = box_css(C.cyanNoteBg, C.cyanNoteBd, C.cyan200)       -- note, e.g. MP3
+local LICENCE_CSS = box_css(C.amberNoteBg, C.amberNoteBd, C.amber200) -- licence of md_beat_this, warnings
+local STATUS_CSS = box_css(C.slate950, C.slate800, C.slate300)        -- tasks and messages
+local DONE_CSS = box_css(C.emeraldBg, C.emeraldBd, C.emerald300)      -- result of the work
+local ERROR_CSS = box_css(C.roseNoteBg, C.roseNoteBd, C.rose300)      -- error, cancelled
 
-local TAB_MUTED_CSS = [[
-  QTabBar {
-    font-size: 12px;
-  }
-  QTabBar::tab {
-    background-color: #1D1D22;
-    color: #6B6B76;
-    border: 1px solid #2B2B32;
-    padding: 6px 18px;
-    min-width: 155px;
-    margin-right: 6px;
-    border-radius: 4px;
-  }
-  QTabBar::tab:selected {
-    background-color: #27272E;
-    color: #9CA3AF;
-    border: 1px solid #383842;
-  }
-]]
+local CLIP_OK_CSS = "color: " .. C.slate100 .. "; font-weight: bold;"
+local CLIP_BAD_CSS = "color: " .. C.rose300 .. "; font-weight: bold;"
+local CLIP_NONE_CSS = "color: " .. C.slate400 .. "; font-weight: bold;"
+local LABEL_CSS = "color: " .. C.slate400 .. ";"
+local VALUE_CSS = "color: " .. C.slate200 .. ";"
 
-local SECTION_HDR_CSS = "background-color: #23232A; border-top: 1px solid #34343F; border-bottom: 1px solid #2C2C34; padding: 4px 8px; color: #B4B4C0; font-weight: bold; font-size: 11px;"
-
-local DIALOG_STYLE = [[
-  #BeatAnalyzerWin {
-    background-color: #18181B;
-    color: #E6E6EA;
-  }
-]]
+local DIALOG_STYLE = "#BeatAnalyzerWin { background-color: " .. C.slate900 .. "; color: " .. C.slate200 .. "; }"
 
 local function color_index(color)
   for i, c in ipairs(M.MARKER_COLORS) do
@@ -2148,9 +2079,9 @@ end
 local function swatch_style(color)
   local hex = SWATCH_HEX[color]
   if hex then
-    return "background-color: " .. hex .. "; border: 1px solid #52525B; border-radius: 2px;"
+    return "background-color: " .. hex .. "; border: 1px solid " .. C.slate600 .. "; border-radius: 2px;"
   end
-  return "background-color: #27272D; border: 1px dashed #52525B; border-radius: 2px;"
+  return "background-color: " .. C.slate800 .. "; border: 1px dashed " .. C.slate600 .. "; border-radius: 2px;"
 end
 
 function M.main()
@@ -2180,7 +2111,7 @@ function M.main()
 
   local function h_divider(id)
     return ui:Label({ ID = id, Text = "", Weight = 0, MinimumSize = { 0, 1 }, MaximumSize = { 9999, 1 },
-                      StyleSheet = "background-color: #2E2E36;" })
+                      StyleSheet = "background-color: " .. C.slate800 .. ";" })
   end
 
   local function color_col(slot, label)
@@ -2189,7 +2120,7 @@ function M.main()
       ui:HGroup({ Weight = 0, Spacing = 5,
         ui:Label({ ID = id .. "Swatch", Text = "", Weight = 0, MinimumSize = { 10, 10 }, MaximumSize = { 10, 10 } }),
         ui:Label({ ID = id .. "Label", Text = label, Weight = 1,
-                   StyleSheet = "color: #C8C8D0; font-size: 11px;" }) }),
+                   StyleSheet = "color: " .. C.slate300 .. "; font-size: 11px;" }) }),
       ui:ComboBox({ ID = id, Weight = 0 }) })
   end
 
@@ -2212,10 +2143,10 @@ function M.main()
       -- 0. Pinned Context Overview (Clip + Timeline at a glance)
       ui:HGroup({ Weight = 0, Spacing = 10,
         ui:Label({ ID = "ClipInfo", Text = "", WordWrap = true, Weight = 1, MinimumSize = { 0, 20 },
-                   StyleSheet = "color: #F4F4F6; font-weight: bold;" }),
+                   StyleSheet = CLIP_OK_CSS }),
         ui:Label({ ID = "OverviewTimeline", Text = "", Weight = 0,
                    Alignment = { AlignRight = true, AlignVCenter = true },
-                   StyleSheet = "color: #9CA3AF;" }) }),
+                   StyleSheet = LABEL_CSS }) }),
 
       -- 1. Source & Analysis Model Section Header + Tabs
       section_header("SecSource", SEC_SOURCE),
@@ -2226,48 +2157,48 @@ function M.main()
       -- Analyse Mode Controls (leaf widgets toggled via Hidden; never hide VGroup/HGroup)
       ui:HGroup({ Weight = 0, Spacing = 8,
         ui:Button({ ID = "ModelBeatThis", Text = MODEL_BT_TEXT, Weight = 1, MinimumSize = { 0, 44 },
-                    ToolTip = T("plugin.model_tip"), StyleSheet = MODEL_ACTIVE_CSS }),
+                    ToolTip = T("plugin.model_tip"), StyleSheet = MODEL_BT_ACTIVE_CSS }),
         ui:Button({ ID = "ModelMd", Text = MODEL_MD_TEXT, Weight = 1, MinimumSize = { 0, 44 },
                     ToolTip = T("plugin.model_tip"), StyleSheet = MODEL_IDLE_CSS }) }),
 
       ui:Label({ ID = "MdNotice", Text = T("plugin.md_notice", { url = M.MD_URL }), WordWrap = true,
                  Weight = 0, MinimumSize = { 0, 48 }, MaximumSize = { 9999, 48 }, Hidden = true,
                  Alignment = { AlignVCenter = true, AlignLeft = true },
-                 StyleSheet = "background-color: #221D15; border: 1px solid #4E3E26; border-radius: 4px; padding: 5px 10px; color: #FCD34D;" }),
+                 StyleSheet = LICENCE_CSS }),
       ui:CheckBox({ ID = "MdConfirm", Text = T("plugin.md_confirm"), Checked = false, Weight = 0,
                     MinimumSize = { 0, 24 }, Hidden = true }),
 
       ui:HGroup({ Weight = 0, Spacing = 8,
         ui:Label({ ID = "SmoothLabel", Text = T("plugin.smooth_label"), Weight = 0,
                    MinimumSize = { LABEL_WIDTH, 0 }, ToolTip = T("plugin.smooth_tip"),
-                   StyleSheet = "color: #A1A1AA;" }),
+                   StyleSheet = LABEL_CSS }),
         ui:Slider({ ID = "Smooth", Minimum = 0, Maximum = 100, Value = settings.smooth, Weight = 1,
                     ToolTip = T("plugin.smooth_tip") }),
         ui:Label({ ID = "SmoothValue", Text = "", Weight = 0, MinimumSize = { 50, 0 },
-                   StyleSheet = "color: #E4E4E7;" }) }),
+                   StyleSheet = VALUE_CSS }) }),
 
       -- Load JSON Controls (leaf widgets toggled via Hidden)
       ui:HGroup({ Weight = 0, Spacing = 8,
         ui:Label({ ID = "JsonLabel", Text = "JSON:", Weight = 0, Hidden = true,
-                   MinimumSize = { LABEL_WIDTH, 0 }, StyleSheet = "color: #A1A1AA;" }),
+                   MinimumSize = { LABEL_WIDTH, 0 }, StyleSheet = LABEL_CSS }),
         ui:Label({ ID = "JsonPath", Text = T("plugin.json_none"), WordWrap = true, Weight = 1,
                    MinimumSize = { 0, 20 }, Hidden = true }),
         ui:Button({ ID = "Choose", Text = T("plugin.btn_choose"), Weight = 0, Hidden = true,
                     StyleSheet = NEUTRAL_BTN_CSS }) }),
       ui:Label({ ID = "Engine", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 18 },
-                 Hidden = true, StyleSheet = "color: #9CA3AF;" }),
+                 Hidden = true, StyleSheet = LABEL_CSS }),
 
       -- Dedicated Alert / Note Banner (leaf Label toggled via Hidden)
       ui:Label({ ID = "Warnings", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 28 }, Hidden = true,
                  Alignment = { AlignTop = true, AlignLeft = true },
-                 StyleSheet = "background-color: #2B2217; border: 1px solid #6E4D24; border-radius: 4px; padding: 6px 10px; color: #FCD34D;" }),
+                 StyleSheet = NOTE_CSS }),
 
       -- 2. Resolve Output Section Header + Controls
       section_header("SecOutput", SEC_OUTPUT),
 
       ui:CheckBox({ ID = "Timeline", Text = T("plugin.check_timeline"), Checked = settings.timeline, Weight = 0 }),
       ui:Label({ ID = "Explain", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 34 },
-                 StyleSheet = "color: #9CA3AF;" }),
+                 StyleSheet = LABEL_CSS }),
       h_divider("OutputDivider"),
       ui:HGroup({ Weight = 0, Spacing = 8,
         ui:CheckBox({ ID = "Colors", Text = T("plugin.check_colors"), Checked = settings.colors_open, Weight = 1 }),
@@ -2286,7 +2217,7 @@ function M.main()
       -- 3. Dynamic Status / Progress Label (hidden when idle so there is zero dead space)
       ui:Label({ ID = "Status", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 44 }, Hidden = true,
                  Alignment = { AlignTop = true, AlignLeft = true },
-                 StyleSheet = "background-color: #212126; border: 1px solid #32323A; border-radius: 5px; padding: 7px 10px; color: #E4E4E7;" }),
+                 StyleSheet = STATUS_CSS }),
 
       ui:VGap(0, 1),
       h_divider("DivFooter"),
@@ -2357,10 +2288,13 @@ function M.main()
     pcall(function() win:RecalcLayout() end)
     S.relayout = true
   end
-  local function status(text)
+  -- kind: nil = tasks and messages, "done" = green, "error" = red, "ask" = amber (question before removing)
+  local function status(text, kind)
     local t = tostring(text or "")
     local empty = (t == "")
     set("Status", "Text", t)
+    set("Status", "StyleSheet", kind == "done" and DONE_CSS or kind == "error" and ERROR_CSS
+      or kind == "ask" and LICENCE_CSS or STATUS_CSS)
     set("Status", "Hidden", empty)
     if not empty then
       fit_box("Status", t, 1, 6.5, 16)
@@ -2446,8 +2380,8 @@ function M.main()
     set("ModelBeatThis", "Enabled", unlocked)
     set("ModelMd", "Enabled", unlocked)
     if unlocked then
-      set("ModelBeatThis", "StyleSheet", (not is_md) and MODEL_ACTIVE_CSS or MODEL_IDLE_CSS)
-      set("ModelMd", "StyleSheet", is_md and MODEL_ACTIVE_CSS or MODEL_IDLE_CSS)
+      set("ModelBeatThis", "StyleSheet", (not is_md) and MODEL_BT_ACTIVE_CSS or MODEL_IDLE_CSS)
+      set("ModelMd", "StyleSheet", is_md and MODEL_MD_ACTIVE_CSS or MODEL_IDLE_CSS)
     else
       set("ModelBeatThis", "StyleSheet", (not is_md) and MODEL_MUTED_SELECTED_CSS or MODEL_MUTED_IDLE_CSS)
       set("ModelMd", "StyleSheet", is_md and MODEL_MUTED_SELECTED_CSS or MODEL_MUTED_IDLE_CSS)
@@ -2599,8 +2533,7 @@ function M.main()
     local text = table.concat(lines_list, "\n")
     set("Warnings", "Text", text)
     set("Warnings", "StyleSheet", is_warning
-      and "background-color: #2B2217; border: 1px solid #6E4D24; border-radius: 4px; padding: 5px 10px; color: #FCD34D;"
-      or  "background-color: #1A2330; border: 1px solid #2D4A6E; border-radius: 4px; padding: 5px 10px; color: #93C5FD;")
+      and LICENCE_CSS or NOTE_CSS)
     fit_box("Warnings", text, 1, 6, 14)
     set("Warnings", "Hidden", false)
   end
@@ -2620,7 +2553,7 @@ function M.main()
       end
       set("ClipInfo", "Text", clip_text)
       set("ClipInfo", "StyleSheet", (S.info.ok and model_ok())
-        and "color: #F4F4F6; font-weight: bold;" or "color: #FCA5A5; font-weight: bold;")
+        and CLIP_OK_CSS or CLIP_BAD_CSS)
       fit("ClipInfo", clip_text, 1, 120)
       local mp3 = S.info.ok and M.is_mp3(S.info.path)
       set_alert(mp3 and { T("plugin.note_mp3") } or {}, false)
@@ -2639,7 +2572,7 @@ function M.main()
       local clip_text = S.info.ok and S.info.clip_text or (S.info.error or "")
       set("ClipInfo", "Text", clip_text)
       set("ClipInfo", "StyleSheet", S.info.ok
-        and "color: #F4F4F6; font-weight: bold;" or "color: #FCA5A5; font-weight: bold;")
+        and CLIP_OK_CSS or CLIP_BAD_CSS)
       local alerts, has_warn = {}, false
       for _, w in ipairs(S.info.warnings or {}) do
         alerts[#alerts + 1] = "⚠ " .. w
@@ -2666,7 +2599,7 @@ function M.main()
       set("JsonPath", "Text", T("plugin.json_none"))
       set("JsonPath", "ToolTip", "")
       set("ClipInfo", "Text", T("plugin.json_none"))
-      set("ClipInfo", "StyleSheet", "color: #9CA3AF; font-weight: bold;")
+      set("ClipInfo", "StyleSheet", CLIP_NONE_CSS)
       set_alert({}, false)
       set("Engine", "Hidden", true)
       S.tinfo = M.timeline_info(current_timeline(), {})
@@ -2739,7 +2672,7 @@ function M.main()
     S.failed = failed and S.analysis and { path = S.analysis.path, model = S.analysis.model } or nil
     S.state, S.analysis = "select", nil
     lock(false)
-    status(text)
+    status(text, failed and "error" or nil)
     refresh()
   end
 
@@ -2750,13 +2683,13 @@ function M.main()
     end
     local dir, err = M.new_job(info.path, { lang = BA.lang, slider = smooth_value(), model = model_value() })
     if not dir then
-      status(tostring(err))
+      status(tostring(err), "error")
       return
     end
     local ok, lerr = M.launch(dir)
     if not ok then
       M.remove_job(dir)
-      status(tostring(lerr))
+      status(tostring(lerr), "error")
       return
     end
     S.analysis = { dir = dir, started = G_os.time(), clip = info.clip, path = info.path, model = model_value(),
@@ -2820,7 +2753,7 @@ function M.main()
       M.remove_job(S.job_dir)
       S.job_dir = nil
     end
-    status(S.last_result_msg)
+    status(S.last_result_msg, "done")
     lock(true)
     log(S.job.msg)
     if S.close_requested then   -- Resolve closed the window during the work: end now that it is done
@@ -2937,7 +2870,7 @@ function M.main()
     local tl = get("Timeline", "Checked") and current_timeline() or false
     local job, err = M.start(S.json, { colors = read_colors(), timeline = tl })
     if not job then
-      status(tostring(err))
+      status(tostring(err), "error")
       return
     end
     S.job, S.state = job, "work"
@@ -2955,8 +2888,9 @@ function M.main()
     end
     S.remove_clips, S.remove_tl = clips, current_timeline()
     local r = M.removal(clips, S.remove_tl)
-    status(r.text)
-    if r.markers + r.tracks + r.srt_clips > 0 then
+    local ask = r.markers + r.tracks + r.srt_clips > 0
+    status(r.text, ask and "ask" or nil)
+    if ask then
       S.confirm_from = S.state
       S.state = "confirm"
       lock(true)
@@ -2968,7 +2902,7 @@ function M.main()
       return
     end
     local done = M.remove(S.remove_clips, S.remove_tl)
-    status(done.text)
+    status(done.text, "done")
     S.state = "select"
     lock(false)
     refresh()
@@ -2980,7 +2914,7 @@ function M.main()
       S.state = back
       if back == "result" then
         lock(true)
-        status(S.last_result_msg or "")
+        status(S.last_result_msg or "", "done")
       else
         lock(false)
         refresh()

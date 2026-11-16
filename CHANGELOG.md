@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.14] – 2026-11-16
+
+### Geändert
+- **Resolve-Fenster in den Farben der Web-App** (Wunsch des Nutzers: gleiche Bedeutung = gleiche Farbe):
+  - Fläche und Text in Schiefergrau (slate) wie die Web-App statt Zinkgrau.
+  - **Cyan** = Hauptaktion und Auswahl: Knopf *Analysieren* / *Marker setzen*, gewählter Reiter, gewählte Kachel beat_this, Hinweis MP3.
+  - **Bernstein** = md_beat_this: gewählte Kachel, Lizenzkasten; auch die Rückfrage vor dem Entfernen.
+  - **Rot (rose)** = Fehler und *Entfernen*; **Grün (emerald)** = Ergebnis nach getaner Arbeit.
+  - Die Farbpunkte der Marker bleiben in den Farben von Resolve.
+
 ## [0.2.13] – 2026-11-16
 
 Neues Design des Resolve-Fensters (Entwurf des Nutzers mit Google Gemini, in Resolve getestet), übernommen und an BeatAnalyzer angepasst.
