@@ -75,6 +75,8 @@
   beat_this hört die „1“; mit „Glätten“ gleichmäßig an der gehörten „1“, Neuansatz nach Edits.
 - Aussage „mit NVIDIA-Grafikkarte über CUDA“ prüfen (installiert die Standardinstallation die CPU-Fassung?).
 - Abschnitt „Modelle und Lizenzen“ ist schon da (0.1.7).
+- **CHANGELOG (und README) auf Englisch übersetzen** – die englischen Release Notes (`docs/releases/0.2.12.md`)
+  verweisen dann ohne Hinweis auf eine deutsche Fassung.
 
 ## 3. Resolve Free (Idee, nicht entschieden)
 
