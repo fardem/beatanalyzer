@@ -65,6 +65,8 @@
 
 ### Sammlung aus dem Test 0.2.14 (noch nicht bauen – erst nach allen Tests des Nutzers)
 
+- **Testlisten:** immer nur eine Liste in der neuesten `docs/resolve-test-<version>.md`, offene Punkte älterer
+  Versionen werden dort übernommen und die ältere Liste gelöscht (Wunsch des Nutzers).
 - **„BeatAnalyzer-Marker entfernen“:** Nach dem Klick bleibt der Knopf klickbar, und man sieht nicht, ob der Befehl
   angenommen wurde. Fehlt: (a) Rückmeldung sofort nach dem Klick, (b) optische Sperre des Knopfs, solange die
   Rückfrage bzw. das Entfernen läuft.
