@@ -586,9 +586,9 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
     }
     # Resolve plays MP3 without dropping the Xing frame and the encoder delay: markers must move by this much
     if original_filename.lower().endswith(".mp3"):
-        offset = mp3_offset.resolve_offset(file_path)
-        if offset > 0:
-            analysis_result["resolveOffset"] = round(offset, 5)
+        # always written for MP3, also 0 (no Xing/Info frame: Resolve plays it on time). Without the field the
+        # script cannot tell a checked MP3 from an old JSON and warned wrongly (Resolve test 0.2.14).
+        analysis_result["resolveOffset"] = round(mp3_offset.resolve_offset(file_path), 5)
     if info["id"] == "md_beat_this":
         analysis_result["license"] = "CC BY-NC 4.0"
         analysis_result["attribution"] = MD_BEAT_THIS_ATTRIBUTION
@@ -655,8 +655,8 @@ def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) ->
         data["engine"] = dict(result["engineInfo"])
         if result.get("selectedModel") == "md_beat_this" and data["engine"].get("id") != "md_beat_this":
             data["engine"]["requestedModel"] = "md_beat_this"   # librosa stood in for md_beat_this
-    if result.get("resolveOffset"):
-        data["resolveOffset"] = result["resolveOffset"]   # seconds; the script moves markers on MP3 clips
+    if result.get("resolveOffset") is not None:
+        data["resolveOffset"] = result["resolveOffset"]   # seconds (0 = checked, no shift); the script moves MP3 markers
     if (result.get("engineInfo") or {}).get("id") == "md_beat_this":
         data["license"] = result.get("license") or "CC BY-NC 4.0"
         data["attribution"] = result.get("attribution") or MD_BEAT_THIS_ATTRIBUTION

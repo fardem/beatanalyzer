@@ -63,6 +63,33 @@
   unter 15 s bleiben ganz sichtbar; zurück mit „Ganze Datei anzeigen“. Dazu: Takt-Beschriftungen und Zeitachse
   überlappen bei vielen Takten.
 
+### Sammlung aus dem Test 0.2.14 – umgesetzt in 0.3.0 (außer: Farben beobachten; Server dekodiert für den Browser)
+
+- **Testlisten:** immer nur eine Liste in der neuesten `docs/resolve-test-<version>.md`, offene Punkte älterer
+  Versionen werden dort übernommen und die ältere Liste gelöscht (Wunsch des Nutzers).
+- **„BeatAnalyzer-Marker entfernen“:** Nach dem Klick bleibt der Knopf klickbar, und man sieht nicht, ob der Befehl
+  angenommen wurde. Fehlt: (a) Rückmeldung sofort nach dem Klick, (b) optische Sperre des Knopfs, solange die
+  Rückfrage bzw. das Entfernen läuft.
+- **Reiter-Text abgeschnitten** (Screenshots 0.2.14, gesperrter Zustand): „usgewählten Clip analysierei“ – der Reiter
+  ist für den fetten Text zu schmal (min-width 155 px); Breite nach Text bzw. kein Fettdruck.
+- **Falsche MP3-Warnung beim Weg „JSON laden“** (Test 10, „01. Mensch.mp3“, md_beat_this): Die JSON hat kein
+  `resolveOffset`. Ursache: Das MP3 hat keinen Xing/Info-Frame → Versatz 0 → der Server schreibt das Feld nicht →
+  das Skript hält die JSON für alt/Browser und warnt. Die Marker liegen trotzdem richtig (ohne Xing-Frame verschiebt
+  Resolve nicht; die Web-App verschiebt nichts). Abhilfe: Server schreibt bei MP3 immer `resolveOffset` (auch 0);
+  das Skript warnt nur, wenn das Feld fehlt, und zeigt bei 0 „kein Ausgleich nötig“.
+- **FLAC „03. Serseri.flac“** (Test 9): Web-App meldet „lässt sich im Browser nicht dekodieren“; Resolve importiert
+  die Datei auch nicht, Windows/Navidrome spielen sie. Ursache 1: Die Web-App dekodiert jede Datei zuerst im Browser
+  (Wiedergabe, Wellenform) und bricht dort ab, auch wenn der Server sie lesen könnte. Abhilfe: bei laufendem Server
+  dekodieren lassen (z. B. Server liefert WAV für Wiedergabe/Wellenform). Ursache 2 (warum Resolve/Browser ablehnen)
+  geklärt: **ID3v2-Tag (4720 Bytes) vor `fLaC`** – nicht nach FLAC-Format, betrifft das ganze Album (vermutlich
+  vom Tagger geschrieben). Sonst normal (44,1 kHz, 16 Bit, Stereo, libFLAC 1.3.1). Server (soundfile, PyAV) liest
+  sie; Chromium hier dekodiert sie auch, der Browser des Nutzers und Resolve nicht. Abhilfe für den Nutzer: ID3v2
+  aus den FLAC entfernen (z. B. Mp3tag: Tag-Typen nur „APE/Vorbis“, ID3v2 entfernen; oder
+  `ffmpeg -i in.flac -map 0 -c copy out.flac`). Für BeatAnalyzer: Web-App erkennt „ID3 vor fLaC“ und meldet das
+  klar (Resolve nimmt solche Dateien nicht); ggf. Server dekodiert, wenn der Browser es nicht kann.
+- Eindruck Farben (Test 3): passt zur Web-App, „vielleicht ein wenig zu viel gleiche Farben in unterschiedlichen
+  Tönen“ – beobachten, keine Änderung verlangt.
+
 ## 2. Teilprojekt 5 – README (Gesamtkonzept Abschnitt 10)
 
 - Ablauf von 0.1.x statt 0.0.5 (Resolve-Fenster mit beiden Wegen, Glätten, Farben, Entfernen, Sprachen, Anzeige
@@ -75,6 +102,7 @@
   beat_this hört die „1“; mit „Glätten“ gleichmäßig an der gehörten „1“, Neuansatz nach Edits.
 - Aussage „mit NVIDIA-Grafikkarte über CUDA“ prüfen (installiert die Standardinstallation die CPU-Fassung?).
 - Abschnitt „Modelle und Lizenzen“ ist schon da (0.1.7).
+- **Screenshot des Resolve-Fensters (Lua-Dialog) fehlt** in der README – aus der letzten Version (0.3.0) machen.
 - **Hauptsprache des Repos wird Englisch:** README, Doku und Code-Kommentare auf Englisch. Der **CHANGELOG nur
   englisch** (keine deutsche oder türkische Fassung). Die englischen Release Notes (`docs/releases/0.2.12.md`) verweisen dann ohne Hinweis auf eine deutsche Fassung.
 - **README in drei Sprachen:** `README.md` englisch (Hauptsprache), dazu deutsch und türkisch (z. B.

@@ -306,11 +306,54 @@ class DialogTests(unittest.TestCase):
             self.assertFalse(self.item("RemoveYes").Hidden)
             self.assertEqual(len(self.markers(self.mock.song)), 8)
             self.click("RemoveYes")
+            # Resolve test 0.2.14: the click must answer at once and lock the window until the removal is done
+            self.assertEqual(self.item("Status").Text, "BeatAnalyzer-Marker werden entfernt …")
+            self.assertFalse(self.item("RemoveYes").Enabled)
+            self.assertFalse(self.item("Close").Enabled)
+            self.assertFalse(self.item("WayTabs").Enabled)
+            self.click("RemoveYes")                                # a second click does nothing
+            self.click("Close")
+            self.assertEqual(len(self.markers(self.mock.song)), 8)  # not yet: the work starts on the next ticks
+            self.tick(2)
             self.assertTrue(self.item("Status").Text.startswith("Entfernt: 8 Marker"))
+            self.assertIn("#6EE7B7", self.item("Status").StyleSheet)   # done: green
             self.assertTrue(self.item("RemoveYes").Hidden)
+            self.assertTrue(self.item("Close").Enabled)
             self.assertEqual(len(self.markers(self.mock.song)), 0)
             self.close()
         self.run_dialog(scenario)
+        self.assertTrue(self.exited())
+
+    def test_tabs_are_not_bold(self):
+        # Resolve test 0.2.14: the bold text of the chosen tab was cut ("usgewählten Clip analysierei")
+        def scenario():
+            self.assertNotIn("bold", self.item("WayTabs").StyleSheet)
+            self.pick_json()
+            self.click("OK")
+            self.assertNotIn("bold", self.item("WayTabs").StyleSheet)  # also locked
+            self.tick(10)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_json_for_an_mp3_without_encoder_delay_gets_no_warning(self):
+        # Resolve test 0.2.14 ("01. Mensch.mp3"): an MP3 without Xing frame has resolveOffset 0; that is no old JSON
+        self.lua.execute("MOCK.song.file = 'Müller Song.mp3'")
+        data = resolve_marker_data(trs.sample_result())
+        data["fileName"], data["resolveOffset"] = "Müller Song.mp3", 0.0
+        Path(self.json_path).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+        def scenario():
+            self.pick_json()
+            text = self.item("Warnings").Text
+            self.assertFalse(self.item("Warnings").Hidden)
+            self.assertNotIn("⚠", text)
+            self.assertIn("kein Ausgleich nötig", text)
+            self.click("OK")
+            self.tick(10)
+            self.assertNotIn("MP3: Marker um", self.item("Status").Text)   # nothing moved
+            self.close()
+        self.run_dialog(scenario)
+        self.assertEqual(sorted(self.markers(self.mock.song))[0], 13)   # first beat 0.5 s at 25 fps: not moved
 
     def test_remove_without_json_uses_only_the_selection(self):
         # a media pool item without a file name (e.g. a timeline) must not become a target

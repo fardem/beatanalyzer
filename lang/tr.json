@@ -69,6 +69,7 @@
     "remove_done": "Kaldırıldı: {markers} marker, {tracks} Subtitle Track, {srt} Subtitle clip'i.",
     "remove_nothing": "'{song}' üzerinde BeatAnalyzer'a ait bir şey bulunamadı.",
     "btn_remove_yes": "Kaldır",
+    "msg_removing": "BeatAnalyzer marker'ları kaldırılıyor …",
     "title": "BeatAnalyzer {version}",
     "json_none": "JSON seçilmedi.",
     "btn_choose": "Seç …",
@@ -140,7 +141,8 @@
     "warn_mp3": "MP3: Resolve MP3 dosyalarını BeatAnalyzer'ın analiz ettiğinden yaklaşık 50 ms geç çalar. Bu JSON düzeltme içermiyor (eski JSON veya tarayıcıda analiz): işaretçiler vuruştan bu kadar önce durur. Sunucuyla yeniden analiz edin veya şarkıyı WAV ya da FLAC olarak kullanın.",
     "note_mp3": "MP3: Resolve MP3 dosyalarını yaklaşık 50 ms geç çalar; BeatAnalyzer işaretçileri buna göre kaydırır.",
     "msg_mp3_shift": "MP3: işaretçiler {ms} ms ileri kaydırıldı (Resolve MP3'ü bu kadar geç çalar).",
-    "note_mp3_json": "MP3: işaretçiler {ms} ms sonra konur (Resolve MP3 dosyalarını bu kadar geç çalar)."
+    "note_mp3_json": "MP3: işaretçiler {ms} ms sonra konur (Resolve MP3 dosyalarını bu kadar geç çalar).",
+    "note_mp3_json_zero": "MP3: düzeltme gerekmiyor (dosyada kodlayıcı gecikmesi yok; Resolve gecikmesiz çalar)."
   },
   "web": {
     "app": {
@@ -171,6 +173,7 @@
     },
     "error": {
       "decode": "“{file}” ses dosyası tarayıcıda çözülemiyor. Desteklenenler: MP3, WAV, AAC/M4A, FLAC ve OGG.",
+      "decode_flac_id3": "“{file}” FLAC dosyası bir ID3 etiketiyle başlıyor (MP3’teki gibi). FLAC biçimi buna izin vermez; tarayıcılar ve DaVinci Resolve bu dosyaları reddeder. Etiketi kaldırın, örn.: ffmpeg -i \"{file}\" -map 0 -c copy yeni.flac",
       "no_server": "Yerel sunucu yanıt vermiyor.",
       "server_failed": "Yerel sunucuda analiz başarısız: {message}",
       "unexpected": "Beklenmeyen bir hata oluştu."

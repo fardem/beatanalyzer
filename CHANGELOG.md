@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0] – 2026-11-16
+
+Teilprojekt 4 fertig: Web-App und Resolve-Fenster sprechen dieselbe Sprache, Begriffe und Farben. Korrekturen aus dem Test von 0.2.14.
+
+### Behoben
+- **„BeatAnalyzer-Marker entfernen“ antwortet sofort:** Nach *Entfernen* zeigt das Fenster „BeatAnalyzer-Marker werden entfernt …“ und sperrt alle Knöpfe, bis die Arbeit fertig ist; danach das Ergebnis im grünen Kasten. Vorher lief das Entfernen im Klick selbst, das Fenster zeichnete sich nicht neu, und der Knopf wirkte, als nehme er den Klick nicht an.
+- **Reiter-Text nicht mehr abgeschnitten** („usgewählten Clip analysierei“): Der gewählte Reiter ist nicht mehr fett (Resolve misst die Breite für normale Schrift).
+- **Keine falsche MP3-Warnung beim Weg „JSON laden“:** MP3-Dateien ohne Encoder-Vorlauf (ohne Xing/Info-Frame) spielt Resolve ohne Verzögerung; der Versatz ist 0. Der Server schreibt `resolveOffset` jetzt bei jedem MP3 (auch 0), das Fenster zeigt dann „kein Ausgleich nötig“ statt der Warnung „ältere JSON oder Browser“. Gewarnt wird nur noch, wenn das Feld fehlt.
+- **FLAC mit ID3-Tag:** Beginnt eine FLAC-Datei mit einem ID3-Tag (im FLAC-Format nicht vorgesehen; Browser und Resolve lehnen sie ab), nennt die Web-App genau das und wie man den Tag entfernt (`ffmpeg -i "datei.flac" -map 0 -c copy neu.flac`), statt nur „lässt sich nicht dekodieren“.
+
 ## [0.2.14] – 2026-11-16
 
 ### Geändert
