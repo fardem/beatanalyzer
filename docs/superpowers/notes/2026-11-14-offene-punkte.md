@@ -75,8 +75,10 @@
   beat_this hört die „1“; mit „Glätten“ gleichmäßig an der gehörten „1“, Neuansatz nach Edits.
 - Aussage „mit NVIDIA-Grafikkarte über CUDA“ prüfen (installiert die Standardinstallation die CPU-Fassung?).
 - Abschnitt „Modelle und Lizenzen“ ist schon da (0.1.7).
-- **CHANGELOG (und README) auf Englisch übersetzen** – die englischen Release Notes (`docs/releases/0.2.12.md`)
-  verweisen dann ohne Hinweis auf eine deutsche Fassung.
+- **Hauptsprache des Repos wird Englisch:** README, CHANGELOG, Doku und Code-Kommentare auf Englisch. Die englischen
+  Release Notes (`docs/releases/0.2.12.md`) verweisen dann ohne Hinweis auf eine deutsche Fassung.
+- **README in drei Sprachen:** `README.md` englisch (Hauptsprache), dazu deutsch und türkisch (z. B.
+  `README.de.md`, `README.tr.md`), oben in jeder Fassung Links zu den anderen Sprachen.
 
 ## 3. Resolve Free (Idee, nicht entschieden)
 
