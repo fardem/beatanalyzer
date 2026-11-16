@@ -81,7 +81,12 @@
   die Datei auch nicht, Windows/Navidrome spielen sie. Ursache 1: Die Web-App dekodiert jede Datei zuerst im Browser
   (Wiedergabe, Wellenform) und bricht dort ab, auch wenn der Server sie lesen könnte. Abhilfe: bei laufendem Server
   dekodieren lassen (z. B. Server liefert WAV für Wiedergabe/Wellenform). Ursache 2 (warum Resolve/Browser ablehnen)
-  offen – Angaben zur Datei vom Nutzer nötig (Abtastrate, Bittiefe, Kanäle, ID3-Tag vor dem FLAC?).
+  geklärt: **ID3v2-Tag (4720 Bytes) vor `fLaC`** – nicht nach FLAC-Format, betrifft das ganze Album (vermutlich
+  vom Tagger geschrieben). Sonst normal (44,1 kHz, 16 Bit, Stereo, libFLAC 1.3.1). Server (soundfile, PyAV) liest
+  sie; Chromium hier dekodiert sie auch, der Browser des Nutzers und Resolve nicht. Abhilfe für den Nutzer: ID3v2
+  aus den FLAC entfernen (z. B. Mp3tag: Tag-Typen nur „APE/Vorbis“, ID3v2 entfernen; oder
+  `ffmpeg -i in.flac -map 0 -c copy out.flac`). Für BeatAnalyzer: Web-App erkennt „ID3 vor fLaC“ und meldet das
+  klar (Resolve nimmt solche Dateien nicht); ggf. Server dekodiert, wenn der Browser es nicht kann.
 - Eindruck Farben (Test 3): passt zur Web-App, „vielleicht ein wenig zu viel gleiche Farben in unterschiedlichen
   Tönen“ – beobachten, keine Änderung verlangt.
 
