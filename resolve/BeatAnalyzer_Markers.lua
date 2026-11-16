@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.2.12"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.2.13"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -59,6 +59,8 @@ local BA = {
       ["plugin.analyze_many"] = "Several clips selected – please select exactly one audio clip.",
       ["plugin.analyze_no_path"] = "The selected item has no file (e.g. a Timeline or a Compound Clip).",
       ["plugin.analyze_none"] = "Select exactly one audio clip in the Media Pool.",
+      ["plugin.btn_analyze"] = "Analyse",
+      ["plugin.btn_apply"] = "Apply markers",
       ["plugin.btn_cancel"] = "Cancel",
       ["plugin.btn_choose"] = "Choose …",
       ["plugin.btn_close"] = "Close",
@@ -91,9 +93,8 @@ local BA = {
       ["plugin.md_confirm"] = "I use md_beat_this for non-commercial purposes only (CC BY-NC 4.0)",
       ["plugin.md_confirm_needed"] = "Tick the licence box to analyse with md_beat_this.",
       ["plugin.md_notice"] = "md_beat_this is licensed under CC BY-NC 4.0 and may only be used for non-commercial purposes, within the terms of the CC BY-NC 4.0 licence: {url}",
-      ["plugin.model_beat_this"] = "beat_this (MIT) – standard",
-      ["plugin.model_label"] = "Model",
-      ["plugin.model_md"] = "md_beat_this (CC BY-NC 4.0) – non-commercial only",
+      ["plugin.model_beat_this"] = "beat_this (MIT)\nStandard · also commercial",
+      ["plugin.model_md"] = "md_beat_this (CC BY-NC 4.0)\nNon-commercial only",
       ["plugin.model_tip"] = "beat_this (CPJKU, MIT): standard, also for commercial work.\nmd_beat_this (Masked Diffusion, CC BY-NC 4.0): non-commercial use only; installed separately (see README).",
       ["plugin.msg_analysis_error"] = "Analysis failed: {message}. Nothing in the project has changed.",
       ["plugin.msg_bad_format"] = "Unknown format '{format}', expected '{expected}'. Export the file in BeatAnalyzer under Export -> DaVinci Resolve.",
@@ -139,6 +140,8 @@ local BA = {
       ["plugin.remove_confirm"] = "Remove from '{song}': {markers} BeatAnalyzer markers, {tracks} Subtitle Track(s) in the open Timeline, {srt} Subtitle clip(s) in the folder BeatAnalyzer? Markers set by hand stay.",
       ["plugin.remove_done"] = "Removed: {markers} markers, {tracks} Subtitle Track(s), {srt} Subtitle clip(s).",
       ["plugin.remove_nothing"] = "Nothing from BeatAnalyzer found on '{song}'.",
+      ["plugin.sec_output"] = "2. Output in Resolve",
+      ["plugin.sec_source"] = "1. Source & analysis model",
       ["plugin.smooth_label"] = "Smoothing",
       ["plugin.smooth_off"] = "off",
       ["plugin.smooth_tip"] = "0 % = off: bars as beat_this hears them.\nMore % = a more even grid.\n100 % = fully smoothed; starts anew only where the '1' is clearly elsewhere.\nThe beats never change.",
@@ -1896,7 +1899,7 @@ function M.settings_path()
 end
 
 function M.load_settings()
-  local s = { json_dir = "", timeline = true, colors_open = false, colors = {}, geometry = nil, way = "json",
+  local s = { json_dir = "", timeline = true, colors_open = false, colors = {}, geometry = nil, way = "analyze",
               smooth = 90, model = "beat_this" }
   for _, slot in ipairs(COLOR_SLOTS) do
     s.colors[slot] = M.DEFAULT_COLORS[slot]
@@ -1957,19 +1960,181 @@ end
 
 -- ─── Dialogs ─────────────────────────────────────────────────────────────────
 
--- One window with the states "select" (before OK), "confirm" (remove asks), "work" (locked, a timer does the
--- job in steps) and "result". A timer every 50 ms: in "select" the clip and the timeline are checked again
--- about once a second, in "work" one job step runs per tick.
+-- Master layout: flat leaf rows in root VGroup (never set Hidden on VGroup/HGroup in Resolve
+-- UIManager), section header bars (#SecSource/#SecOutput), 2-button model selector, explicit
+-- per-button StyleSheets (since Resolve ignores parent #ID button selectors), and live swatches.
 
 local TICK_MS = 50
-local WIN_MIN = { 600, 440 }   -- smaller windows wrap every line (seen in Resolve)
-local WIN_HEIGHT = 460         -- as the user found right (0.1.7: 640 was too high); a saved height is not restored
-local LINE_PX, CHAR_PX = 17, 8   -- height of a text line, mean width of a character (for wrapped labels;
-                                 -- 7 was too small: a 600 px window wraps after about 70 characters)
+local WIN_MIN = { 660, 360 }
+local WIN_HEIGHT = 440
+local LINE_PX, CHAR_PX = 19, 8
 local REFRESH_TICKS = 20
+local LABEL_WIDTH = 86
 
 local COLOR_IDS = { downbeat = "ColorDownbeat", beat2 = "ColorBeat2", beat3 = "ColorBeat3", beat4 = "ColorBeat4",
                     other = "ColorOther" }
+
+local SWATCH_HEX = {
+  Blue = "#3B82F6", Cyan = "#06B6D4", Green = "#22C55E", Yellow = "#EAB308",
+  Red = "#EF4444", Pink = "#EC4899", Purple = "#A855F7", Fuchsia = "#D946EF",
+  Rose = "#F43F5E", Lavender = "#A78BFA", Sky = "#38BDF8", Mint = "#34D399",
+  Lemon = "#FACC15", Sand = "#D6B88D", Cocoa = "#8B5E3C", Cream = "#F3E8D2",
+}
+
+local PRIMARY_BTN_CSS = [[
+  QPushButton {
+    background-color: #E05A47;
+    color: #FFFFFF;
+    border: 1px solid #E05A47;
+    border-radius: 4px;
+    padding: 6px 16px;
+    font-weight: bold;
+  }
+  QPushButton:hover {
+    background-color: #EB6B59;
+    border-color: #EB6B59;
+  }
+]]
+
+local NEUTRAL_BTN_CSS = [[
+  QPushButton {
+    background-color: #26262C;
+    color: #E4E4E7;
+    border: 1px solid #3C3C46;
+    border-radius: 4px;
+    padding: 6px 14px;
+  }
+  QPushButton:hover {
+    background-color: #303038;
+    border-color: #4E4E5A;
+  }
+]]
+
+local DISABLED_BTN_CSS = [[
+  QPushButton {
+    background-color: #1E1E24;
+    color: #6B6B76;
+    border: 1px solid #2C2C34;
+    border-radius: 4px;
+    padding: 6px 14px;
+  }
+]]
+
+local DANGER_BTN_CSS = [[
+  QPushButton {
+    background-color: #991B1B;
+    color: #FFFFFF;
+    border: 1px solid #DC2626;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-weight: bold;
+  }
+  QPushButton:hover {
+    background-color: #B91C1C;
+  }
+]]
+
+local MODEL_ACTIVE_CSS = [[
+  QPushButton {
+    background-color: #2D2022;
+    color: #FFFFFF;
+    border: 2px solid #E05A47;
+    border-radius: 5px;
+    padding: 6px 12px;
+    font-weight: bold;
+  }
+  QPushButton:hover {
+    background-color: #352427;
+  }
+]]
+
+local MODEL_IDLE_CSS = [[
+  QPushButton {
+    background-color: #222227;
+    color: #A1A1AA;
+    border: 1px solid #383842;
+    border-radius: 5px;
+    padding: 6px 12px;
+  }
+  QPushButton:hover {
+    background-color: #292930;
+    color: #E4E4E7;
+    border-color: #4E4E5A;
+  }
+]]
+
+local MODEL_MUTED_SELECTED_CSS = [[
+  QPushButton {
+    background-color: #24242B;
+    color: #9CA3AF;
+    border: 1px solid #3E3E48;
+    border-radius: 5px;
+    padding: 6px 12px;
+  }
+]]
+
+local MODEL_MUTED_IDLE_CSS = [[
+  QPushButton {
+    background-color: #1C1C21;
+    color: #6B6B76;
+    border: 1px solid #2A2A32;
+    border-radius: 5px;
+    padding: 6px 12px;
+  }
+]]
+
+local TAB_ACTIVE_CSS = [[
+  QTabBar {
+    font-size: 12px;
+  }
+  QTabBar::tab {
+    background-color: #222227;
+    color: #A1A1AA;
+    border: 1px solid #32323A;
+    padding: 6px 18px;
+    min-width: 155px;
+    margin-right: 6px;
+    border-radius: 4px;
+  }
+  QTabBar::tab:hover {
+    color: #F4F4F6;
+    border-color: #464652;
+  }
+  QTabBar::tab:selected {
+    background-color: #E05A47;
+    color: #FFFFFF;
+    border-color: #E05A47;
+  }
+]]
+
+local TAB_MUTED_CSS = [[
+  QTabBar {
+    font-size: 12px;
+  }
+  QTabBar::tab {
+    background-color: #1D1D22;
+    color: #6B6B76;
+    border: 1px solid #2B2B32;
+    padding: 6px 18px;
+    min-width: 155px;
+    margin-right: 6px;
+    border-radius: 4px;
+  }
+  QTabBar::tab:selected {
+    background-color: #27272E;
+    color: #9CA3AF;
+    border: 1px solid #383842;
+  }
+]]
+
+local SECTION_HDR_CSS = "background-color: #23232A; border-top: 1px solid #34343F; border-bottom: 1px solid #2C2C34; padding: 4px 8px; color: #B4B4C0; font-weight: bold; font-size: 11px;"
+
+local DIALOG_STYLE = [[
+  #BeatAnalyzerWin {
+    background-color: #18181B;
+    color: #E6E6EA;
+  }
+]]
 
 local function color_index(color)
   for i, c in ipairs(M.MARKER_COLORS) do
@@ -1978,6 +2143,14 @@ local function color_index(color)
     end
   end
   return #M.MARKER_COLORS   -- the last entry: no marker
+end
+
+local function swatch_style(color)
+  local hex = SWATCH_HEX[color]
+  if hex then
+    return "background-color: " .. hex .. "; border: 1px solid #52525B; border-radius: 2px;"
+  end
+  return "background-color: #27272D; border: 1px dashed #52525B; border-radius: 2px;"
 end
 
 function M.main()
@@ -1990,67 +2163,144 @@ function M.main()
   local ui = fu.UIManager
   local disp = bmd.UIDispatcher(ui)
   local settings = M.load_settings()
-  local S = { state = "select", ticks = 0 }
+  local S = { state = "select", ticks = 0, ok_ready = false, way_idx = settings.way == "json" and 1 or 0,
+              model = (settings.model == "md_beat_this") and "md_beat_this" or "beat_this" }
 
-  local function color_row(slot, label)
-    return ui:HGroup({ Weight = 0,
-      ui:Label({ ID = COLOR_IDS[slot] .. "Label", Text = label, Weight = 0, MinimumSize = { 80, 0 } }),
-      ui:ComboBox({ ID = COLOR_IDS[slot], Weight = 1 }) })
+  local BTN_ANALYZE = T("plugin.btn_analyze")
+  local BTN_APPLY = T("plugin.btn_apply")
+  local SEC_SOURCE = T("plugin.sec_source")
+  local SEC_OUTPUT = T("plugin.sec_output")
+  local MODEL_BT_TEXT = T("plugin.model_beat_this")
+  local MODEL_MD_TEXT = T("plugin.model_md")
+
+  local function section_header(id, title)
+    return ui:Label({ ID = id, Text = title, Weight = 0, MinimumSize = { 0, 24 },
+                      StyleSheet = SECTION_HDR_CSS })
   end
 
-  -- only the position is restored: Resolve sizes the width by the content (WidthGuard holds it), and an old
-  -- saved height (680/640 up to 0.1.7) was too high
+  local function h_divider(id)
+    return ui:Label({ ID = id, Text = "", Weight = 0, MinimumSize = { 0, 1 }, MaximumSize = { 9999, 1 },
+                      StyleSheet = "background-color: #2E2E36;" })
+  end
+
+  local function color_col(slot, label)
+    local id = COLOR_IDS[slot]
+    return ui:VGroup({ Weight = 1, Spacing = 4,
+      ui:HGroup({ Weight = 0, Spacing = 5,
+        ui:Label({ ID = id .. "Swatch", Text = "", Weight = 0, MinimumSize = { 10, 10 }, MaximumSize = { 10, 10 } }),
+        ui:Label({ ID = id .. "Label", Text = label, Weight = 1,
+                   StyleSheet = "color: #C8C8D0; font-size: 11px;" }) }),
+      ui:ComboBox({ ID = id, Weight = 0 }) })
+  end
+
+  local function mini_swatch(slot)
+    return ui:Label({ ID = COLOR_IDS[slot] .. "Mini", Text = "", Weight = 0,
+                      MinimumSize = { 9, 9 }, MaximumSize = { 9, 9 } })
+  end
+
   local saved = settings.geometry or { 300, 150 }
   local geometry = { saved[1], saved[2], WIN_MIN[1], WIN_HEIGHT }
+  local initial_way_idx = settings.way == "json" and 1 or 0   -- the window opens on the way used last
+
   local win = disp:AddWindow({ ID = "BeatAnalyzerWin", WindowTitle = T("plugin.title", { version = VERSION }),
-                               Geometry = geometry, MinimumSize = WIN_MIN },
+                              Geometry = geometry, MinimumSize = WIN_MIN, StyleSheet = DIALOG_STYLE },
     ui:VGroup({ Spacing = 6,
       -- Resolve ignores the requested width (and Resize) and sizes the window by its content, so the width changed
       -- with every song name. An empty row with a minimum width holds the window at least that wide.
       ui:Label({ ID = "WidthGuard", Text = "", Weight = 0, MinimumSize = { WIN_MIN[1] - 20, 1 } }),
-      ui:HGroup({ Weight = 0,
-        ui:CheckBox({ ID = "WayAnalyze", Text = T("plugin.way_analyze"), Checked = settings.way == "analyze",
-                      Weight = 0 }),
-        ui:CheckBox({ ID = "WayJson", Text = T("plugin.way_json"), Checked = settings.way ~= "analyze",
-                      Weight = 0 }),
-        ui:HGap(0, 1) }),
-      ui:HGroup({ Weight = 0,
-        ui:Label({ ID = "JsonLabel", Text = "JSON:", Weight = 0 }),
-        ui:Label({ ID = "JsonPath", Text = T("plugin.json_none"), WordWrap = true, Weight = 1, MinimumSize = { 0, 36 } }),
-        ui:Button({ ID = "Choose", Text = T("plugin.btn_choose"), Weight = 0 }) }),
-      ui:HGroup({ Weight = 0,
-        ui:Label({ ID = "ModelLabel", Text = T("plugin.model_label"), Weight = 0, ToolTip = T("plugin.model_tip") }),
-        ui:ComboBox({ ID = "Model", Weight = 1, ToolTip = T("plugin.model_tip") }) }),
-      -- md_beat_this (CC BY-NC 4.0): licence notice with the address and a check box that must be ticked
-      ui:Label({ ID = "MdNotice", Text = T("plugin.md_notice", { url = M.MD_URL }), WordWrap = true, Weight = 0,
-                 MinimumSize = { 0, 36 }, Hidden = true }),
-      ui:CheckBox({ ID = "MdConfirm", Text = T("plugin.md_confirm"), Checked = false, Weight = 0, Hidden = true }),
-      ui:HGroup({ Weight = 0,
-        ui:Label({ ID = "SmoothLabel", Text = T("plugin.smooth_label"), Weight = 0, ToolTip = T("plugin.smooth_tip") }),
+
+      -- 0. Pinned Context Overview (Clip + Timeline at a glance)
+      ui:HGroup({ Weight = 0, Spacing = 10,
+        ui:Label({ ID = "ClipInfo", Text = "", WordWrap = true, Weight = 1, MinimumSize = { 0, 20 },
+                   StyleSheet = "color: #F4F4F6; font-weight: bold;" }),
+        ui:Label({ ID = "OverviewTimeline", Text = "", Weight = 0,
+                   Alignment = { AlignRight = true, AlignVCenter = true },
+                   StyleSheet = "color: #9CA3AF;" }) }),
+
+      -- 1. Source & Analysis Model Section Header + Tabs
+      section_header("SecSource", SEC_SOURCE),
+
+      ui:TabBar({ ID = "WayTabs", Weight = 0, Expanding = false, DrawBase = false, UsesScrollButtons = false,
+                  StyleSheet = TAB_ACTIVE_CSS }),
+
+      -- Analyse Mode Controls (leaf widgets toggled via Hidden; never hide VGroup/HGroup)
+      ui:HGroup({ Weight = 0, Spacing = 8,
+        ui:Button({ ID = "ModelBeatThis", Text = MODEL_BT_TEXT, Weight = 1, MinimumSize = { 0, 44 },
+                    ToolTip = T("plugin.model_tip"), StyleSheet = MODEL_ACTIVE_CSS }),
+        ui:Button({ ID = "ModelMd", Text = MODEL_MD_TEXT, Weight = 1, MinimumSize = { 0, 44 },
+                    ToolTip = T("plugin.model_tip"), StyleSheet = MODEL_IDLE_CSS }) }),
+
+      ui:Label({ ID = "MdNotice", Text = T("plugin.md_notice", { url = M.MD_URL }), WordWrap = true,
+                 Weight = 0, MinimumSize = { 0, 48 }, MaximumSize = { 9999, 48 }, Hidden = true,
+                 Alignment = { AlignVCenter = true, AlignLeft = true },
+                 StyleSheet = "background-color: #221D15; border: 1px solid #4E3E26; border-radius: 4px; padding: 5px 10px; color: #FCD34D;" }),
+      ui:CheckBox({ ID = "MdConfirm", Text = T("plugin.md_confirm"), Checked = false, Weight = 0,
+                    MinimumSize = { 0, 24 }, Hidden = true }),
+
+      ui:HGroup({ Weight = 0, Spacing = 8,
+        ui:Label({ ID = "SmoothLabel", Text = T("plugin.smooth_label"), Weight = 0,
+                   MinimumSize = { LABEL_WIDTH, 0 }, ToolTip = T("plugin.smooth_tip"),
+                   StyleSheet = "color: #A1A1AA;" }),
         ui:Slider({ ID = "Smooth", Minimum = 0, Maximum = 100, Value = settings.smooth, Weight = 1,
                     ToolTip = T("plugin.smooth_tip") }),
-        ui:Label({ ID = "SmoothValue", Text = "", Weight = 0, MinimumSize = { 50, 0 } }) }),
-      ui:Label({ ID = "ClipInfo", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 20 } }),
-      ui:Label({ ID = "Warnings", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 36 }, Hidden = true }),
-      ui:Label({ ID = "Engine", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 20 }, Hidden = true }),
+        ui:Label({ ID = "SmoothValue", Text = "", Weight = 0, MinimumSize = { 50, 0 },
+                   StyleSheet = "color: #E4E4E7;" }) }),
+
+      -- Load JSON Controls (leaf widgets toggled via Hidden)
+      ui:HGroup({ Weight = 0, Spacing = 8,
+        ui:Label({ ID = "JsonLabel", Text = "JSON:", Weight = 0, Hidden = true,
+                   MinimumSize = { LABEL_WIDTH, 0 }, StyleSheet = "color: #A1A1AA;" }),
+        ui:Label({ ID = "JsonPath", Text = T("plugin.json_none"), WordWrap = true, Weight = 1,
+                   MinimumSize = { 0, 20 }, Hidden = true }),
+        ui:Button({ ID = "Choose", Text = T("plugin.btn_choose"), Weight = 0, Hidden = true,
+                    StyleSheet = NEUTRAL_BTN_CSS }) }),
+      ui:Label({ ID = "Engine", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 18 },
+                 Hidden = true, StyleSheet = "color: #9CA3AF;" }),
+
+      -- Dedicated Alert / Note Banner (leaf Label toggled via Hidden)
+      ui:Label({ ID = "Warnings", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 28 }, Hidden = true,
+                 Alignment = { AlignTop = true, AlignLeft = true },
+                 StyleSheet = "background-color: #2B2217; border: 1px solid #6E4D24; border-radius: 4px; padding: 6px 10px; color: #FCD34D;" }),
+
+      -- 2. Resolve Output Section Header + Controls
+      section_header("SecOutput", SEC_OUTPUT),
+
       ui:CheckBox({ ID = "Timeline", Text = T("plugin.check_timeline"), Checked = settings.timeline, Weight = 0 }),
-      ui:Label({ ID = "Explain", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 72 } }),
-      ui:CheckBox({ ID = "Colors", Text = T("plugin.check_colors"), Checked = settings.colors_open, Weight = 0 }),
-      ui:HGroup({ Weight = 0,
-        color_row("downbeat", T("plugin.color_downbeat")),
-        color_row("beat2", T("plugin.color_beat", { n = 2 })),
-        color_row("beat3", T("plugin.color_beat", { n = 3 })) }),
-      ui:HGroup({ Weight = 0,
-        color_row("beat4", T("plugin.color_beat", { n = 4 })),
-        color_row("other", T("plugin.color_other")) }),
-      ui:Label({ ID = "Status", Text = "", WordWrap = true, Weight = 1, MinimumSize = { 0, 120 } }),
-      ui:HGroup({ Weight = 0,
-        ui:Button({ ID = "Remove", Text = T("plugin.btn_remove"), Weight = 0 }),
-        ui:Button({ ID = "RemoveYes", Text = T("plugin.btn_remove_yes"), Weight = 0, Hidden = true }),
+      ui:Label({ ID = "Explain", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 34 },
+                 StyleSheet = "color: #9CA3AF;" }),
+      h_divider("OutputDivider"),
+      ui:HGroup({ Weight = 0, Spacing = 8,
+        ui:CheckBox({ ID = "Colors", Text = T("plugin.check_colors"), Checked = settings.colors_open, Weight = 1 }),
+        mini_swatch("downbeat"),
+        mini_swatch("beat2"),
+        mini_swatch("beat3"),
+        mini_swatch("beat4"),
+        mini_swatch("other") }),
+      ui:HGroup({ Weight = 0, Spacing = 8,
+        color_col("downbeat", T("plugin.color_downbeat")),
+        color_col("beat2", T("plugin.color_beat", { n = 2 })),
+        color_col("beat3", T("plugin.color_beat", { n = 3 })),
+        color_col("beat4", T("plugin.color_beat", { n = 4 })),
+        color_col("other", T("plugin.color_other")) }),
+
+      -- 3. Dynamic Status / Progress Label (hidden when idle so there is zero dead space)
+      ui:Label({ ID = "Status", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 44 }, Hidden = true,
+                 Alignment = { AlignTop = true, AlignLeft = true },
+                 StyleSheet = "background-color: #212126; border: 1px solid #32323A; border-radius: 5px; padding: 7px 10px; color: #E4E4E7;" }),
+
+      ui:VGap(0, 1),
+      h_divider("DivFooter"),
+
+      -- 4. Logical Action Bar (direct StyleSheets on every button)
+      ui:HGroup({ Weight = 0, Spacing = 8,
+        ui:Button({ ID = "Remove", Text = T("plugin.btn_remove"), Weight = 0, StyleSheet = NEUTRAL_BTN_CSS }),
+        ui:Button({ ID = "RemoveYes", Text = T("plugin.btn_remove_yes"), Weight = 0, Hidden = true,
+                    StyleSheet = DANGER_BTN_CSS }),
         ui:HGap(0, 1),
-        ui:Button({ ID = "Cancel", Text = T("plugin.btn_cancel"), Weight = 0, Hidden = true }),
-        ui:Button({ ID = "Close", Text = T("plugin.btn_close"), Weight = 0 }),
-        ui:Button({ ID = "OK", Text = T("plugin.btn_ok"), Weight = 0, Enabled = false }) }) }))
+        ui:Button({ ID = "Cancel", Text = T("plugin.btn_cancel"), Weight = 0, Hidden = true,
+                    StyleSheet = NEUTRAL_BTN_CSS }),
+        ui:Button({ ID = "Close", Text = T("plugin.btn_close"), Weight = 0, StyleSheet = NEUTRAL_BTN_CSS }),
+        ui:Button({ ID = "OK", Text = BTN_ANALYZE, Weight = 0, Enabled = false, StyleSheet = DISABLED_BTN_CSS }) }) }))
   local itm = win:GetItems()
 
   local function set(id, prop, value)
@@ -2061,12 +2311,10 @@ function M.main()
     return ok and v or nil
   end
 
-  -- Resolve does not grow a wrapped label with its text: reserve the lines it needs at the current width.
   local function window_width()
     local ok, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
     return ok and type(g) == "table" and tonumber(g[3]) or geometry[3]
   end
-  -- lines of one text line wrapped at word boundaries like the label does (characters, not UTF-8 bytes)
   local function wrapped_lines(line, per_line)
     local n, used = 1, 0
     for word in line:gmatch("%S+") do
@@ -2078,19 +2326,30 @@ function M.main()
       else
         n, used = n + 1, w
       end
-      while used > per_line do   -- a word longer than a line is broken inside
+      while used > per_line do
         n, used = n + 1, used - per_line
       end
     end
     return n
   end
-  local function fit(id, text, min_lines)
-    local per_line = math.max(30, math.floor((window_width() - 40) / CHAR_PX))
+  -- Resolve does not grow a wrapped label with its text: reserve the lines it needs at the current width.
+  local function fit(id, text, min_lines, extra_inset, extra_h)
+    local per_line = math.max(24, math.floor((window_width() - 90 - (extra_inset or 0)) / CHAR_PX))
     local lines = 0
     for line in (tostring(text or "") .. "\n"):gmatch("(.-)\n") do
       lines = lines + wrapped_lines(line, per_line)
     end
-    set(id, "MinimumSize", { 0, math.max(min_lines or 1, lines) * LINE_PX + 2 })
+    set(id, "MinimumSize", { 0, math.max(min_lines or 1, lines) * LINE_PX + 8 + (extra_h or 0) })
+  end
+  local function fit_box(id, text, min_lines, char_px, extra_h)
+    local per_line = math.max(32, math.floor((window_width() - 48) / (char_px or 6)))
+    local lines = 0
+    for line in (tostring(text or "") .. "\n"):gmatch("(.-)\n") do
+      lines = lines + wrapped_lines(line, per_line)
+    end
+    local h = math.max(min_lines or 1, lines) * 18 + (extra_h or 14)
+    set(id, "MinimumSize", { 0, h })
+    set(id, "MaximumSize", { 9999, h })
   end
   -- The UIManager lays a window out for another size than it draws (WhisperX Workbench): lay out now
   -- and once more on the next tick.
@@ -2099,10 +2358,21 @@ function M.main()
     S.relayout = true
   end
   local function status(text)
-    set("Status", "Text", text)
-    fit("Status", text, 6)
+    local t = tostring(text or "")
+    local empty = (t == "")
+    set("Status", "Text", t)
+    set("Status", "Hidden", empty)
+    if not empty then
+      fit_box("Status", t, 1, 6.5, 16)
+    end
     relayout()
   end
+
+  pcall(function() itm.WayTabs:AddTab(T("plugin.way_analyze")) end)
+  pcall(function() itm.WayTabs:AddTab(T("plugin.way_json")) end)
+  set("WayTabs", "CurrentIndex", initial_way_idx)
+  set("Status", "Hidden", true)
+  set("Warnings", "Hidden", true)
 
   for slot, id in pairs(COLOR_IDS) do
     for _, c in ipairs(M.MARKER_COLORS) do
@@ -2121,13 +2391,24 @@ function M.main()
     return colors
   end
 
-  local function colors_visibility()
-    local hidden = not get("Colors", "Checked")
-    for _, id in pairs(COLOR_IDS) do
-      set(id, "Hidden", hidden)
-      set(id .. "Label", "Hidden", hidden)
+  local function update_swatches()
+    local colors = read_colors()
+    for slot, id in pairs(COLOR_IDS) do
+      local css = swatch_style(colors[slot])
+      set(id .. "Swatch", "StyleSheet", css)
+      set(id .. "Mini", "StyleSheet", css)
     end
-    pcall(function() win:RecalcLayout() end)
+  end
+
+  local function colors_visibility()
+    local open = get("Colors", "Checked") == true
+    for _, id in pairs(COLOR_IDS) do
+      set(id, "Hidden", not open)
+      set(id .. "Label", "Hidden", not open)
+      set(id .. "Swatch", "Hidden", not open)
+      set(id .. "Mini", "Hidden", open)
+    end
+    relayout()
   end
 
   local function project()
@@ -2139,7 +2420,6 @@ function M.main()
     return p and api(p, "GetCurrentTimeline") or nil
   end
 
-  -- Clips for "Remove": the target of the JSON, without a JSON only the selection in the media pool.
   local function remove_clips()
     if S.info and S.info.ok then
       return S.info.clips
@@ -2149,19 +2429,109 @@ function M.main()
   end
 
   local function analyze_way()
-    return get("WayAnalyze", "Checked") and true or false
+    return (tonumber(get("WayTabs", "CurrentIndex")) or S.way_idx or 0) == 0
   end
 
-  pcall(function() itm.Model:AddItem(T("plugin.model_beat_this")) end)
-  pcall(function() itm.Model:AddItem(T("plugin.model_md")) end)
-  set("Model", "CurrentIndex", settings.model == "md_beat_this" and 1 or 0)
-
   local function model_value()
-    return tonumber(get("Model", "CurrentIndex")) == 1 and "md_beat_this" or "beat_this"
+    return S.model == "md_beat_this" and "md_beat_this" or "beat_this"
   end
   -- md_beat_this may only analyse once its licence box is ticked
   local function model_ok()
     return model_value() ~= "md_beat_this" or get("MdConfirm", "Checked") == true
+  end
+
+  local function sync_model_buttons()
+    local is_md = (model_value() == "md_beat_this")
+    local unlocked = (S.state == "select")
+    set("ModelBeatThis", "Enabled", unlocked)
+    set("ModelMd", "Enabled", unlocked)
+    if unlocked then
+      set("ModelBeatThis", "StyleSheet", (not is_md) and MODEL_ACTIVE_CSS or MODEL_IDLE_CSS)
+      set("ModelMd", "StyleSheet", is_md and MODEL_ACTIVE_CSS or MODEL_IDLE_CSS)
+    else
+      set("ModelBeatThis", "StyleSheet", (not is_md) and MODEL_MUTED_SELECTED_CSS or MODEL_MUTED_IDLE_CSS)
+      set("ModelMd", "StyleSheet", is_md and MODEL_MUTED_SELECTED_CSS or MODEL_MUTED_IDLE_CSS)
+    end
+  end
+
+  -- Buttons per state; buttons that do not fit the state are hidden. Fusion's UIManager ignores a parent's #ID
+  -- selector for buttons, so every button gets its own StyleSheet.
+  local function sync_buttons()
+    sync_model_buttons()
+    if S.state ~= "select" then
+      set("OK", "Enabled", false)   -- hidden outside "select"; also locked, so it can never start twice
+    end
+    local can_remove = (#remove_clips() > 0)
+    if S.state == "select" then
+      set("WayTabs", "StyleSheet", TAB_ACTIVE_CSS)
+      set("Choose", "StyleSheet", NEUTRAL_BTN_CSS)
+      set("Remove", "Hidden", false)
+      set("Remove", "Enabled", can_remove)
+      set("Remove", "StyleSheet", can_remove and NEUTRAL_BTN_CSS or DISABLED_BTN_CSS)
+      set("RemoveYes", "Hidden", true)
+      set("Cancel", "Hidden", true)
+      set("Close", "Hidden", false)
+      set("Close", "Enabled", true)
+      set("Close", "Text", T("plugin.btn_close"))
+      set("Close", "StyleSheet", NEUTRAL_BTN_CSS)
+      local ready = (S.ok_ready == true)
+      set("OK", "Hidden", false)
+      set("OK", "Enabled", ready)
+      set("OK", "Text", analyze_way() and BTN_ANALYZE or BTN_APPLY)
+      set("OK", "StyleSheet", ready and PRIMARY_BTN_CSS or DISABLED_BTN_CSS)
+    elseif S.state == "confirm" then
+      set("WayTabs", "StyleSheet", TAB_MUTED_CSS)
+      set("Choose", "StyleSheet", DISABLED_BTN_CSS)
+      set("Remove", "Hidden", true)
+      set("RemoveYes", "Hidden", false)
+      set("RemoveYes", "Enabled", true)
+      set("RemoveYes", "StyleSheet", DANGER_BTN_CSS)
+      set("Cancel", "Hidden", true)
+      set("OK", "Hidden", true)
+      set("Close", "Hidden", false)
+      set("Close", "Enabled", true)
+      set("Close", "Text", T("plugin.btn_cancel"))
+      set("Close", "StyleSheet", NEUTRAL_BTN_CSS)
+    elseif S.state == "analyze" then
+      set("WayTabs", "StyleSheet", TAB_MUTED_CSS)
+      set("Choose", "StyleSheet", DISABLED_BTN_CSS)
+      set("Remove", "Hidden", false)
+      set("Remove", "Enabled", false)
+      set("Remove", "StyleSheet", DISABLED_BTN_CSS)
+      set("RemoveYes", "Hidden", true)
+      set("Close", "Hidden", true)
+      set("OK", "Hidden", true)
+      set("Cancel", "Hidden", false)
+      set("Cancel", "Enabled", true)
+      set("Cancel", "StyleSheet", NEUTRAL_BTN_CSS)
+    elseif S.state == "work" then
+      set("WayTabs", "StyleSheet", TAB_MUTED_CSS)
+      set("Choose", "StyleSheet", DISABLED_BTN_CSS)
+      set("Remove", "Hidden", false)
+      set("Remove", "Enabled", false)
+      set("Remove", "StyleSheet", DISABLED_BTN_CSS)
+      set("RemoveYes", "Hidden", true)
+      set("Cancel", "Hidden", true)
+      set("OK", "Hidden", true)
+      set("Close", "Hidden", false)
+      set("Close", "Enabled", false)
+      set("Close", "Text", T("plugin.btn_close"))
+      set("Close", "StyleSheet", DISABLED_BTN_CSS)
+    elseif S.state == "result" then
+      set("WayTabs", "StyleSheet", TAB_MUTED_CSS)
+      set("Choose", "StyleSheet", DISABLED_BTN_CSS)
+      set("Remove", "Hidden", false)
+      set("Remove", "Enabled", can_remove)
+      set("Remove", "StyleSheet", can_remove and NEUTRAL_BTN_CSS or DISABLED_BTN_CSS)
+      set("RemoveYes", "Hidden", true)
+      set("Cancel", "Hidden", true)
+      set("OK", "Hidden", true)
+      set("Close", "Hidden", false)
+      set("Close", "Enabled", true)
+      set("Close", "Text", T("plugin.btn_ok"))
+      set("Close", "StyleSheet", PRIMARY_BTN_CSS)
+      set("Close", "Default", true)
+    end
   end
 
   local function smooth_value()
@@ -2171,27 +2541,23 @@ function M.main()
   local function show_way()
     local a = analyze_way()
     local md = a and model_value() == "md_beat_this"
-    for _, id in ipairs({ "JsonLabel", "JsonPath", "Choose" }) do
-      set(id, "Hidden", a)
-    end
-    for _, id in ipairs({ "ModelLabel", "Model" }) do
-      set(id, "Hidden", not a)
-    end
-    for _, id in ipairs({ "MdNotice", "MdConfirm" }) do
-      set(id, "Hidden", not md)
-    end
+    set("ModelBeatThis", "Hidden", not a)
+    set("ModelMd", "Hidden", not a)
+    set("MdNotice", "Hidden", not md)
+    set("MdConfirm", "Hidden", not md)
     if md then
-      fit("MdNotice", get("MdNotice", "Text"), 2)
+      fit_box("MdNotice", get("MdNotice", "Text"), 2, 6, 14)
     end
-    -- md_beat_this gives no probabilities per frame: "Glätten" would change nothing
     for _, id in ipairs({ "SmoothLabel", "Smooth", "SmoothValue" }) do
       set(id, "Hidden", not a or md)
+    end
+    for _, id in ipairs({ "JsonLabel", "JsonPath", "Choose" }) do
+      set(id, "Hidden", a)
     end
     local v = smooth_value()
     set("SmoothValue", "Text", v == 0 and T("plugin.smooth_off") or (tostring(v) .. " %"))
   end
 
-  -- The way "analyse the selected clip": exactly one clip with a file, as in M.analysis_target.
   local function analysis_info()
     local info = { ok = false, warnings = {} }
     local p = project()
@@ -2215,6 +2581,30 @@ function M.main()
     return info
   end
 
+  local function set_overview_timeline(tinfo)
+    if tinfo and tinfo.state == "present" then
+      set("OverviewTimeline", "Text", tinfo.name .. " · " .. (tinfo.tracks or ("A" .. tostring(tinfo.track))))
+    elseif tinfo and tinfo.state == "absent" then
+      set("OverviewTimeline", "Text", tinfo.name)
+    else
+      set("OverviewTimeline", "Text", "–")
+    end
+  end
+
+  local function set_alert(lines_list, is_warning)
+    if #lines_list == 0 then
+      set("Warnings", "Hidden", true)
+      return
+    end
+    local text = table.concat(lines_list, "\n")
+    set("Warnings", "Text", text)
+    set("Warnings", "StyleSheet", is_warning
+      and "background-color: #2B2217; border: 1px solid #6E4D24; border-radius: 4px; padding: 5px 10px; color: #FCD34D;"
+      or  "background-color: #1A2330; border: 1px solid #2D4A6E; border-radius: 4px; padding: 5px 10px; color: #93C5FD;")
+    fit_box("Warnings", text, 1, 6, 14)
+    set("Warnings", "Hidden", false)
+  end
+
   local function refresh()
     if S.state ~= "select" then
       return
@@ -2229,14 +2619,14 @@ function M.main()
         clip_text = clip_text .. "\n" .. T("plugin.md_confirm_needed")
       end
       set("ClipInfo", "Text", clip_text)
-      fit("ClipInfo", clip_text)
+      set("ClipInfo", "StyleSheet", (S.info.ok and model_ok())
+        and "color: #F4F4F6; font-weight: bold;" or "color: #FCA5A5; font-weight: bold;")
+      fit("ClipInfo", clip_text, 1, 120)
       local mp3 = S.info.ok and M.is_mp3(S.info.path)
-      local warn = mp3 and T("plugin.note_mp3") or ""
-      set("Warnings", "Text", warn)
-      fit("Warnings", warn)
-      set("Warnings", "Hidden", not mp3)
+      set_alert(mp3 and { T("plugin.note_mp3") } or {}, false)
       set("Engine", "Hidden", true)
       S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
+      set_overview_timeline(S.tinfo)
       local explain, explain_tip = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
       set("Explain", "Text", explain)
       set("Explain", "ToolTip", explain_tip)
@@ -2244,26 +2634,44 @@ function M.main()
       relayout()
     elseif S.json then
       S.info = M.prepare(S.json)
-      set("JsonPath", "Text", S.json:match("([^/\\]+)$") or S.json)   -- the file name; the path as tooltip
+      set("JsonPath", "Text", S.json:match("([^/\\]+)$") or S.json)
       set("JsonPath", "ToolTip", S.json)
-      set("ClipInfo", "Text", S.info.ok and S.info.clip_text or (S.info.error or ""))
-      local warnings = {}
+      local clip_text = S.info.ok and S.info.clip_text or (S.info.error or "")
+      set("ClipInfo", "Text", clip_text)
+      set("ClipInfo", "StyleSheet", S.info.ok
+        and "color: #F4F4F6; font-weight: bold;" or "color: #FCA5A5; font-weight: bold;")
+      local alerts, has_warn = {}, false
       for _, w in ipairs(S.info.warnings or {}) do
-        warnings[#warnings + 1] = "⚠ " .. w
+        alerts[#alerts + 1] = "⚠ " .. w
+        has_warn = true
       end
       for _, n in ipairs(S.info.notes or {}) do
-        warnings[#warnings + 1] = n
+        alerts[#alerts + 1] = n
       end
-      set("Warnings", "Text", table.concat(warnings, "\n"))
-      fit("Warnings", table.concat(warnings, "\n"))
-      set("Warnings", "Hidden", #warnings == 0)
+      set_alert(alerts, has_warn)
       set("Engine", "Text", S.info.engine or "")
       fit("Engine", S.info.engine or "")
       set("Engine", "Hidden", not S.info.engine)
-      fit("JsonPath", get("JsonPath", "Text"), 2)
-      fit("ClipInfo", get("ClipInfo", "Text"))
+      fit("JsonPath", get("JsonPath", "Text"), 1, 140)
+      fit("ClipInfo", clip_text, 1, 120)
       S.tinfo = M.timeline_info(current_timeline(), S.info.ok and S.info.clips or {})
+      set_overview_timeline(S.tinfo)
       local explain, explain_tip = M.explanation(get("Timeline", "Checked"), S.tinfo, S.info.song)
+      set("Explain", "Text", explain)
+      set("Explain", "ToolTip", explain_tip)
+      fit("Explain", explain, 2)
+      relayout()
+    else
+      S.info = nil
+      set("JsonPath", "Text", T("plugin.json_none"))
+      set("JsonPath", "ToolTip", "")
+      set("ClipInfo", "Text", T("plugin.json_none"))
+      set("ClipInfo", "StyleSheet", "color: #9CA3AF; font-weight: bold;")
+      set_alert({}, false)
+      set("Engine", "Hidden", true)
+      S.tinfo = M.timeline_info(current_timeline(), {})
+      set_overview_timeline(S.tinfo)
+      local explain, explain_tip = M.explanation(get("Timeline", "Checked"), S.tinfo, "")
       set("Explain", "Text", explain)
       set("Explain", "ToolTip", explain_tip)
       fit("Explain", explain, 2)
@@ -2271,23 +2679,23 @@ function M.main()
     end
     local ok = S.info ~= nil and S.info.ok == true
     if analyze_way() and not model_ok() then
-      ok = false   -- md_beat_this without the licence box (the hint is in ClipInfo)
+      ok = false
     end
     if analyze_way() and ok and S.failed and S.failed.path == S.info.path and S.failed.model == model_value() then
-      ok = false   -- this file failed with this model: only Close, another clip or another model
+      ok = false   -- this file failed with this model: only Close, another clip or another model (Resolve test 0.2.2)
     end
-    set("OK", "Enabled", ok)
-    set("Remove", "Enabled", #remove_clips() > 0)
+    S.ok_ready = ok
+    sync_buttons()
   end
 
   local function lock(locked)
-    for _, id in ipairs({ "WayAnalyze", "WayJson", "Model", "MdConfirm", "Smooth", "Choose", "Timeline", "Colors",
-                          "Remove", "OK", "Close" }) do
+    for _, id in ipairs({ "WayTabs", "ModelBeatThis", "ModelMd", "MdConfirm", "Smooth", "Choose", "Timeline", "Colors" }) do
       set(id, "Enabled", not locked)
     end
     for _, id in pairs(COLOR_IDS) do
       set(id, "Enabled", not locked)
     end
+    sync_buttons()
   end
 
   local function work_text()
@@ -2311,11 +2719,10 @@ function M.main()
     return table.concat(lines, "\n")
   end
 
-  local save   -- defined below, used by finish()
+  local save
 
   local function analysis_text(step)
     local a = S.analysis
-    local clip = tostring(api(a.clip, "GetName") or "?")
     local secs = math.max(0, G_os.time() - a.started)
     local lines = { T("plugin.tasks_title"),
       string.format("… %s (%s)   %d:%02d", T("plugin.task_analyze"), T("plugin.step_" .. (step or "model")),
@@ -2328,12 +2735,9 @@ function M.main()
     return table.concat(lines, "\n")
   end
 
-  -- failed: the analysis of this file with this model failed (error, no start, timeout); OK stays off for it, so
-  -- the window can only be closed or another clip / model chosen (Resolve test 0.2.2: m4a error, OK was active)
   local function end_analysis(text, failed)
     S.failed = failed and S.analysis and { path = S.analysis.path, model = S.analysis.model } or nil
     S.state, S.analysis = "select", nil
-    set("Cancel", "Hidden", true)
     lock(false)
     status(text)
     refresh()
@@ -2341,7 +2745,7 @@ function M.main()
 
   local function start_analysis()
     local info = S.info
-    if not model_ok() then   -- OK is disabled then; never start md_beat_this without the licence box
+    if not model_ok() then
       return
     end
     local dir, err = M.new_job(info.path, { lang = BA.lang, slider = smooth_value(), model = model_value() })
@@ -2355,14 +2759,11 @@ function M.main()
       status(tostring(lerr))
       return
     end
-    -- project, timeline and clip are fixed at OK (spec 6.2), also for the markers without a subtitle track
     S.analysis = { dir = dir, started = G_os.time(), clip = info.clip, path = info.path, model = model_value(),
                    marker_timeline = current_timeline(),
                    timeline = get("Timeline", "Checked") and current_timeline() or false }
     S.state = "analyze"
     lock(true)
-    set("Cancel", "Hidden", false)
-    set("Cancel", "Enabled", true)
     status(analysis_text(nil))
   end
 
@@ -2370,7 +2771,7 @@ function M.main()
     if S.state ~= "analyze" then
       return
     end
-    M.cancel(S.analysis.dir)   -- Python ends at its next step; its folder goes with cleanup_jobs
+    M.cancel(S.analysis.dir)
     end_analysis(T("plugin.msg_cancelled"))
   end
 
@@ -2404,25 +2805,23 @@ function M.main()
     local engine = M.engine_text(job.data.engine)
     local engine_line = engine and T("plugin.engine", { engine = engine }) or T("plugin.engine_unknown")
     set("Engine", "Text", engine_line)
-    fit("Engine", engine_line)   -- seen in Resolve: a two-line text overlapped the next line
+    fit("Engine", engine_line)
     set("Engine", "Hidden", false)
-    set("Cancel", "Hidden", true)
     S.job, S.state, S.analyzed, S.job_dir = job, "work", true, a.dir
     S.track_step = a.timeline and S.tinfo and S.tinfo.state == "present"
+    sync_buttons()
     status(work_text())
   end
 
   local function finish()
     S.state = "result"
+    S.last_result_msg = S.job.msg or ""
     if S.job_dir then
-      M.remove_job(S.job_dir)   -- markers.json was read: the job folder is not needed any more
+      M.remove_job(S.job_dir)
       S.job_dir = nil
     end
-    status(S.job.msg or "")   -- the analysis program stays visible in its own line above
-    set("Close", "Text", T("plugin.btn_ok"))
-    set("Close", "Enabled", true)
-    set("OK", "Hidden", true)
-    set("Remove", "Hidden", true)
+    status(S.last_result_msg)
+    lock(true)
     log(S.job.msg)
     if S.close_requested then   -- Resolve closed the window during the work: end now that it is done
       save()
@@ -2432,7 +2831,7 @@ function M.main()
 
   local function tick()
     S.ticks = S.ticks + 1
-    if S.relayout then   -- second layout pass, see relayout()
+    if S.relayout then
       S.relayout = false
       pcall(function() win:RecalcLayout() end)
     end
@@ -2470,12 +2869,12 @@ function M.main()
   end
 
   local function close()
-    if S.state == "analyze" then   -- nothing has changed in the project yet: cancel and close
+    if S.state == "analyze" then
       cancel_analysis()
     end
     if S.state == "work" then
       log("Close ignored: the work is not finished yet.")
-      S.close_requested = true   -- if Resolve closes the window anyway, the loop ends after the work
+      S.close_requested = true
       pcall(function() win:Show() end)
       return
     end
@@ -2483,6 +2882,12 @@ function M.main()
     disp:ExitLoop()
   end
 
+  win.On.WayTabs.CurrentChanged = function(ev)
+    S.way_idx = tonumber(ev and ev.Index) or 0
+    S.info = nil
+    refresh()
+    relayout()
+  end
   win.On.Choose.Clicked = function()
     local okf, path = pcall(function()
       return fu:RequestFile(settings.json_dir or "", "", { FReqB_Saving = false, FReqB_SeqGather = false,
@@ -2498,28 +2903,29 @@ function M.main()
     refresh()
   end
   win.On.Timeline.Clicked = function() refresh() end
-  -- the two ways work like radio buttons (the UIManager has none)
-  -- after showing/hiding rows the window must be laid out again (0.1.7: "Auswählen …" missing until resized)
-  win.On.WayAnalyze.Clicked = function()
-    set("WayJson", "Checked", not get("WayAnalyze", "Checked"))
-    S.info = nil
-    refresh()
-    relayout()
-  end
-  win.On.WayJson.Clicked = function()
-    set("WayAnalyze", "Checked", not get("WayJson", "Checked"))
-    S.info = nil
-    refresh()
-    relayout()
-  end
   win.On.Smooth.ValueChanged = function() show_way() end
-  win.On.Model.CurrentIndexChanged = function()
+  win.On.ModelBeatThis.Clicked = function()
+    if S.state ~= "select" or S.model == "beat_this" then
+      return
+    end
+    S.model = "beat_this"
+    refresh()
+    relayout()
+  end
+  win.On.ModelMd.Clicked = function()
+    if S.state ~= "select" or S.model == "md_beat_this" then
+      return
+    end
+    S.model = "md_beat_this"
     refresh()
     relayout()
   end
   win.On.MdConfirm.Clicked = function() refresh() end
   win.On.Cancel.Clicked = function() cancel_analysis() end
   win.On.Colors.Clicked = function() colors_visibility() end
+  for _, id in pairs(COLOR_IDS) do
+    win.On[id].CurrentIndexChanged = function() update_swatches() end
+  end
   win.On.OK.Clicked = function()
     if S.state ~= "select" or not (S.info and S.info.ok) then
       return
@@ -2540,7 +2946,7 @@ function M.main()
     status(work_text())
   end
   win.On.Remove.Clicked = function()
-    if S.state ~= "select" then
+    if S.state ~= "select" and S.state ~= "result" then
       return
     end
     local clips = remove_clips()
@@ -2551,9 +2957,10 @@ function M.main()
     local r = M.removal(clips, S.remove_tl)
     status(r.text)
     if r.markers + r.tracks + r.srt_clips > 0 then
+      S.confirm_from = S.state
       S.state = "confirm"
-      set("RemoveYes", "Hidden", false)
-      pcall(function() win:RecalcLayout() end)
+      lock(true)
+      relayout()
     end
   end
   win.On.RemoveYes.Clicked = function()
@@ -2562,23 +2969,29 @@ function M.main()
     end
     local done = M.remove(S.remove_clips, S.remove_tl)
     status(done.text)
-    set("RemoveYes", "Hidden", true)
     S.state = "select"
+    lock(false)
     refresh()
   end
   win.On.Close.Clicked = function()
-    if S.state == "confirm" then   -- the button closes the question, not the window
-      S.state = "select"
-      set("RemoveYes", "Hidden", true)
-      status("")
+    if S.state == "confirm" then
+      local back = S.confirm_from or "select"
+      S.confirm_from = nil
+      S.state = back
+      if back == "result" then
+        lock(true)
+        status(S.last_result_msg or "")
+      else
+        lock(false)
+        refresh()
+        status("")
+      end
       return
     end
     close()
   end
   win.On.BeatAnalyzerWin.Close = function() close() end
 
-  -- Both ways of receiving timer events are registered (as in the WhisperX Workbench); the same event
-  -- object is handled once.
   local timer = ui:Timer({ ID = "BATimer", Interval = TICK_MS, SingleShot = false })
   local last_event
   local function on_timer(ev)
@@ -2594,10 +3007,11 @@ function M.main()
   pcall(function() disp.On.BATimer.Timeout = on_timer end)
 
   M.cleanup_jobs()
+  update_swatches()
   colors_visibility()
   refresh()
   timer:Start()
-  local want_w, want_h = geometry[3], geometry[4]   -- numbers: the geometry table may be the window's own
+  local want_w, want_h = geometry[3], geometry[4]
   win:Show()
   local okg, g = pcall(function() return itm.BeatAnalyzerWin.Geometry end)
   local actual = okg and type(g) == "table" and (tostring(g[3]) .. "x" .. tostring(g[4])) or "?"

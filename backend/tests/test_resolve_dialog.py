@@ -35,10 +35,14 @@ local function widget(kind)
       spec.entries, spec.CurrentIndex = {}, 0
       function spec:AddItem(text) self.entries[#self.entries + 1] = text end
     end
+    if kind == "TabBar" then
+      spec.tabs, spec.CurrentIndex = {}, 0
+      function spec:AddTab(text) self.tabs[#self.tabs + 1] = text end
+    end
     return spec
   end
 end
-for _, kind in ipairs({ "VGroup", "HGroup", "Label", "Button", "LineEdit", "ComboBox", "CheckBox", "Slider" }) do
+for _, kind in ipairs({ "VGroup", "HGroup", "Label", "Button", "LineEdit", "ComboBox", "CheckBox", "Slider", "TabBar" }) do
   UI[kind] = widget(kind)
 end
 function UI:VGap() return { kind = "Gap" } end
@@ -86,6 +90,11 @@ function UIMOCK.choose(id, index)
   UIMOCK.items[id].CurrentIndex = index
   local h = rawget(UIMOCK.win.On[id], "CurrentIndexChanged")
   if h then h({ who = id }) end
+end
+function UIMOCK.tab(id, index)
+  UIMOCK.items[id].CurrentIndex = index
+  local h = rawget(UIMOCK.win.On[id], "CurrentChanged")
+  if h then h({ who = id, Index = index }) end
 end
 function UIMOCK.slide(id, value)
   UIMOCK.items[id].Value = value
@@ -169,7 +178,12 @@ class DialogTests(unittest.TestCase):
     def request_file(self, path):
         self.ui.request_file = path
 
+    def way(self, name):
+        """the two ways are the tabs of WayTabs: 0 = analyse the selected clip, 1 = load JSON"""
+        self.ui.tab("WayTabs", 0 if name == "analyze" else 1)
+
     def pick_json(self):
+        self.way("json")
         self.request_file(self.json_path)
         self.click("Choose")
         self.tick(20)
@@ -325,10 +339,19 @@ class DialogTests(unittest.TestCase):
     def test_text_labels_reserve_their_height(self):
         # Resolve does not grow wrapped labels by itself (seen in Resolve: texts overlapped)
         def scenario():
-            for id, lines in (("ClipInfo", 1), ("Warnings", 2), ("Engine", 1), ("Explain", 4), ("Status", 6)):
+            for id, lines in (("ClipInfo", 1), ("Engine", 1), ("Explain", 2)):
                 size = self.item(id).MinimumSize
                 self.assertIsNotNone(size, id)
                 self.assertGreaterEqual(size[2], 16 * lines, id)
+            # the boxes for notes and status are hidden while empty (no empty space) and get their height with text
+            self.assertTrue(self.item("Warnings").Hidden)
+            self.assertTrue(self.item("Status").Hidden)
+            self.pick_json()
+            self.click("OK")
+            self.tick(10)
+            self.assertFalse(self.item("Status").Hidden)
+            lines = len(self.item("Status").Text.split("\n"))
+            self.assertGreaterEqual(self.item("Status").MinimumSize[2], 18 * lines)
             self.close()
         self.run_dialog(scenario)
 
@@ -346,10 +369,9 @@ class DialogTests(unittest.TestCase):
 
         def scenario():
             spec = self.ui.win.spec
-            # width held by the WidthGuard; height as in the user's picture (0.1.7: 640 was too high); a saved
-            # height is not restored, only the position
-            self.assertEqual(list(spec.MinimumSize.values()), [600, 440])
-            self.assertEqual(list(spec.Geometry.values()), [50, 60, 600, 460])
+            # width held by the WidthGuard; a saved height is not restored, only the position (0.2.13 layout)
+            self.assertEqual(list(spec.MinimumSize.values()), [660, 360])
+            self.assertEqual(list(spec.Geometry.values()), [50, 60, 660, 440])
             self.close()
         self.run_dialog(scenario)
 
@@ -424,7 +446,7 @@ class DialogTests(unittest.TestCase):
         # Resolve ignored the requested width and Resize (0.1.6: "actual 431x640, resized to 431x640"); the width
         # followed the content. A row with a minimum width holds the window at least that wide.
         def scenario():
-            self.assertEqual(list(self.item("WidthGuard").MinimumSize.values())[0], 580)
+            self.assertEqual(list(self.item("WidthGuard").MinimumSize.values())[0], 640)
             self.close()
         self.run_dialog(scenario)
 
@@ -433,7 +455,7 @@ class DialogTests(unittest.TestCase):
         (self.tmp / "resolve_temp" / "plugin.txt").write_text("geometry=50,60,700,900\n", encoding="utf-8")
 
         def scenario():
-            self.assertEqual(list(self.ui.win.spec.Geometry.values()), [50, 60, 600, 460])
+            self.assertEqual(list(self.ui.win.spec.Geometry.values()), [50, 60, 660, 440])
             self.close()
         self.run_dialog(scenario)
 
@@ -442,9 +464,9 @@ class DialogTests(unittest.TestCase):
         # window was resized
         def scenario():
             before = self.ui.recalc or 0
-            self.check("WayAnalyze", True)
+            self.way("analyze")
             middle = self.ui.recalc
-            self.check("WayJson", True)
+            self.way("json")
             self.assertGreater(middle, before)
             self.assertGreater(self.ui.recalc, middle)
             self.close()
@@ -520,7 +542,7 @@ class AnalysisDialogTests(DialogTests):
 
     def start_analysis(self, slider=None):
         self.select_song()
-        self.check("WayAnalyze", True)
+        self.way("analyze")
         self.tick(20)
         if slider is not None:
             self.ui.slide("Smooth", slider)
@@ -528,16 +550,43 @@ class AnalysisDialogTests(DialogTests):
 
     def test_ways_exclude_each_other(self):
         def scenario():
-            self.assertTrue(self.item("WayJson").Checked)
-            self.assertFalse(self.item("WayAnalyze").Checked)
-            self.assertTrue(self.item("Smooth").Hidden)
-            self.check("WayAnalyze", True)
-            self.assertFalse(self.item("WayJson").Checked)
+            self.assertEqual(list(self.item("WayTabs").tabs.values()), ["Ausgewählten Clip analysieren", "JSON laden"])
+            self.assertEqual(self.item("WayTabs").CurrentIndex, 0)        # without settings: analyse
             self.assertFalse(self.item("Smooth").Hidden)
             self.assertTrue(self.item("Choose").Hidden)
-            self.check("WayJson", True)
-            self.assertFalse(self.item("WayAnalyze").Checked)
+            self.assertEqual(self.item("OK").Text, "Analysieren")
+            self.way("json")
+            self.assertTrue(self.item("Smooth").Hidden)
+            self.assertTrue(self.item("ModelMd").Hidden)
             self.assertFalse(self.item("Choose").Hidden)
+            self.assertEqual(self.item("OK").Text, "Marker setzen")
+            self.way("analyze")
+            self.assertTrue(self.item("Choose").Hidden)
+            self.close()
+        self.run_dialog(scenario)
+
+    def test_window_opens_on_the_way_used_last(self):
+        def scenario():
+            self.way("json")
+            self.close()
+        self.run_dialog(scenario)
+        self.assertIn("way=json", (self.tmp / "resolve_temp" / "plugin.txt").read_text(encoding="utf-8"))
+
+        def again():
+            self.assertEqual(self.item("WayTabs").CurrentIndex, 1)
+            self.assertFalse(self.item("Choose").Hidden)
+            self.close()
+        self.ui.exited = False
+        self.run_dialog(again)
+
+    def test_model_buttons_are_locked_during_the_analysis(self):
+        def scenario():
+            self.start_analysis()
+            self.assertFalse(self.item("ModelMd").Enabled)
+            self.click("ModelMd")                                # ignored while analysing
+            self.assertTrue(self.item("MdConfirm").Hidden)
+            self.click("Cancel")
+            self.assertTrue(self.item("ModelMd").Enabled)
             self.close()
         self.run_dialog(scenario)
 
@@ -545,7 +594,7 @@ class AnalysisDialogTests(DialogTests):
         # test 0.2.2: Resolve plays MP3 about 50 ms later than BeatAnalyzer analyses it
         def scenario():
             self.select_song()
-            self.check("WayAnalyze", True)
+            self.way("analyze")
             self.tick(20)
             self.assertTrue(self.item("Warnings").Hidden)              # WAV: no hint
             self.lua.execute("MOCK.song.filepath = '/Musik/Müller Song.MP3'")
@@ -554,7 +603,7 @@ class AnalysisDialogTests(DialogTests):
             self.assertIn("50 ms", self.item("Warnings").Text)
             self.assertIn("Marker entsprechend später", self.item("Warnings").Text)   # the analysis corrects it
             self.assertTrue(self.item("OK").Enabled)                    # only a hint, analysing is allowed
-            self.check("WayJson", True)                                 # the JSON way has its own warnings
+            self.way("json")                                 # the JSON way has its own warnings
             self.tick(25)
             self.close()
         self.run_dialog(scenario)
@@ -562,7 +611,7 @@ class AnalysisDialogTests(DialogTests):
     def test_analyze_way_shows_the_selected_clip(self):
         def scenario():
             self.select_song()
-            self.check("WayAnalyze", True)
+            self.way("analyze")
             self.tick(20)
             self.assertEqual(self.item("ClipInfo").Text, "Song im Media Pool · 0:20")
             self.assertTrue(self.item("OK").Enabled)
@@ -590,7 +639,7 @@ class AnalysisDialogTests(DialogTests):
 
     def test_smooth_slider_default_90_shown_and_saved(self):
         def scenario():
-            self.check("WayAnalyze", True)
+            self.way("analyze")
             self.assertEqual(self.item("Smooth").Value, 90)
             self.assertEqual(self.item("SmoothValue").Text, "90 %")
             self.assertIn("0 %", self.item("Smooth").ToolTip)
@@ -627,12 +676,15 @@ class AnalysisDialogTests(DialogTests):
 
     def test_model_choice_only_in_the_analyze_way(self):
         def scenario():
-            self.assertTrue(self.item("Model").Hidden)
-            self.check("WayAnalyze", True)
-            self.assertFalse(self.item("Model").Hidden)
-            self.assertEqual(list(self.item("Model").entries.values()),
-                             ["beat_this (MIT) – Standard", "md_beat_this (CC BY-NC 4.0) – nur nicht-kommerziell"])
-            self.assertEqual(self.item("Model").CurrentIndex, 0)
+            self.way("json")
+            self.assertTrue(self.item("ModelBeatThis").Hidden)
+            self.assertTrue(self.item("ModelMd").Hidden)
+            self.way("analyze")
+            self.assertFalse(self.item("ModelBeatThis").Hidden)
+            self.assertEqual(self.item("ModelBeatThis").Text, "beat_this (MIT)\nStandard · auch kommerziell")
+            self.assertEqual(self.item("ModelMd").Text, "md_beat_this (CC BY-NC 4.0)\nNur nicht-kommerziell")
+            self.assertIn("#E05A47", self.item("ModelBeatThis").StyleSheet)   # beat_this is the chosen one
+            self.assertNotIn("#E05A47", self.item("ModelMd").StyleSheet)
             self.assertTrue(self.item("MdConfirm").Hidden)
             self.assertTrue(self.item("MdNotice").Hidden)
             self.close()
@@ -641,10 +693,10 @@ class AnalysisDialogTests(DialogTests):
     def test_md_beat_this_needs_the_licence_box(self):
         def scenario():
             self.select_song()
-            self.check("WayAnalyze", True)
+            self.way("analyze")
             self.tick(20)
             self.assertTrue(self.item("OK").Enabled)
-            self.choose("Model", 1)
+            self.click("ModelMd")
             self.assertFalse(self.item("MdConfirm").Hidden)
             self.assertFalse(self.item("MdConfirm").Checked)
             notice = self.item("MdNotice").Text
@@ -672,8 +724,8 @@ class AnalysisDialogTests(DialogTests):
         # Resolve 0.2.1: the clip line went from one line to two lines on every refresh, the window twitched
         def scenario():
             self.select_song()
-            self.check("WayAnalyze", True)
-            self.choose("Model", 1)
+            self.way("analyze")
+            self.click("ModelMd")
             self.tick(5)
             self.lua.execute("""
               local real = UIMOCK.items.ClipInfo
@@ -701,7 +753,7 @@ class AnalysisDialogTests(DialogTests):
             job = (self.job_dir() / "job.txt").read_text(encoding="utf-8")
             self.assertIn("model=beat_this", job)
             self.click("Cancel")
-            self.choose("Model", 1)
+            self.click("ModelMd")
             self.check("MdConfirm", True)
             self.close()
         self.run_dialog(scenario)
@@ -709,8 +761,9 @@ class AnalysisDialogTests(DialogTests):
         self.assertIn("model=md_beat_this", text)
 
         def again():
-            self.check("WayAnalyze", True)
-            self.assertEqual(self.item("Model").CurrentIndex, 1)
+            self.way("analyze")
+            self.assertIn("#E05A47", self.item("ModelMd").StyleSheet)        # md_beat_this was remembered
+            self.assertFalse(self.item("MdConfirm").Hidden)
             self.assertFalse(self.item("MdConfirm").Checked)   # asked again in every window
             self.close()
         self.ui.exited = False
@@ -755,10 +808,10 @@ class AnalysisDialogTests(DialogTests):
             self.assertFalse(self.item("OK").Enabled)
             self.assertIn("kaputt", self.item("Status").Text)
             self.assertTrue(self.item("Close").Enabled)
-            self.choose("Model", 1)                             # another model may be tried
+            self.click("ModelMd")                             # another model may be tried
             self.check("MdConfirm", True)
             self.assertTrue(self.item("OK").Enabled)
-            self.choose("Model", 0)
+            self.click("ModelBeatThis")
             self.assertFalse(self.item("OK").Enabled)
             self.lua.execute("MOCK.selected = {}")              # another clip may be analysed
             self.tick(25)

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.13] – 2026-11-16
+
+Neues Design des Resolve-Fensters (Entwurf des Nutzers mit Google Gemini, in Resolve getestet), übernommen und an BeatAnalyzer angepasst.
+
+### Geändert
+- **Resolve-Fenster neu gegliedert:** oben Song, Dauer und Timeline auf einen Blick; Abschnitt **„1. Quelle & Analyse-Modell“** mit den zwei Wegen als Reiter (*Ausgewählten Clip analysieren* / *JSON laden*) und dem **Modell als zwei Kacheln** (beat_this · auch kommerziell / md_beat_this · nur nicht-kommerziell); Abschnitt **„2. Ausgabe in Resolve“** mit Subtitle Track und Markerfarben (eingeklappt als kleine Farbpunkte, aufgeklappt mit Farbfeld je Beat).
+- Dunkles Farbschema wie Resolve; Hinweise in farbigen Kästen (blau = Hinweis, z. B. MP3; gelb = Warnung, Lizenz von md_beat_this); der Status-Kasten erscheint erst, wenn es etwas zu melden gibt.
+- Der Haupt-Knopf heißt je Weg **„Analysieren“** bzw. **„Marker setzen“**; Knöpfe, die gerade nicht passen, sind ausgeblendet (während der Analyse nur *Abbrechen*, danach *OK*).
+- „BeatAnalyzer-Marker entfernen“ geht auch direkt nach dem Ergebnis.
+- Neue Texte in `lang/*.json` (auch türkisch): `btn_analyze`, `btn_apply`, `sec_source`, `sec_output`; Modell-Kacheln zweizeilig.
+
+### Hinweis
+- „Python of BeatAnalyzer not found“ im Test des Entwurfs: Die Datei war die Vorlage aus dem Repo (ohne BeatAnalyzer-Ordner und Python). Eingebaut wird das Skript über *In Resolve aktualisieren* in der Web-App bzw. `install_and_run.bat`; erst dann trägt es diese Pfade.
+
 ## [0.2.12] – 2026-11-15
 
 ### Geändert
