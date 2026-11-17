@@ -1,6 +1,6 @@
 """
 CPJKU beat_this Python Integration Engine
-Führt Beat & Downbeat Tracking mit PyTorch / beat_this oder Librosa-Fallback durch.
+Beat and downbeat tracking with PyTorch / beat_this, md_beat_this or the librosa fallback.
 """
 
 import math
@@ -33,10 +33,10 @@ ENGINE_LABELS = {
 }
 
 try:
-    # Versuche offiziellen CPJKU beat_this Import
-    # Audio2Beats statt File2Beats: Wir uebergeben das bereits dekodierte Signal.
-    # File2Beats laedt per torchaudio.load, das ab torchaudio 2.9 TorchCodec + FFmpeg
-    # voraussetzt (unter Windows meist nicht vorhanden -> MP3/AAC schlagen fehl).
+    # official CPJKU beat_this
+    # Audio2Beats instead of File2Beats: we pass the signal we have already decoded.
+    # File2Beats loads with torchaudio.load, which needs TorchCodec + FFmpeg from torchaudio 2.9 on
+    # (usually missing on Windows -> MP3/AAC fail).
     from beat_this.inference import Audio2Beats
     BEAT_THIS_AVAILABLE = True
     print("[BeatAnalyzer Backend] CPJKU beat_this loaded.")
@@ -44,7 +44,7 @@ except Exception as e:
     print(f"[BeatAnalyzer Backend] Note: CPJKU beat_this not available ({e}). Using the librosa fallback.")
 
 try:
-    # Optionales Modell (CC BY-NC 4.0, nur nicht-kommerzielle Nutzung): fosfrancesco/md_beat_this
+    # optional model (CC BY-NC 4.0, non-commercial use only): fosfrancesco/md_beat_this
     from md_beat_this.inference import Audio2Beats as MdAudio2Beats
     MD_BEAT_THIS_AVAILABLE = True
     print("[BeatAnalyzer Backend] Masked Diffusion md_beat_this (non-commercial) loaded.")
@@ -65,8 +65,8 @@ def get_predictor():
         try:
             import torch
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            print(f"[BeatAnalyzer Backend] Initialisiere CPJKU Audio2Beats auf Device: {device}...")
-            # 'final0' ist das offizielle Standard-Checkpoint-Modell von CPJKU
+            print(f"[BeatAnalyzer Backend] Initialising CPJKU Audio2Beats on device: {device} ...")
+            # 'final0' is the official standard checkpoint of CPJKU
             predictor_instance = Audio2Beats(checkpoint_path="final0", device=device)
             MODEL_LOAD_FAILED, PREDICTOR_DEVICE = False, device
             print("[BeatAnalyzer Backend] Model ready.")
@@ -100,7 +100,7 @@ def get_md_predictor():
         try:
             import torch
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            print(f"[BeatAnalyzer Backend] Initialisiere md_beat_this Audio2Beats (Non-Commercial) auf Device: {device}...")
+            print(f"[BeatAnalyzer Backend] Initialising md_beat_this Audio2Beats (non-commercial) on device: {device} ...")
             md_predictor_instance = MdAudio2Beats(checkpoint_path="run1", device=device)
             MD_MODEL_LOAD_FAILED, MD_PREDICTOR_DEVICE = False, device
             print("[BeatAnalyzer Backend] md_beat_this model ready.")
@@ -181,7 +181,7 @@ def decode_with_av(file_path: str):
         for out in resampler.resample(None):   # flush
             chunks.append(out.to_ndarray().reshape(-1))
     if not chunks:
-        raise RuntimeError(f"keine Audiodaten in {os.path.basename(file_path)}")
+        raise RuntimeError(f"no audio data in {os.path.basename(file_path)}")
     return np.concatenate(chunks).astype(np.float32), int(sr)
 
 
@@ -198,7 +198,7 @@ def decode_with_ffmpeg(file_path: str, target_sr: int):
                           capture_output=True, creationflags=flags)
     if proc.returncode != 0 or not proc.stdout:
         detail = proc.stderr.decode("utf-8", "replace").strip().splitlines()
-        raise RuntimeError(f"ffmpeg: {detail[-1] if detail else 'keine Audiodaten'}")
+        raise RuntimeError(f"ffmpeg: {detail[-1] if detail else 'no audio data'}")
     return np.frombuffer(proc.stdout, dtype=np.float32).copy(), target_sr
 
 
@@ -377,9 +377,9 @@ def _file_key(file_path: str) -> str:
 def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = True,
                        protect: float = PROTECT_CONF, model: str = "beat_this") -> Dict[str, Any]:
     """
-    Analysiert eine Audiodatei (MP3, WAV, AAC, FLAC) mit CPJKU beat_this oder
-    md_beat_this (nur nicht-kommerziell) und liefert strukturierte Beats, Downbeats,
-    Tempo, Taktart und BAF/DAF-Aktivierungskurven.
+    Analyses an audio file (MP3, WAV, AAC, FLAC ...) with CPJKU beat_this or
+    md_beat_this (non-commercial only) and returns structured beats, downbeats,
+    tempo, time signature and the BAF/DAF activation curves.
     """
     model_id = normalize_model(model)
     ffmpeg_utils.apply_ffmpeg_dir(settings.load().get("ffmpegDir"))
@@ -399,7 +399,7 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
     key = _file_key(file_path)
     last = _LAST
     cached_model = last[4] if last and last[0] == key and last[1] == model_id else None
-    # Lade Audio sicher mit soundfile / librosa (kompatibel mit Python 3.9 bis 3.13)
+    # load the audio with soundfile / PyAV / librosa (works with Python 3.9 to 3.13)
     if last and last[0] == key:
         y, sr = last[2], last[3]
     else:
@@ -433,7 +433,7 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
 
     _LAST = (key, model_id, y, sr, model_cache)
 
-    # Kurven fuer die Web-App: Wahrscheinlichkeiten vom Modell, sonst die Onset-Staerke von librosa
+    # curves for the web app: probabilities of the model, otherwise the onset strength of librosa
     if beat_prob is not None:
         curve = activation_curve(beat_prob, downbeat_prob)
         activation_source = model_id
@@ -445,7 +445,7 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
         curve = activation_curve(onset_env, None, fps=sr / hop_length)
         activation_source = "onset"
 
-    # Statistiken & Strukturierte Beats erzeugen
+    # statistics and structured beats
     intervals = []
     for i in range(1, len(beats_sec)):
         dt = beats_sec[i] - beats_sec[i - 1]
@@ -470,20 +470,20 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
         max_bpm = 120.0
         tempo_stability = 90
 
-    # Taktart: haeufigste Beat-Anzahl zwischen zwei Downbeats und ihr Anteil an allen Takten
+    # time signature: most frequent number of beats between two downbeats and its share of all bars
     beats_per_bar, bar_share = meter_from_beats(beats_sec, downbeats_sec)
     if info["id"] == "librosa":
         bar_share = None   # librosa puts a downbeat on every 3rd/4th beat: a share of those bars says nothing
 
-    # Erzeuge strukturierte Beat-Liste mit Takt & Zählzeit
+    # structured beat list with bar and beat of the bar
     downbeat_indices = set()
     for d in downbeats_sec:
-        # Finde nächsten Beat
+        # next beat
         closest_idx = min(range(len(beats_sec)), key=lambda i: abs(beats_sec[i] - d), default=None)
         if closest_idx is not None and abs(beats_sec[closest_idx] - d) < 0.12:
             downbeat_indices.add(closest_idx)
 
-    # Takte glaetten (nur beat_this): gleichmaessiges Raster, Neuansatz nur bei klarer Evidenz des Modells
+    # smooth the bars (beat_this only): an even grid, restarted only where the model clearly hears another "1"
     smoothing = {"applied": False, "meter": beats_per_bar, "changedBeats": 0, "reanchors": 0, "protect": protect}
     positions = None
     if beat_prob is not None and smooth and len(downbeat_indices) >= 2:   # fewer: no bar the model heard
@@ -533,7 +533,7 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
 
         beat_in_bar = beat_in_bar + 1 if positions else (beat_in_bar % beats_per_bar) + 1
 
-    # Wellenform-Peaks für schnelles Rendern im Canvas
+    # waveform peaks for quick drawing in the canvas
     num_buckets = 2400
     bucket_size = max(1, len(y) // num_buckets)
     waveform_peaks = []
@@ -597,21 +597,21 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
 
 def fallback_mir_track(y: np.ndarray, sr: int):
     """
-    Präziser Fallback mit Librosa Dynamic Programming & Harmonischer Taktsegmentierung
+    Fallback with librosa (dynamic programming beat tracker; bars from harmonic similarity)
     """
     tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr, hop_length=512, trim=False)
     beats_sec = [float(round(t, 3)) for t in librosa.frames_to_time(beat_frames, sr=sr, hop_length=512)]
 
-    # librosa erkennt keine Downbeats: jeder 4. Beat ab dem ersten (3., wenn sich der Klang nach 3 Beats
-    # deutlich aehnlicher wiederholt als nach 4). Ob die "1" stimmt, haengt am ersten erkannten Beat.
+    # librosa finds no downbeats: every 4th beat from the first (every 3rd when the sound repeats clearly more
+    # similarly after 3 beats than after 4). Whether the "1" is right depends on the first detected beat.
     downbeats_sec = []
     if beats_sec:
         step = 4
-        # Prüfe ob 3/4 (Walzer)
+        # 3/4 (waltz)?
         if len(beats_sec) >= 12:
             cqt = np.abs(librosa.cqt(y=y[:sr * 30], sr=sr, hop_length=512))
             sync_cqt = librosa.util.sync(cqt, beat_frames[:len(beats_sec)])
-            # Chroma Korrelation bei Lag 3 vs 4
+            # chroma correlation at lag 3 vs 4
             if sync_cqt.shape[1] >= 12:
                 sim3 = float(np.mean(sync_cqt[:, :-3] * sync_cqt[:, 3:]))
                 sim4 = float(np.mean(sync_cqt[:, :-4] * sync_cqt[:, 4:]))
@@ -629,8 +629,8 @@ RESOLVE_MARKER_FORMAT = "beatthis-resolve-markers/1"
 
 def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) -> Dict[str, Any]:
     """
-    Marker-JSON fuer resolve/BeatAnalyzer_Markers.lua (gleiches Format wie der Export der Web-App).
-    Zeiten in Sekunden ab Anfang der Audiodatei.
+    Marker JSON for resolve/BeatAnalyzer_Markers.lua (same format as the export of the web app).
+    Times in seconds from the start of the audio file.
     """
     beats = [b for b in result["beats"] if b["isDownbeat"]] if only_downbeats else result["beats"]
     data = {

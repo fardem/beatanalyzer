@@ -92,6 +92,25 @@
 
 ## 2. Teilprojekt 5 – README (Gesamtkonzept Abschnitt 10)
 
+**Stand 2026-11-17:** README in drei Sprachen fertig (`README.md` englisch, `README.de.md`, `README.tr.md`) mit
+Screenshots aus 0.3.1 (`docs/images/`; Projektname und Timeline-Vorschauen unkenntlich). CHANGELOG ist englisch
+(übersetzt); neue Einträge nur noch englisch. Code-Kommentare, Docstrings und `requirements.txt` englisch
+(2026-11-17; zwei deutsche Konsolenausgaben in `analyzer.py` gefunden und übersetzt). Interne Arbeitsdokumente unter
+`docs/superpowers/` bleiben deutsch (Verlauf). Statt eines Vergleichs mit Resolves „Show Beats“/librosa
+(Entscheidung Nutzer: andere nicht schlechtmachen) beschreibt die README im Abschnitt „Why BeatAnalyzer“ unsere
+Stärken. Offen: Aussage zu CUDA prüfen.
+
+**Nächste Zusammenführung (nach Teilprojekt 5, Nutzer):** parallele Entwicklung des Nutzers mit dem Panel
+„Beat-Evidenz & Takt-Korrektur“ – Onset-Spuren in drei Bändern (Low < 150 Hz Bass/Kick, Mid 150 Hz–2,5 kHz
+Snare/Körper, High > 2,5 kHz Hats/Air) mit Takt-Fähnchen, „gefalteter Takt“ (alle Takte gemittelt, je Band eine
+Kurve, Hinweis bei schwach ausgeprägter Kick-Verteilung) und „1-Klick-Taktkorrektur“ (Takt-Start ±1 Beat,
+Beat-Raster ±½ Beat, Tempo ½×/2×, Rückgängig). Danach in README „Why BeatAnalyzer“ ergänzen.
+  Festlegungen (Nutzer, 2026-11-17): Die neuen Funktionen bleiben **nur in der Web-App**; Korrekturen kommen über
+  den JSON-Export nach Resolve. Das **Resolve-Fenster gilt als fertig** (Endstand 0.3.x) und wird dafür nicht
+  erweitert. Der gefaltete Takt mittelt schon über den sichtbaren Ausschnitt bzw. einen gewählten Bereich.
+  Beim Zusammenführen prüfen: Korrektur übersteht neues Glätten; Korrektur landet in der Marker-JSON; Texte in
+  `lang/*.json` (EN/DE/TR); Onset-Spuren standardmäßig eingeklappt bzw. an den Zoom gekoppelt.
+
 - Ablauf von 0.1.x statt 0.0.5 (Resolve-Fenster mit beiden Wegen, Glätten, Farben, Entfernen, Sprachen, Anzeige
   des Analyse-Programms, Subtitle Track je Spur).
 - **Vergleich mit Resolves „Show Beats“:** warum beat_this anders arbeitet und welche Vorteile das bringt
@@ -156,6 +175,9 @@
 - Server versteht nur `smoothBars=0` als „aus“; Kommandozeile gibt `barSmoothing` nicht aus.
 
 **Glätten / Analyse**
+- **Gesamttempo robuster (Idee, nicht entschieden):** `globalBpm` = 60 / Mittelwert der Beat-Abstände. Bei Songs, in
+  denen beat_this abschnittsweise doppelt so viele Beats findet („Teoman – Ağır Kapı“: Tabelle meist 76,9 BPM,
+  Gesamttempo 131,2, Stabilität 59 %, Tempo-Kurve bis 375 BPM), zieht das den Wert hoch. Median wäre robuster.
 - Testlücken: 3/4-Takt und Songende bei `smooth_bars`.
 - Tempo-Sprünge in Abschnitten (z. B. „Küçük Sevgilim“: ≈ 115 ↔ 176 BPM, Faktor 1,5) – beat_this zählt dort auf
   anderer Ebene; nicht untersucht.

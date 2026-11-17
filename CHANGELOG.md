@@ -1,365 +1,375 @@
 # Changelog
 
+## [0.3.2] – 2026-11-17
+
+### Fixed
+- **GPU speed on Windows:** `install_and_run.bat` installed PyTorch from PyPI, which on Windows is the **CPU build only** – an NVIDIA card was not used unless PyTorch was installed again by hand. The new `backend/torch_setup.py` reads the CUDA version of the NVIDIA driver from `nvidia-smi` (old "CUDA Version" and new "CUDA UMD Version" format) and installs the tested **PyTorch 2.8.0** as the **CUDA 12.8 build** (driver with CUDA 12.8 or newer, needed by RTX 50 cards), the CUDA 12.6 build for older drivers, otherwise the CPU build. A CPU build from an older installation is replaced; a working CUDA build is never touched. If the CUDA build cannot be installed, it falls back to the newest build of that index and then to the CPU build. `BEATANALYZER_TORCH=cpu|cu126|cu128` sets the build by hand. Only the venv of BeatAnalyzer changes – other Python environments (e.g. Whisper) and the driver stay as they are.
+- `debug_check.py` (`debug_system.bat`) printed German texts, and two error messages of the audio decoding were German; all English now.
+
+### Added
+- The server banner shows the PyTorch version and whether it is the CUDA or the CPU build; `debug_system.bat` too.
+- `docs/tested-environment.md`: the tested PC and all package versions; README "Tested with".
+
 ## [0.3.1] – 2026-11-17
 
-Rückmeldungen aus dem Test von 0.3.0.
+Feedback from the test of 0.3.0.
 
-### Behoben
-- **Leeres Browserfenster beim Start:** `start.bat`, `install_and_run.bat` und `install_and_run.sh` öffneten den Browser sofort, während der Server noch lud (torch, Modell). Jetzt öffnet der Server die Web-App selbst, sobald er bereit ist (`server.py --open-browser`).
-- **Doppelte Fortschrittszeile im Resolve-Fenster:** „Track wird analysiert (Analysieren)“ bzw. TR „Parça analiz ediliyor (analiz ediliyor)“ heißt jetzt „… (Beats erkennen)“ / „(detecting beats)“ / „(beat'ler algılanıyor)“.
-- **Türkisch: „marker“ statt „işaretçi“** überall (Resolve gibt es nicht auf Türkisch; Resolve-Begriffe bleiben englisch, wie im Glossar). Ein Test prüft das.
+### Fixed
+- **Empty browser window at start:** `start.bat`, `install_and_run.bat` and `install_and_run.sh` opened the browser at once while the server was still loading (torch, model). Now the server opens the web app itself as soon as it is ready (`server.py --open-browser`).
+- **Doubled progress line in the Resolve window:** "Analysing the track (analysing)" – TR "Parça analiz ediliyor (analiz ediliyor)" – now reads "… (detecting beats)" / "(Beats erkennen)" / "(beat'ler algılanıyor)".
+- **Turkish: "marker" instead of "işaretçi"** everywhere (Resolve has no Turkish interface; Resolve terms stay English, as in the glossary). A test checks this.
 
 ## [0.3.0] – 2026-11-16
 
-Teilprojekt 4 fertig: Web-App und Resolve-Fenster sprechen dieselbe Sprache, Begriffe und Farben. Korrekturen aus dem Test von 0.2.14.
+Teilprojekt 4 done: web app and Resolve window share language, terms and colours. Fixes from the test of 0.2.14.
 
-### Behoben
-- **„BeatAnalyzer-Marker entfernen“ antwortet sofort:** Nach *Entfernen* zeigt das Fenster „BeatAnalyzer-Marker werden entfernt …“ und sperrt alle Knöpfe, bis die Arbeit fertig ist; danach das Ergebnis im grünen Kasten. Vorher lief das Entfernen im Klick selbst, das Fenster zeichnete sich nicht neu, und der Knopf wirkte, als nehme er den Klick nicht an.
-- **Reiter-Text nicht mehr abgeschnitten** („usgewählten Clip analysierei“): Der gewählte Reiter ist nicht mehr fett (Resolve misst die Breite für normale Schrift).
-- **Keine falsche MP3-Warnung beim Weg „JSON laden“:** MP3-Dateien ohne Encoder-Vorlauf (ohne Xing/Info-Frame) spielt Resolve ohne Verzögerung; der Versatz ist 0. Der Server schreibt `resolveOffset` jetzt bei jedem MP3 (auch 0), das Fenster zeigt dann „kein Ausgleich nötig“ statt der Warnung „ältere JSON oder Browser“. Gewarnt wird nur noch, wenn das Feld fehlt.
-- **FLAC mit ID3-Tag:** Beginnt eine FLAC-Datei mit einem ID3-Tag (im FLAC-Format nicht vorgesehen; Browser und Resolve lehnen sie ab), nennt die Web-App genau das und wie man den Tag entfernt (`ffmpeg -i "datei.flac" -map 0 -c copy neu.flac`), statt nur „lässt sich nicht dekodieren“.
+### Fixed
+- **"Remove BeatAnalyzer markers" answers at once:** after *Remove* the window shows "Removing BeatAnalyzer markers …" and locks every button until the work is done; then the result in a green box. Before, the removal ran inside the click, the window did not repaint and the button looked as if it ignored the click.
+- **Tab text no longer cut off** ("usgewählten Clip analysierei"): the chosen tab is no longer bold (Resolve measures the width for the normal font).
+- **No false MP3 warning on the way "Load JSON":** Resolve plays MP3 files without an encoder delay (no Xing/Info frame) on time; the offset is 0. The server now writes `resolveOffset` for every MP3 (also 0), and the window shows "no correction needed" instead of the warning "older JSON or browser". It only warns when the field is missing.
+- **FLAC with an ID3 tag:** when a FLAC file starts with an ID3 tag (not allowed by the FLAC format; browsers and Resolve refuse it), the web app says exactly that and how to remove the tag (`ffmpeg -i "file.flac" -map 0 -c copy new.flac`) instead of only "cannot be decoded".
 
 ## [0.2.14] – 2026-11-16
 
-### Geändert
-- **Resolve-Fenster in den Farben der Web-App** (Wunsch des Nutzers: gleiche Bedeutung = gleiche Farbe):
-  - Fläche und Text in Schiefergrau (slate) wie die Web-App statt Zinkgrau.
-  - **Cyan** = Hauptaktion und Auswahl: Knopf *Analysieren* / *Marker setzen*, gewählter Reiter, gewählte Kachel beat_this, Hinweis MP3.
-  - **Bernstein** = md_beat_this: gewählte Kachel, Lizenzkasten; auch die Rückfrage vor dem Entfernen.
-  - **Rot (rose)** = Fehler und *Entfernen*; **Grün (emerald)** = Ergebnis nach getaner Arbeit.
-  - Die Farbpunkte der Marker bleiben in den Farben von Resolve.
+### Changed
+- **Resolve window in the colours of the web app** (wish of the user: same meaning = same colour):
+  - Surface and text in slate like the web app instead of zinc grey.
+  - **Cyan** = main action and choice: button *Analyse* / *Apply markers*, chosen tab, chosen beat_this tile, MP3 note.
+  - **Amber** = md_beat_this: chosen tile, licence box; also the question before removing.
+  - **Red (rose)** = errors and *Remove*; **green (emerald)** = result after the work.
+  - The colour squares of the markers keep Resolve's colours.
 
 ## [0.2.13] – 2026-11-16
 
-Neues Design des Resolve-Fensters (Entwurf des Nutzers mit Google Gemini, in Resolve getestet), übernommen und an BeatAnalyzer angepasst.
+New design of the Resolve window (draft of the user with Google Gemini, tested in Resolve), adopted and adapted to BeatAnalyzer.
 
-### Geändert
-- **Resolve-Fenster neu gegliedert:** oben Song, Dauer und Timeline auf einen Blick; Abschnitt **„1. Quelle & Analyse-Modell“** mit den zwei Wegen als Reiter (*Ausgewählten Clip analysieren* / *JSON laden*) und dem **Modell als zwei Kacheln** (beat_this · auch kommerziell / md_beat_this · nur nicht-kommerziell); Abschnitt **„2. Ausgabe in Resolve“** mit Subtitle Track und Markerfarben (eingeklappt als kleine Farbpunkte, aufgeklappt mit Farbfeld je Beat).
-- Dunkles Farbschema wie Resolve; Hinweise in farbigen Kästen (blau = Hinweis, z. B. MP3; gelb = Warnung, Lizenz von md_beat_this); der Status-Kasten erscheint erst, wenn es etwas zu melden gibt.
-- Der Haupt-Knopf heißt je Weg **„Analysieren“** bzw. **„Marker setzen“**; Knöpfe, die gerade nicht passen, sind ausgeblendet (während der Analyse nur *Abbrechen*, danach *OK*).
-- „BeatAnalyzer-Marker entfernen“ geht auch direkt nach dem Ergebnis.
-- Neue Texte in `lang/*.json` (auch türkisch): `btn_analyze`, `btn_apply`, `sec_source`, `sec_output`; Modell-Kacheln zweizeilig.
+### Changed
+- **Resolve window reorganised:** song, length and timeline at a glance at the top; section **"1. Source & analysis model"** with the two ways as tabs (*Analyse the selected clip* / *Load JSON*) and the **model as two tiles** (beat_this · also commercial / md_beat_this · non-commercial only); section **"2. Output in Resolve"** with subtitle track and marker colours (folded: small colour squares; unfolded: one colour field per beat).
+- Dark colour scheme like Resolve; notes in coloured boxes (blue = note, e.g. MP3; yellow = warning, licence of md_beat_this); the status box only appears when there is something to report.
+- The main button reads **"Analyse"** or **"Apply markers"** depending on the way; buttons that do not fit the state are hidden (while analysing only *Cancel*, afterwards *OK*).
+- "Remove BeatAnalyzer markers" also works right after the result.
+- New texts in `lang/*.json` (Turkish too): `btn_analyze`, `btn_apply`, `sec_source`, `sec_output`; model tiles on two lines.
 
-### Hinweis
-- „Python of BeatAnalyzer not found“ im Test des Entwurfs: Die Datei war die Vorlage aus dem Repo (ohne BeatAnalyzer-Ordner und Python). Eingebaut wird das Skript über *In Resolve aktualisieren* in der Web-App bzw. `install_and_run.bat`; erst dann trägt es diese Pfade.
+### Note
+- "Python of BeatAnalyzer not found" in the test of the draft: the file was the template from the repo (without BeatAnalyzer folder and Python). The script is installed with *Update in Resolve* in the web app or `install_and_run.bat`; only then does it contain these paths.
 
 ## [0.2.12] – 2026-11-15
 
-### Geändert
-- **Alle Texte des Servers auf Englisch:** Fehlermeldungen an die Web-App (z. B. „Audio analysis failed: …“, „Settings not saved: …“), Meldungen des Updaters, der ffmpeg-Prüfung und der Modellprüfung bei der Installation, Ausgaben in der Konsole, Kommandozeile (`analyze_cli.py`, Hilfe und Ausgabe) und die Ersatz-Oberfläche, die der Server ohne `dist/` zeigt. Die Web-App selbst bleibt in der gewählten Sprache; Meldungen des Servers erscheinen darin englisch.
-- **Batch- und Shell-Skripte englisch** (`install_and_run.bat`, `start.bat`, `update.bat`, `run_cli.bat`, `debug_system.bat`, `install_and_run.sh`). Grundsatz (Nutzer): Das Programm spricht Englisch; nur die Oberflächen mit Sprachwahl (Web-App, Resolve-Fenster) zeigen die gewählte Sprache.
+### Changed
+- **All texts of the server in English:** error messages to the web app (e.g. "Audio analysis failed: …", "Settings not saved: …"), messages of the updater, of the ffmpeg check and of the model check during installation, console output, command line (`analyze_cli.py`, help and output) and the fallback page the server shows without `dist/`. The web app itself keeps the chosen language; server messages appear in it in English.
+- **Batch and shell scripts in English** (`install_and_run.bat`, `start.bat`, `update.bat`, `run_cli.bat`, `debug_system.bat`, `install_and_run.sh`). Principle (user): the program speaks English; only the interfaces with a language choice (web app, Resolve window) show the chosen language.
 
 ## [0.2.11] – 2026-11-15
 
-### Behoben
-- Kacheln: Texte unter dem Wert wurden abgeschnitten (z. B. „sehr gleichmäßig (wie Click-Track“). Sie brechen jetzt bei Bedarf in eine zweite Zeile um; die Texte zur Tempo-Stabilität sind kürzer („sehr gleichmäßig“, „natürlicher Groove“, „Tempo schwankt“).
+### Fixed
+- Tiles: texts under the value were cut off (e.g. "very steady (like a click track"). They now wrap to a second line when needed; the tempo stability texts are shorter ("very steady", "natural groove", "tempo varies").
 
 ## [0.2.10] – 2026-11-15
 
-Rückmeldungen aus dem Test von 0.2.9 (alle Punkte bestanden).
+Feedback from the test of 0.2.9 (all points passed).
 
-### Behoben
-- Player: **Song, Metronom und Geschwindigkeit gleich hoch** (40 px); das Auswahlfeld der Geschwindigkeit wurde abgeschnitten.
-- Kachel Taktart: Ohne „Glätten“ (librosa, md_beat_this, Browser) stand die Taktart ein zweites Mal klein darunter. Dort steht jetzt nichts; mit beat_this wie bisher „n Beats neu eingeteilt / k Neuansätze“.
+### Fixed
+- Player: **song, metronome and speed at the same height** (40 px); the speed selector was cut off.
+- Time signature tile: without smoothing (librosa, md_beat_this, browser) the time signature appeared a second time in small print below. Nothing is shown there now; with beat_this as before "n beats reassigned / k restarts".
 
 ## [0.2.9] – 2026-11-15
 
-Rückmeldungen aus dem Test von 0.2.8.
+Feedback from the test of 0.2.8.
 
-### Geändert
-- **Loop „Ausschnitt“ folgt dem blauen Rahmen:** Verschiebst du den Rahmen in der Übersicht (oder zoomst), ist seine linke Kante der Start und die rechte das Ende des Loops; liegt die Wiedergabe außerhalb, springt sie an den Start. Solange dieser Loop läuft, scrollt die Ansicht nicht mehr selbst mit.
-- Player kompakter, damit er in einer Zeile bleibt: Geschwindigkeit als Auswahlfeld.
-- **Loop-Knopf als Symbol** (Wunsch des Nutzers): grau = aus, gelb mit „A-B“ = Ausschnitt (blauer Rahmen), grün = ganzer Song; was ein Klick tut, steht im Tooltip.
+### Changed
+- **Loop "section" follows the blue frame:** when you move the frame in the overview (or zoom), its left edge is the start and its right edge the end of the loop; if playback is outside, it jumps to the start. While this loop runs, the view no longer scrolls along by itself.
+- More compact player so it stays on one line: speed as a selector.
+- **Loop button as an icon** (wish of the user): grey = off, yellow with "A-B" = section (blue frame), green = whole song; the tooltip says what a click does.
 
-### Behoben
-- **Player sprang bei jedem Downbeat in eine zweite Zeile:** Die Anzeige „Takt 35 • Downbeat (Beat 1)“ war breiter als „Takt 34 • Beat 2“. Sie ist jetzt zweizeilig in fester Größe (oben der Takt, darunter Downbeat/Beat); die Höhe des Players bleibt beim Abspielen und beim Umschalten des Loops gleich.
+### Fixed
+- **Player jumped to a second line on every downbeat:** the display "Bar 35 • Downbeat (Beat 1)" was wider than "Bar 34 • Beat 2". It now has two lines of fixed size (bar above, downbeat/beat below); the height of the player stays the same while playing and when switching the loop.
 
 ## [0.2.8] – 2026-11-15
 
-Rückmeldungen aus dem Test von 0.2.7.
+Feedback from the test of 0.2.7.
 
-### Hinzugefügt
-- **Loop** im Player (Knopf neben den Abspieltasten): 1. Klick wiederholt den **sichtbaren Ausschnitt** der Wellenform (z. B. nach `5s`), 2. Klick den **ganzen Song**, 3. Klick schaltet aus. Zeigt die Wellenform den ganzen Song, geht es gleich zum ganzen Song. Der Loop läuft lückenlos; in der Wellenform ist alles außerhalb abgedunkelt, die Grenzen sind gelb, in der Übersicht ist der Bereich markiert. Ein Sprung aus dem Ausschnitt heraus beendet den Loop.
-- **Lautstärke des Songs** (Regler „Song“ neben dem Metronom), damit sich Song und Klick abstimmen lassen.
+### Added
+- **Loop** in the player (button next to the play buttons): 1st click repeats the **visible section** of the waveform (e.g. after `5s`), 2nd click the **whole song**, 3rd click turns it off. If the waveform shows the whole song, it goes straight to the whole song. The loop is gapless; outside it the waveform is dimmed, the limits are yellow, and the range is marked in the overview. Jumping out of the section ends the loop.
+- **Song volume** (slider "Song" next to the metronome) to balance song and click.
 
-### Behoben
-- Kachel Taktart: Der Kasten „Anteil der Takte“ brach im Türkischen auf zwei Zeilen um und saß zu hoch. Er bleibt jetzt einzeilig und unten bündig mit der Taktart (türkisch „%97 ölçü“, „4/4'lük“ eine Stufe kleiner); ist die Kachel zu schmal, rutscht er in die nächste Zeile.
+### Fixed
+- Time signature tile: the box "share of bars" wrapped to two lines in Turkish and sat too high. It now stays on one line, aligned at the bottom with the time signature (Turkish "%97 ölçü", "4/4'lük" one size smaller); if the tile is too narrow, it moves to the next line.
 
 ## [0.2.7] – 2026-11-15
 
-Teilprojekt 4 (Web-App), Schritt 2: Sprachen.
+Teilprojekt 4 (web app), step 2: languages.
 
-### Hinzugefügt
-- **Web-App in Deutsch, Englisch und Türkisch.** Sprachwahl in der Kopfzeile (System, Deutsch, English, Türkçe). Die Wahl speichert der Server in `settings.json`; sie gilt auch für das installierte Resolve-Skript. Ohne Server merkt sich der Browser die Wahl.
-- Alle Texte der Web-App stehen in `lang/*.json` (Abschnitt `web`), zusammen mit den Texten des Resolve-Skripts. Zahlen und Prozente im Format der Sprache (89,6 / 89.6; 75 % / 75% / %75).
-- Kacheln nach Glossar: **Taktart** · 4/4 (EN *Time signature*, TR *Ölçü* · 4/4'lük) und **Taktanzahl** · 124 (EN *Bars*, TR *Toplam* · 124 ölçü). Takt-Fähnchen, Tabelle und Tooltips nennen den Takt in der Sprache („Takt 7“, „Bar 7“, „Ölçü 7“).
+### Added
+- **Web app in German, English and Turkish.** Language choice in the header (System, Deutsch, English, Türkçe). The server stores the choice in `settings.json`; it also applies to the installed Resolve script. Without a server the browser remembers it.
+- All texts of the web app are in `lang/*.json` (section `web`), together with the texts of the Resolve script. Numbers and percentages in the format of the language (89,6 / 89.6; 75 % / 75% / %75).
+- Tiles after the glossary: **time signature** · 4/4 (DE *Taktart*, TR *Ölçü* · 4/4'lük) and **bars** · 124 (DE *Taktanzahl*, TR *Toplam* · 124 ölçü). Bar labels, table and tooltips name the bar in the language ("Takt 7", "Bar 7", "Ölçü 7").
 
-### Geändert
-- Fortschritts- und Fehlertexte der Analyse kommen aus den Sprachdateien.
-- Fenster „Modell-Info“ korrigiert: Autoren und Titel von beat_this (Foscarin, Schlüter, Widmer – „Beat this! Accurate beat tracking without DBN postprocessing“, ISMIR 2024), Ablauf der Analyse wie er wirklich ist (Server mit beat_this, Browser nur als Ersatz).
-- Begriffe nach Glossar: Tabelle „Nur Downbeats“ statt „Taktanfänge“, Spalte „Confidence“.
+### Changed
+- Progress and error texts of the analysis come from the language files.
+- Window "Model info" corrected: authors and title of beat_this (Foscarin, Schlüter, Widmer – "Beat this! Accurate beat tracking without DBN postprocessing", ISMIR 2024), the analysis flow as it really is (server with beat_this, browser only as fallback).
+- Terms after the glossary: table "Downbeats only" instead of "bar starts", column "Confidence".
 
 ## [0.2.6] – 2026-11-15
 
-Teilprojekt 4 (Web-App), Schritt 1. Plan: `docs/superpowers/plans/2026-11-15-teilprojekt-4-web-app.md`.
+Teilprojekt 4 (web app), step 1. Plan: `docs/superpowers/plans/2026-11-15-teilprojekt-4-web-app.md`.
 
-### Geändert
-- **Wellenform mit echten Details:** Hauptansicht und Lupe zeichnen die Wellenform aus den dekodierten Audiodaten, eine Säule je Bildschirmspalte (Spitze und RMS), wie in DaVinci Resolve. Bisher kam die Hüllkurve aus 2400 Spitzen für den ganzen Song (bei 3:30 eine je ≈ 90 ms) – beim Hineinzoomen waren die Anschläge nicht zu sehen. Die Übersicht bleibt unverändert.
-- **Keine Überlappung mehr** bei Takt-Beschriftungen und Zeitachse: Es wird nur jeder n-te Takt beschriftet, die Zeitachse wählt einen passenden Schritt; Beat-Nummern nur, wenn Platz ist.
-- **Kopfzeile zeigt das Analyse-Programm** (z. B. „beat_this · CUDA (RTX 5080)“, „librosa (Ersatz) – beat_this nicht installiert“, „Browser-Analyse (Ersatz) – kein Server“), vor der Analyse aus dem Server, danach aus dem Ergebnis; die Lizenz steht im Tooltip.
-- Export „DaVinci Resolve“: Auswahl „Nur Downbeats“ und Farbhinweis entfallen (Farben stellt das Resolve-Fenster ein). Die Kommandozeile behält `--only-downbeats`.
-- Die Web-App wartet bis zu 3 s auf den Server (bisher 0,8 s), damit ein beschäftigter Server nicht durch die Browser-Analyse ersetzt wird.
+### Changed
+- **Waveform with real detail:** main view and magnifier draw the waveform from the decoded audio, one column per screen pixel (peak and RMS), as in DaVinci Resolve. Before, the envelope came from 2400 peaks for the whole song (one per ≈ 90 ms at 3:30) – zoomed in, the attacks were not visible. The overview is unchanged.
+- **No more overlapping** of bar labels and time axis: only every n-th bar is labelled, the time axis picks a suitable step; beat numbers only when there is room.
+- **Header shows the analysis program** (e.g. "beat_this · CUDA (RTX 5080)", "librosa (fallback) – beat_this not installed", "Browser analysis (fallback) – no server"), before the analysis from the server, afterwards from the result; the licence is in the tooltip.
+- Export "DaVinci Resolve": the option "Downbeats only" and the colour note are gone (colours are set in the Resolve window). The command line keeps `--only-downbeats`.
+- The web app waits up to 3 s for the server (before 0.8 s), so a busy server is not replaced by the browser analysis.
 
 ## [0.2.5] – 2026-11-15
 
-Rückmeldungen aus dem Test von 0.2.4 (MP3-Ausgleich in Resolve bestätigt: Marker der MP3 liegen auf dem Beat).
+Feedback from the test of 0.2.4 (MP3 correction in Resolve confirmed: the markers of the MP3 sit on the beat).
 
-### Geändert
-- Resolve-Fenster, Weg „JSON laden“: Enthält die JSON den MP3-Ausgleich, steht schon vor OK „MP3: Die Marker werden 51 ms später gesetzt …“ (bisher stand das nur in der Meldung am Ende).
-- Web-App, *Exportieren → DaVinci Resolve*: Bei MP3 nennt ein Hinweis den Ausgleich in Millisekunden, den die JSON enthält.
+### Changed
+- Resolve window, way "Load JSON": if the JSON contains the MP3 correction, "MP3: the markers are set 51 ms later …" appears before OK (before, it was only in the message at the end).
+- Web app, *Export → DaVinci Resolve*: for MP3 a note names the correction in milliseconds that the JSON contains.
 
 ## [0.2.4] – 2026-11-15
 
-Rückmeldungen aus dem Test von 0.2.3.
+Feedback from the test of 0.2.3.
 
-### Behoben
-- **MP3 in Resolve: Marker lagen ≈ 50 ms vor dem Beat.** Resolve spielt bei MP3 zuerst den Xing/Info-Rahmen und die Verzögerung des Encoders ab, die die Analyse (wie jede Gapless-Wiedergabe) weglässt. Der Server liest den Versatz aus dem Kopf der MP3 (Rahmen + Encoder-Verzögerung aus dem LAME-Tag + 529 Samples des Decoders; z. B. 51,2 ms bei 44,1 kHz) und schreibt ihn als `resolveOffset` in die Analyse und die Marker-JSON. Das Resolve-Skript setzt Marker und Subtitles auf MP3-Clips um diesen Wert später und meldet das („MP3: Marker um 51 ms nach hinten gesetzt“). Auf WAV/FLAC-Clips ändert sich nichts. JSON ohne den Wert (älter oder im Browser analysiert) bekommen im Fenster weiter den Warnhinweis.
-- **Web-App rechnete bei einem Fehler des Servers still im Browser weiter** (z. B. m4a, die der Server nicht lesen konnte). Antwortet der Server, erscheint jetzt seine Fehlermeldung; die Browser-Analyse springt nur noch ein, wenn kein Server läuft (mit Banner „Fallback aktiv“).
+### Fixed
+- **MP3 in Resolve: markers sat ≈ 50 ms before the beat.** For MP3 Resolve first plays the Xing/Info frame and the encoder delay, which the analysis (like any gapless playback) leaves out. The server reads the offset from the MP3 header (frame + encoder delay from the LAME tag + 529 decoder samples; e.g. 51.2 ms at 44.1 kHz) and writes it as `resolveOffset` into the analysis and the marker JSON. The Resolve script sets markers and subtitles on MP3 clips that much later and says so ("MP3: markers moved by 51 ms"). Nothing changes on WAV/FLAC clips. JSON files without the value (older or analysed in the browser) still get the warning in the window.
+- **The web app silently continued in the browser after a server error** (e.g. an m4a the server could not read). If the server answers, its error message now appears; the browser analysis only steps in when no server runs (with the banner "fallback active").
 
-### Geändert
-- Resolve-Fenster: Bei MP3 im Weg „Ausgewählten Clip analysieren“ steht statt der Warnung der Hinweis, dass BeatAnalyzer die Marker entsprechend später setzt.
+### Changed
+- Resolve window: for MP3 on the way "Analyse the selected clip", the warning is replaced by a note that BeatAnalyzer moves the markers accordingly.
 
 ## [0.2.3] – 2026-11-15
 
-Rückmeldungen aus dem Test von 0.2.2.
+Feedback from the test of 0.2.2.
 
-### Hinzugefügt
-- Resolve-Fenster: **Hinweis bei MP3** (beide Wege): Resolve spielt MP3-Dateien etwa 50 ms später ab, als BeatAnalyzer sie analysiert (Resolve rechnet die Verzögerung des Encoders am Anfang nicht heraus); die Marker liegen dort so viel vor dem Beat. Für genaue Marker den Song als WAV oder FLAC verwenden. Analysieren bleibt möglich.
+### Added
+- Resolve window: **note for MP3** (both ways): Resolve plays MP3 files about 50 ms later than BeatAnalyzer analyses them (Resolve does not remove the encoder delay at the start); the markers sit that much before the beat. For exact markers use the song as WAV or FLAC. Analysing is still possible.
 
-### Behoben
-- **m4a/AAC ließ sich nicht analysieren** (Web-App und Resolve), wenn ffmpeg nicht über den `PATH` erreichbar war. Formate, die soundfile nicht kennt (m4a/AAC, ALAC, Opus, WMA …), liest der Server jetzt mit **PyAV** (bringt eigene FFmpeg-Bibliotheken mit, wird mitinstalliert); ohne PyAV mit dem installierten ffmpeg (Ordner aus den Einstellungen oder System-`PATH`, unter Windows ohne Konsolenfenster). Die Originaldatei wird nur gelesen; gelesen wird mit voller Auflösung bei der eigenen Abtastrate, die Verzögerung des Encoders am Anfang (MP3/AAC) wird wie bisher herausgerechnet. Ist ein Format nicht lesbar, nennt die Meldung die Abhilfe.
-- Resolve-Fenster: **Nach einem Analysefehler blieb OK aktiv.** Jetzt bleibt OK für diese Datei mit diesem Modell gesperrt (nur Schließen); ein anderer Clip oder ein anderes Modell geht. Gilt auch, wenn Python nicht startet oder die Zeit abläuft; nach Abbrechen bleibt OK aktiv.
-- Web-App: Die **Höhe des Wellenform-Bereichs sprang** beim Abspielen in schmalen Fenstern. Die Anzeige „Takt 7 · Downbeat“/„Takt 7 · Beat 2“ hat jetzt eine feste Breite und immer denselben Rahmen, auch ohne aktuellen Beat.
+### Fixed
+- **m4a/AAC could not be analysed** (web app and Resolve) when ffmpeg was not on the `PATH`. Formats soundfile does not know (m4a/AAC, ALAC, Opus, WMA …) are now read by the server with **PyAV** (brings its own FFmpeg libraries, installed along); without PyAV with the installed ffmpeg (folder from the settings or system `PATH`, on Windows without a console window). The original file is only read; it is read at full resolution at its own sample rate, the encoder delay at the start (MP3/AAC) is removed as before. If a format cannot be read, the message names the remedy.
+- Resolve window: **OK stayed active after an analysis error.** Now OK stays locked for this file with this model (only Close); another clip or another model works. This also applies when Python does not start or the time runs out; after Cancel, OK stays active.
+- Web app: the **height of the waveform area jumped** while playing in narrow windows. The display "Bar 7 · Downbeat" / "Bar 7 · Beat 2" now has a fixed width and always the same frame, also without a current beat.
 
 ## [0.2.2] – 2026-11-15
 
-Rückmeldungen aus dem Test von 0.2.1.
+Feedback from the test of 0.2.1.
 
-### Behoben
-- Resolve-Fenster: **Zucken bei `md_beat_this` ohne Lizenz-Häkchen.** Die Clip-Zeile wurde jede Sekunde erst mit einer, dann mit zwei Zeilen (Hinweis „Lizenz-Häkchen setzen“) gesetzt; das Fenster ordnete sich dabei zweimal neu an. Der Text wird jetzt in einem Schritt mit der endgültigen Höhe gesetzt.
+### Fixed
+- Resolve window: **twitching with `md_beat_this` without the licence box.** Every second the clip line was set first with one line, then with two (note "tick the licence box"); the window laid itself out twice. The text is now set in one step with its final height.
 
-### Hinzugefügt
-- Web-App: **Songname** in der Kopfzeile der Wellenform („Wellenform & Beat Grid · Song.mp3 · 4:55“); lange Namen werden gekürzt, der volle Name steht im Tooltip.
+### Added
+- Web app: **song name** in the header of the waveform ("Waveform & beat grid · Song.mp3 · 4:55"); long names are shortened, the full name is in the tooltip.
 
-### Geändert
-- Web-App: Begriffe nach Glossar – „Takteintritt“ und „EINS“ heißen jetzt **Downbeat**. Anzeige über der Wellenform „Takt 7 · Downbeat“ bzw. „Takt 7 · Beat 2“, im Player „Takt 7 • Downbeat (Beat 1)“.
+### Changed
+- Web app: terms after the glossary – "Takteintritt" and "EINS" are now **Downbeat**. Display above the waveform "Bar 7 · Downbeat" or "Bar 7 · Beat 2", in the player "Bar 7 • Downbeat (Beat 1)".
 
 ## [0.2.1] – 2026-11-15
 
-### Geändert
-- Web-App, Wellenform: **Schnellauswahl `5s | 15s | 30s | 60s`** statt nur `20s`. Jeder Knopf zeigt einen Ausschnitt dieser Länge um die Abspielposition; ein zweiter Klick auf den aktiven Knopf zeigt wieder die ganze Datei. Knöpfe für Längen, die der Song nicht hat, sind gesperrt. Die Zoomgrenze reicht bei langen Songs bis 5 s.
+### Changed
+- Web app, waveform: **quick selection `5s | 15s | 30s | 60s`** instead of only `20s`. Each button shows a section of that length around the playback position; a second click on the active button shows the whole file again. Buttons for lengths the song does not have are locked. For long songs the zoom limit reaches 5 s.
 
 ## [0.2.0] – 2026-11-15
 
-Zusammenführung mit der parallelen Entwicklung aus Google AI Studio (`fardem/BeatAnalyzer_test`, Basis 0.1.4;
-Protokoll in `docs/gemini weiterentwicklung 0.1.4.md`). Der Stand 0.1.8 bleibt vollständig erhalten.
+Merge with the parallel development from Google AI Studio (`fardem/BeatAnalyzer_test`, base 0.1.4;
+log in `docs/gemini weiterentwicklung 0.1.4.md`). Version 0.1.8 is kept completely.
 
-### Hinzugefügt
-- **Zweites Analyse-Modell `md_beat_this`** (Masked Diffusion, fosfrancesco/md_beat_this, **CC BY-NC 4.0 – nur nicht-kommerzielle Nutzung**). Wird nicht mitinstalliert, sondern bei Bedarf von Hand in die `venv` (siehe README). Server: `/api/analyze?model=md_beat_this`, `/api/health` meldet beide Modelle; Kommandozeile: `--model`. Ohne Installation rechnet librosa. Lizenz und Namensnennung stehen in Analyse- und Marker-JSON und in den Exporten.
-- **Resolve-Fenster: Modellwahl** im Weg „Ausgewählten Clip analysieren“ (`beat_this (MIT)` / `md_beat_this (CC BY-NC 4.0)`). Bei `md_beat_this` Lizenzhinweis mit <https://github.com/fosfrancesco/md_beat_this> und ein Häkchen „nur nicht-kommerziell“, ohne das OK gesperrt bleibt. Das Modell wird gespeichert, das Häkchen nicht. „Glätten“ ist dabei ausgeblendet (das Modell liefert keine Wahrscheinlichkeiten je Frame).
-- **ffmpeg-Ordner** einstellbar (Web-App, `settings.json`, `--ffmpeg-dir`), wenn ffmpeg nicht im System-`PATH` liegt; der Ordner wird beim Speichern geprüft.
-- Web-App: Modell-Kacheln mit Zahnrad, Lizenz- und Einrichtungsfenster (Bestätigung einmal je Sitzung), Lizenzzeile in der Ergebnisansicht.
-- Wellenform: Knopf **`20s`** (20-Sekunden-Ausschnitt um die Abspielposition), höhere Zoomgrenze bei langen Songs, zuschaltbare **Lupe**, **verschiebbarer Rahmen** in der Übersicht.
+### Added
+- **Second analysis model `md_beat_this`** (Masked Diffusion, fosfrancesco/md_beat_this, **CC BY-NC 4.0 – non-commercial use only**). Not installed along; install it by hand into the `venv` if needed (see README). Server: `/api/analyze?model=md_beat_this`, `/api/health` reports both models; command line: `--model`. Without it, librosa computes. Licence and attribution are in the analysis and marker JSON and in the exports.
+- **Resolve window: model choice** on the way "Analyse the selected clip" (`beat_this (MIT)` / `md_beat_this (CC BY-NC 4.0)`). For `md_beat_this` a licence note with <https://github.com/fosfrancesco/md_beat_this> and a box "non-commercial only"; without it OK stays locked. The model is saved, the box is not. Smoothing is hidden for it (the model gives no per-frame probabilities).
+- **ffmpeg folder** can be set (web app, `settings.json`, `--ffmpeg-dir`) when ffmpeg is not on the system `PATH`; the folder is checked when saving.
+- Web app: model tiles with a gear button, licence and setup window (confirmation once per session), licence line in the result view.
+- Waveform: button **`20s`** (20-second section around the playback position), higher zoom limit for long songs, optional **magnifier**, **draggable frame** in the overview.
 
-### Geändert
-- Web-App: Regler „Glätten“ nur, wenn er wirkt; Knopf DAF gesperrt, wenn das Modell keine Downbeat-Kurve liefert (Tooltip nennt den Grund).
-- Subtitles mit `md_beat_this`: ohne Zeile „Confidence“ (das Modell liefert keine), Infoblock „Model: md_beat_this – Nutzung im Rahmen der CC BY-NC 4.0-Lizenz“. Rechnet librosa ersatzweise, heißt es „md_beat_this nicht installiert“.
+### Changed
+- Web app: smoothing slider only when it has an effect; DAF button locked when the model gives no downbeat curve (the tooltip names the reason).
+- Subtitles with `md_beat_this`: no "Confidence" line (the model gives none), info block "Model: md_beat_this – use under the CC BY-NC 4.0 licence". If librosa steps in, it says "md_beat_this not installed".
 
 ## [0.1.8] – 2026-11-14
 
-### Behoben
-- **Marker im vorne gekürzten Timeline-Clip lagen verschoben.** Resolve zählt die Marker eines Timeline-Clips ab dem Anfang der Datei, nicht ab dem sichtbaren Anfang; der abgeschnittene Teil wird nicht mehr abgezogen. Die Subtitles waren richtig.
-- Resolve-Fenster: Nach dem Wechsel von „Ausgewählten Clip analysieren“ zu „JSON laden“ fehlte der Knopf „Auswählen …“, bis man die Fenstergröße änderte. Das Fenster wird nach jedem Wechsel neu angeordnet.
+### Fixed
+- **Markers in a timeline clip trimmed at the start were shifted.** Resolve counts the markers of a timeline clip from the start of the file, not from the visible start; the trimmed part is no longer subtracted. The subtitles were right.
+- Resolve window: after switching from "Analyse the selected clip" to "Load JSON" the button "Choose …" was missing until the window was resized. The window is laid out again after every switch.
 
-### Geändert
-- Resolve-Fenster: niedriger (460 px statt 640 px); eine gespeicherte Höhe wird nicht mehr übernommen, nur die Position.
-- Modellzeile im Subtitle kürzer: „Model: beat_this – Nutzung im Rahmen der MIT-Lizenz“.
+### Changed
+- Resolve window: lower (460 px instead of 640 px); a saved height is no longer restored, only the position.
+- Model line in the subtitle shorter: "Model: beat_this – use under the MIT licence".
 
 ## [0.1.7] – 2026-11-14
 
-### Hinzugefügt
-- **Infoblock in jedem Subtitle** (Media Pool und jedes Vorkommen in der Timeline): BeatAnalyzer, Datei, Tempo und Taktart sowie **Modell und Lizenz**, z. B. „Model: beat_this – Lizenz: MIT – Nutzung: frei, auch kommerziell“. Er steht vor dem ersten Beat, wenn dort mindestens 0,5 s Platz sind, sonst unter dem ersten Beat. Der Subtitle im Media Pool beginnt weiterhin bei 0 s, damit das Timing beim Anlegen an den Clipanfang stimmt.
-- Die Analyse liefert Modell und Lizenz mit (`engineInfo.model`: Name, Lizenz, kommerzielle Nutzung erlaubt). Vorbereitet für spätere Modelle mit anderen Bedingungen („nicht für kommerzielle Nutzung“).
-- README: Abschnitt **Modelle und Lizenzen** (BeatAnalyzer liefert kein Modell aus, beat_this lädt es beim Anbieter, das Modell wird nicht verändert).
+### Added
+- **Info block in every subtitle** (Media Pool and every use in the timeline): BeatAnalyzer, file, tempo and time signature as well as **model and licence**, e.g. "Model: beat_this – licence: MIT – use: free, also commercial". It stands before the first beat if there are at least 0.5 s, otherwise under the first beat. The subtitle in the Media Pool still starts at 0 s so the timing fits when placed at the start of the clip.
+- The analysis returns model and licence (`engineInfo.model`: name, licence, commercial use allowed). Prepared for later models with other terms ("not for commercial use").
+- README: section **Models and licences** (BeatAnalyzer ships no model, beat_this downloads it from its provider, the model is not changed).
 
-### Behoben
-- Resolve-Fenster: Die Breite änderte sich mit dem Inhalt (Resolve ignoriert die verlangte Breite). Eine Zeile mit Mindestbreite hält das Fenster jetzt mindestens 600 px breit; der wirkungslose `Resize`-Versuch aus 0.1.6 entfällt.
-- Resolve-Fenster: Die Zeile „Analysiert mit beat_this (…)“ überlappte nach einer Analyse aus Resolve die nächste Zeile.
+### Fixed
+- Resolve window: the width changed with the content (Resolve ignores the requested width). A row with a minimum width now holds the window at least 600 px wide; the ineffective `Resize` attempt from 0.1.6 is gone.
+- Resolve window: the line "Analysed with beat_this (…)" overlapped the next line after an analysis from Resolve.
 
 ## [0.1.6] – 2026-11-14
 
-### Geändert
-- Resolve-Fenster: **kurze Texte**, die Details stehen im Tooltip. Der Fortschritt heißt „Tasks“ mit kurzen Zeilen („Track wird analysiert“, „Marker werden gesetzt“, „Subtitle wird angelegt“, „Subtitle Track in der Timeline“) ohne den Songnamen in jeder Zeile. Die Erklärung unter „Subtitle Track“ ist eine Zeile, die lange Fassung steht im Tooltip. Kürzerer Tooltip für den Regler „Glätten“ (auch in der Web-App).
-- **Marker-Notiz** mit Takt, Beat, Zeit, Tempo und Confidence, z. B. „Takt 24 – Beat 2 | 106,860 s | 120,0 BPM | Confidence 75 %“ (vorher nur Zeit und Tempo).
-- **Ein Subtitle Track je Audiospur**, in der der Song liegt („BeatAnalyzer - Song (A1)“, „… (A2)“); liegt der Song in einer Spur mehrmals, stehen alle Vorkommen auf diesem Track, jeweils unter ihrem Clip. Liegt der Song nur in einer Spur, heißt der Track wie bisher „BeatAnalyzer - Song“. Ein neuer Lauf ersetzt alle diese Tracks, „BeatAnalyzer-Marker entfernen“ entfernt sie. Vorher bekam nur der zeitlich erste Clip einen Track.
-- Nach dem Anlegen des Subtitle Tracks zeigt Resolve wieder die Timeline, die vorher offen war.
-- `install_and_run.bat` lädt das **Modell von beat_this vorab** (`backend/model_check.py`). Scheitert das, stehen dort die eigentliche Ursache, der Ordner, der Dateiname und die Download-Adresse. Auch der Server loggt beim Ladefehler die Ursache (beat_this verdeckt sie hinter „Could not load the checkpoint“).
+### Changed
+- Resolve window: **short texts**, details in the tooltip. The progress is called "Tasks" with short lines ("Analysing the track", "Setting markers", "Creating the subtitle", "Subtitle track in the timeline") without the song name in every line. The explanation under "Subtitle track" is one line, the long version is in the tooltip. Shorter tooltip for the smoothing slider (web app too).
+- **Marker note** with bar, beat, time, tempo and confidence, e.g. "Bar 24 – Beat 2 | 106.860 s | 120.0 BPM | Confidence 75%" (before only time and tempo).
+- **One subtitle track per audio track** the song is on ("BeatAnalyzer - Song (A1)", "… (A2)"); if the song is on one track several times, all uses are on this subtitle track, each under its clip. If the song is on only one track, the track is called "BeatAnalyzer - Song" as before. A new run replaces all these tracks, "Remove BeatAnalyzer markers" removes them. Before, only the first clip in time got a track.
+- After creating the subtitle track Resolve shows the timeline that was open before again.
+- `install_and_run.bat` downloads the **beat_this model in advance** (`backend/model_check.py`). If that fails, it names the real cause, the folder, the file name and the download address. The server also logs the cause of a load error (beat_this hides it behind "Could not load the checkpoint").
 
-### Behoben
-- Auftragsordner abgebrochener Analysen blieben in `resolve_temp` liegen; sie werden jetzt beim nächsten Öffnen gelöscht, sobald Python fertig ist.
-- Resolve-Fenster: Zeichnet Resolve das Fenster schmaler als verlangt, wird die Größe nochmals gesetzt (Konsole: „resized to …“).
-- Resolve-Konsole: „Selection: ignored entries that are not clips“ erschien jede Sekunde; jetzt nur noch einmal.
+### Fixed
+- Job folders of cancelled analyses stayed in `resolve_temp`; they are now deleted the next time the window opens, once Python has finished.
+- Resolve window: if Resolve draws the window narrower than requested, the size is set again (console: "resized to …").
+- Resolve console: "Selection: ignored entries that are not clips" appeared every second; now only once.
 
 ## [0.1.5] – 2026-11-14
 
-### Hinzugefügt
-- **Analyse direkt aus Resolve:** Im Resolve-Fenster gibt es oben zwei Wege, „Ausgewählten Clip analysieren“ und „JSON laden“. Beim Analysieren startet das Skript Python unsichtbar (`backend/resolve_job.py`, ohne Server und ohne Web-App), zeigt den Fortschritt und setzt danach Marker und Subtitles wie beim JSON-Weg. **Abbrechen** geht nur während der Analyse; bis dahin ist im Projekt nichts verändert. Fehler, Python startet nicht (60 s) und Zeitgrenze (10 min) werden gemeldet, ohne das Projekt zu ändern.
-- Resolve-Fenster: Regler **„Glätten“** 0–100 % (0 % = aus, 100 % = voll geglättet, Standard 90 %) für die Analyse aus Resolve; Weg und Wert werden gemerkt.
-- **Marker auch auf den Clips des Songs in der Timeline**, nicht nur auf dem Clip im Media Pool: Liegt der Song in der beim OK offenen Timeline (Audio- oder Videospur, auch mehrfach), bekommt jeder dieser Clips die Marker, beim vorne getrimmten Clip nur im sichtbaren Teil. „BeatAnalyzer-Marker entfernen“ entfernt sie mit; Marker von Hand bleiben.
+### Added
+- **Analysis straight from Resolve:** the Resolve window offers two ways at the top, "Analyse the selected clip" and "Load JSON". To analyse, the script starts Python invisibly (`backend/resolve_job.py`, without server and web app), shows the progress and then sets markers and subtitles as on the JSON way. **Cancel** works only during the analysis; until then nothing in the project has changed. Errors, Python not starting (60 s) and the time limit (10 min) are reported without changing the project.
+- Resolve window: slider **"Smoothing"** 0–100 % (0 % = off, 100 % = fully smoothed, default 90 %) for the analysis from Resolve; way and value are remembered.
+- **Markers also on the song's clips in the timeline**, not only on the clip in the Media Pool: if the song is in the timeline open at OK (audio or video track, also several times), each of these clips gets the markers, a clip trimmed at the start only in its visible part. "Remove BeatAnalyzer markers" removes them too; markers set by hand stay.
 
-### Geändert
-- **Standard „Glätten“ 90 %** überall (Web-App, Resolve-Fenster, Server `protect`, Kommandozeile `--protect`); bisher 70 %.
-- Web-App: Die Kachel Taktart behält ihre Höhe beim Verstellen des Reglers (Infobereich immer zwei Zeilen, Fortschritt und Fehler in einer Zeile, voller Text im Tooltip).
+### Changed
+- **Default smoothing 90 %** everywhere (web app, Resolve window, server `protect`, command line `--protect`); before 70 %.
+- Web app: the time signature tile keeps its height while moving the slider (info area always two lines, progress and errors on one line, full text in the tooltip).
 
 ## [0.1.4] – 2026-11-13
 
-### Geändert
-- Web-App, Kachel Taktart: Häkchen „Takte glätten“ und Regler „Schutz klarer 1“ sind zu einem Regler **„Glätten“ 0–100 %** zusammengelegt (Standard 70 %). 0 % = aus, die Takte bleiben wie von beat_this; nach rechts darf das gleichmäßige Raster immer mehr „1“en verschieben; 100 % = das Raster entscheidet allein. Intern entspricht 1–100 % dem bisherigen Schutz 50–100 % (70 % = bisher 85 %). Der Regler nutzt die ganze Breite der Kachel, Beschriftung und Wert stehen darüber; ein Tooltip erklärt 0 %, „weiter rechts“ und 100 %.
-- Die Kachel zeigt „n Beats neu eingeteilt“ und „k Neuansätze“ in zwei Zeilen.
+### Changed
+- Web app, time signature tile: the box "Smooth bars" and the slider "Protect a clear 1" are merged into one slider **"Smoothing" 0–100 %** (default 70 %). 0 % = off, the bars stay as beat_this gives them; further right the even grid may move more and more "1"s; 100 % = the grid decides alone. Internally 1–100 % corresponds to the former protection 50–100 % (70 % = formerly 85 %). The slider uses the full width of the tile, label and value are above it; a tooltip explains 0 %, "further right" and 100 %.
+- The tile shows "n beats reassigned" and "k restarts" on two lines.
 
-### Behoben
-- Web-App: „n Beats neu eingeteilt · k Neuansätze“ wurde abgeschnitten, der Wert „100 %“ brach in zwei Zeilen um.
-- Build: Tailwind las den alten Inhalt von `dist/` mit, dadurch änderte sich `dist/` bei jedem zweiten Build (die CI-Prüfung „dist/ is up to date“ hing davon ab). `dist/` ist jetzt ausgeschlossen.
+### Fixed
+- Web app: "n beats reassigned · k restarts" was cut off, the value "100 %" wrapped to two lines.
+- Build: Tailwind also read the old content of `dist/`, so `dist/` changed on every second build (the CI check "dist/ is up to date" depended on it). `dist/` is now excluded.
 
 ## [0.1.3] – 2026-11-12
 
-### Hinzugefügt
-- Web-App: Regler „Schutz klarer 1“ (50–100 %, Standard 85 %) an der Kachel Taktart. Eine „1“, die beat_this mindestens so sicher hört, bleibt eine „1“; bei 100 % entscheidet das Raster allein. Neu gerechnet wird, sobald der Regler kurz ruht (Maus oder Pfeiltasten), ohne dass beat_this noch einmal läuft: Der Server merkt sich Audio und Modell-Ergebnis der zuletzt analysierten Datei, die Web-App das dekodierte Audio.
-- Die Kachel zeigt immer, was passiert ist: „n Beats neu eingeteilt · k Neuansätze“ oder „nicht geglättet“.
-- Server `POST /api/analyze?protect=0.9`, Kommandozeile `--protect 0.9`, Ergebnisfeld `barSmoothing.protect`.
+### Added
+- Web app: slider "Protect a clear 1" (50–100 %, default 85 %) on the time signature tile. A "1" that beat_this hears at least that surely stays a "1"; at 100 % the grid decides alone. The bars are recomputed as soon as the slider rests briefly (mouse or arrow keys), without running beat_this again: the server keeps audio and model result of the last analysed file, the web app the decoded audio.
+- The tile always shows what happened: "n beats reassigned · k restarts" or "not smoothed".
+- Server `POST /api/analyze?protect=0.9`, command line `--protect 0.9`, result field `barSmoothing.protect`.
 
-### Geändert
-- Ist „Takte glätten“ an, wird immer geglättet. Die Grenze „mindestens 50 % regelmäßige Takte“ entfällt (bei „Küçük Sevgilim“ wurde deshalb gar nicht geglättet). Nicht geglättet wird nur, wenn beat_this weniger als zwei Downbeats liefert.
+### Changed
+- With "Smooth bars" on, the bars are always smoothed. The limit "at least 50 % regular bars" is gone (because of it "Küçük Sevgilim" was not smoothed at all). Bars are only not smoothed when beat_this gives fewer than two downbeats.
 
 ## [0.1.2] – 2026-11-12
 
-### Behoben
-- Resolve-Dialog: Die Zeile „Analyse-Programm: in der JSON nicht angegeben …“ bekommt jetzt die Höhe, die sie braucht (war auf eine Zeile beschränkt und abgeschnitten).
+### Fixed
+- Resolve dialog: the line "Analysis program: not given in the JSON …" now gets the height it needs (it was limited to one line and cut off).
 
 ## [0.1.1] – 2026-11-12
 
-### Hinzugefügt
-- Takte glätten bei Analysen mit beat_this: beat_this setzt jeden Downbeat einzeln, an unsicheren Stellen (Intro, Break, Build-up) entstanden so Takte mit 2 oder 3 Beats. BeatAnalyzer legt jetzt ein gleichmäßiges Taktraster darüber und setzt es nur dort neu an, wo das Modell über etwa zwei Takte klar eine andere „1“ hört. Die Beats selbst bleiben unverändert, die Confidence bleibt der Wert des Modells – ein vom Raster ergänzter Downbeat zeigt also eine niedrige Confidence. Nicht geglättet wird, wenn weniger als die Hälfte der Takte des Modells regelmäßig ist.
-- Web-App: Häkchen „Takte glätten“ an der Kachel Taktart (standardmäßig an, Umschalten analysiert den Song neu); die Kachel zeigt, wie viele Beats neu eingeteilt wurden. Der Anteil „… % der Takte“ bezieht sich auf das Modell vor dem Glätten.
-- Web-App: Häkchen „Mitlaufen“ an der Beat-Tabelle (standardmäßig an): Beim Abspielen blättert die Tabelle selbst auf die Seite des laufenden Beats, die Zeile des aktuellen Beats bleibt markiert, bis der nächste kommt. Bei „Nur Downbeats“ wird der aktuelle Takt markiert. Wer selbst blättert, schaltet das Mitlaufen ab.
-- Kommandozeile `--no-smooth-bars`, Server `POST /api/analyze?smoothBars=0`, Ergebnisfeld `barSmoothing`.
-- Einen Downbeat, den das Modell sehr sicher hört (ab 85 %), überstimmt das Raster nie – auch nicht am Songanfang.
-- Nach einem Neuansatz zählen die Zählzeiten ab der neuen „1“ weiter (ein Takt aus zwei Beats heißt „1 2“, nicht „1 4“); nur der Auftakt vor der ersten „1“ behält seinen Platz im Raster (z. B. „3 4“).
-- Web-App: Während der neuen Analyse ist das Häkchen gesperrt und zeigt den Fortschritt; schlägt sie fehl, bleibt das bisherige Ergebnis stehen, das Häkchen springt zurück und der Fehler steht an der Kachel (kein stilles Ausweichen auf die Browser-Analyse).
+### Added
+- Bar smoothing for analyses with beat_this: beat_this sets every downbeat on its own, so uncertain passages (intro, break, build-up) got bars of 2 or 3 beats. BeatAnalyzer now lays an even bar grid over them and restarts it only where the model clearly hears a different "1" over about two bars. The beats themselves stay unchanged, the confidence stays the model's value – a downbeat added by the grid therefore shows a low confidence. No smoothing when fewer than half of the model's bars are regular.
+- Web app: box "Smooth bars" on the time signature tile (on by default, switching re-analyses the song); the tile shows how many beats were reassigned. The share "… % of the bars" refers to the model before smoothing.
+- Web app: box "Follow" on the beat table (on by default): while playing, the table turns to the page of the playing beat, the row of the current beat stays marked until the next one comes. With "Downbeats only" the current bar is marked. Turning the pages yourself switches following off.
+- Command line `--no-smooth-bars`, server `POST /api/analyze?smoothBars=0`, result field `barSmoothing`.
+- A downbeat the model hears very surely (from 85 %) is never overruled by the grid – not even at the start of the song.
+- After a restart the beats count on from the new "1" (a bar of two beats reads "1 2", not "1 4"); only the pickup before the first "1" keeps its place in the grid (e.g. "3 4").
+- Web app: during the new analysis the box is locked and shows the progress; if it fails, the previous result stays, the box switches back and the error is shown on the tile (no silent fallback to the browser analysis).
 
-### Behoben
-- Resolve-Dialog: Lange Hinweise (z. B. „Kein Clip gefunden …“ mit langem Dateinamen) wurden oben und unten abgeschnitten. Der Dialog schätzt die nötigen Zeilen jetzt mit Wortumbruch und etwas breiteren Zeichen.
+### Fixed
+- Resolve dialog: long notes (e.g. "No clip found …" with a long file name) were cut off at the top and bottom. The dialog now estimates the needed lines with word wrap and slightly wider characters.
 
 ## [0.1.0] – 2026-11-12
 
-### Hinzugefügt
-- Sprachdateien `lang/en.json`, `lang/de.json`, `lang/tr.json` (Englisch, Deutsch, Türkisch). Die türkischen Texte sind noch zu prüfen.
-- Einstellungsdatei `settings.json` im BeatAnalyzer-Ordner mit der Sprache (Vorgabe „wie das System“, sonst Englisch). Der Server liest und schreibt sie über `/api/settings`.
-- Angaben zum Analyse-Programm (`engineInfo`: beat_this oder librosa, CUDA oder CPU, Grafikkarte, Grund für den Ersatz) im Ergebnis, in der Marker-JSON und in `/api/health`.
+### Added
+- Language files `lang/en.json`, `lang/de.json`, `lang/tr.json` (English, German, Turkish). The Turkish texts are still to be reviewed.
+- Settings file `settings.json` in the BeatAnalyzer folder with the language (default "like the system", otherwise English). The server reads and writes it via `/api/settings`.
+- Details of the analysis program (`engineInfo`: beat_this or librosa, CUDA or CPU, graphics card, reason for the fallback) in the result, in the marker JSON and in `/api/health`.
 
-### Geändert
-- Resolve-Skript: eigenes Fenster statt sofortigem Dateidialog. JSON wählen; das Fenster zeigt den Ziel-Clip im Media Pool mit Laufzeit, warnt bei anderem Dateinamen oder wenn die Laufzeit des Clips um 0,5 s oder mehr von der analysierten Datei abweicht, und zeigt das Analyse-Programm. Ohne Ziel-Clip bleibt OK gesperrt.
-- Resolve-Skript: Häkchen „Subtitle Track in der Timeline anlegen“ mit Erklärung, die sich nach Häkchen und offener Timeline richtet.
-- Resolve-Skript: Markerfarben pro Zählzeit (Downbeat, Beat 2, 3, 4, übrige), jeweils auch „kein Marker“. Die Subtitles enthalten immer alle Beats.
-- Resolve-Skript: Nach OK zeigt das Fenster die Schritte mit Fortschritt („240 / 512“) und bleibt gesperrt, bis alles fertig ist; das X wird so lange ignoriert. Der Subtitle Track kommt in die Timeline, die beim OK offen war.
-- Resolve-Skript: Knopf „BeatAnalyzer-Marker entfernen“ mit Nachfrage (eigene Marker, Subtitle Track, Subtitle im Ordner BeatAnalyzer; Marker von Hand bleiben).
-- Resolve-Skript: Das Fenster merkt sich Ordner der letzten JSON, Häkchen, Farben und Fenstergröße in `resolve_temp/plugin.txt`.
-- Resolve-Skript: Die SRT-Dateien entstehen in einem Arbeitsordner unter `resolve_temp/` und werden nach dem Import gelöscht, nicht mehr neben der JSON. Im Ordner BeatAnalyzer im Media Pool liegt nur noch `<Song>.srt`; `<Song> (Timeline).srt` wird nach dem Platzieren entfernt.
-- Resolve-Skript: Meldungen in der eingestellten Sprache.
-- Resolve-Skript: Marker und Subtitles erscheinen in der eingestellten Sprache, z. B. „Takt 24 – Beat 1“, „89,6 BPM“, „Confidence 75 %“. Beat, Downbeat und Confidence bleiben in allen Sprachen englisch, der Trenner ist „–“. Downbeat-Marker heißen „Takt 1“ / „Bar 1“ / „Ölçü 1“.
-- Resolve-Skript: Das installierte Skript enthält Sprache, BeatAnalyzer-Ordner und Texte. Der Server gleicht es beim Start und bei einem Sprachwechsel ab; *In Resolve aktualisieren* zeigt ein veraltetes Skript an.
-- Confidence pro Beat kommt jetzt von beat_this (Wahrscheinlichkeit des Modells, immer über 50 %), statt fester 95 % bzw. 88 %. Ohne beat_this steht „–“.
-- Die Kurven der Web-App zeigen bei beat_this dessen Wahrscheinlichkeiten pro Frame. Ohne beat_this ist es die Onset-Stärke, eine Downbeat-Kurve gibt es dann nicht.
-- Taktart: statt einer festen Confidence von 95 % der Anteil der Takte mit dieser Beat-Anzahl („96 % der Takte“), nur mit beat_this; ohne beat_this „–“. Der Name der Taktart ist nur noch „4/4“ (ohne „(Standard)“, „(Walzer)“).
-- Ein installiertes Resolve-Skript wird bei gleicher Version nur im Konfigurationsblock angepasst; eigene Änderungen, z. B. der Farben oben im Skript, bleiben erhalten.
-- Resolve-Fenster: Die JSON-Zeile zeigt den Dateinamen, der volle Pfad steht im Tooltip. Das Fenster ist mindestens 600 × 640 groß; Zeilen für Warnungen und Analyse-Programm erscheinen nur, wenn sie etwas zeigen. Steht in der JSON kein Analyse-Programm, sagt das Fenster das.
-- Server: Die Startmeldung sagt klar, womit analysiert wird (beat_this, librosa oder gar nicht). `/api/health` meldet zusätzlich den Grund `analyzer_failed`.
-- `install_and_run.bat`: Lassen sich NumPy, SciPy, librosa oder soundfile nicht laden, bricht die Installation mit Anleitung ab. Fehlt beat_this, kommt eine deutliche Warnung mit den häufigen Ursachen (Git fehlt, kein Internet, laufender Server), statt still mit librosa weiterzumachen. Ohne Git steht ein Hinweis mit Download-Link da. Am Anfang steht der Hinweis, laufende BeatAnalyzer-Fenster vorher zu schließen.
+### Changed
+- Resolve script: its own window instead of an immediate file dialog. Choose the JSON; the window shows the target clip in the Media Pool with its length, warns about a different file name or when the length of the clip differs by 0.5 s or more from the analysed file, and shows the analysis program. Without a target clip OK stays locked.
+- Resolve script: box "Create a subtitle track in the timeline" with an explanation that depends on the box and the open timeline.
+- Resolve script: marker colours per beat of the bar (downbeat, beat 2, 3, 4, others), each also "no marker". The subtitles always contain all beats.
+- Resolve script: after OK the window shows the steps with progress ("240 / 512") and stays locked until everything is done; the X is ignored meanwhile. The subtitle track goes into the timeline that was open at OK.
+- Resolve script: button "Remove BeatAnalyzer markers" with a question (own markers, subtitle track, subtitle in the bin BeatAnalyzer; markers set by hand stay).
+- Resolve script: the window remembers the folder of the last JSON, the boxes, colours and window size in `resolve_temp/plugin.txt`.
+- Resolve script: the SRT files are created in a working folder under `resolve_temp/` and deleted after the import, no longer next to the JSON. The bin BeatAnalyzer in the Media Pool only holds `<song>.srt`; `<song> (Timeline).srt` is removed after placing.
+- Resolve script: messages in the chosen language.
+- Resolve script: markers and subtitles appear in the chosen language, e.g. "Takt 24 – Beat 1", "89,6 BPM", "Confidence 75 %". Beat, downbeat and confidence stay English in every language, the separator is "–". Downbeat markers are called "Takt 1" / "Bar 1" / "Ölçü 1".
+- Resolve script: the installed script contains language, BeatAnalyzer folder and texts. The server matches it at start and on a change of language; *Update in Resolve* reports an outdated script.
+- Confidence per beat now comes from beat_this (probability of the model, always above 50 %) instead of a fixed 95 % or 88 %. Without beat_this it shows "–".
+- With beat_this the curves of the web app show its per-frame probabilities. Without beat_this it is the onset strength, and there is no downbeat curve.
+- Time signature: instead of a fixed confidence of 95 %, the share of bars with this number of beats ("96 % of the bars"), only with beat_this; without beat_this "–". The name of the time signature is only "4/4" (without "(standard)", "(waltz)").
+- An installed Resolve script of the same version is only adapted in its configuration block; your own changes, e.g. of the colours at the top of the script, are kept.
+- Resolve window: the JSON line shows the file name, the full path is in the tooltip. The window is at least 600 × 640; lines for warnings and the analysis program only appear when they show something. If the JSON names no analysis program, the window says so.
+- Server: the start message clearly says what analyses (beat_this, librosa or nothing at all). `/api/health` also reports the reason `analyzer_failed`.
+- `install_and_run.bat`: if NumPy, SciPy, librosa or soundfile cannot be loaded, the installation stops with instructions. If beat_this is missing, a clear warning names the common causes (Git missing, no internet, server running) instead of silently going on with librosa. Without Git a note with a download link appears. At the start a note says to close running BeatAnalyzer windows first.
 
-### Behoben
-- Windows-Batch-Dateien: Ein `&` in Titel- und Textzeilen wurde als Befehl ausgeführt („Die Datei "mit" kann nicht gefunden werden“). Klammern in Textzeilen innerhalb von Blöcken beendeten den Block vorzeitig; `install_and_run.bat` legte dadurch die Umgebung `venv` bei jedem Start neu an.
-- Server: Ließ sich `analyzer.py` nicht laden (z. B. wegen einer beschädigten NumPy-Installation), endete jede Analyse mit `NameError: err`; die eigentliche Ursache ging verloren.
-- Resolve-Skript: Laufzeit des Clips aus „Duration“, wenn Resolve bei Audio-Clips keine Frame-Anzahl liefert (vorher „· ?“).
-- Resolve-Skript: Der alte Subtitle Track wird vor dem neuen Import gelöscht. Weil Resolve einen noch benutzten Clip nicht löscht, sammelten sich sonst bei jedem Lauf `<Song> (Timeline).srt`-Clips im Media Pool.
-- Resolve-Skript unter Windows: Dateien und Ordner mit Umlauten im Pfad werden über die Unicode-Funktionen gelöscht und angelegt; vorher blieb beim Löschen eine Datei geöffnet und der Arbeitsordner liegen.
-- Resolve-Skript: Der Zwischen-Clip `<Song> (Timeline).srt` wird auf jedem Weg entfernt, auch wenn der Subtitle Track nicht angelegt werden kann; scheitert das Entfernen, nennt das Ergebnis den Clip.
-- Resolve-Skript: „BeatAnalyzer-Marker entfernen“ ohne gewählte JSON wirkt nur auf ausgewählte Clips, nicht auf Einträge ohne Dateinamen (z. B. Timelines).
-- Resolve-Skript: Schließt Resolve das Fenster während der Arbeit trotzdem, endet das Skript nach getaner Arbeit, statt unsichtbar weiterzulaufen.
-- Längenwarnung zeigt Zehntelsekunden, wenn beide Laufzeiten sonst gleich aussähen.
-- `/api/health` startet CUDA nicht mehr nur, um den Namen der Grafikkarte zu lesen; die erste Analyse nach dem Start lief sonst unter Umständen im Browser statt mit beat_this.
+### Fixed
+- Windows batch files: an `&` in title and text lines was run as a command ("The file "mit" cannot be found"). Parentheses in text lines inside blocks ended the block early; because of that `install_and_run.bat` created the environment `venv` anew at every start.
+- Server: if `analyzer.py` could not be loaded (e.g. because of a broken NumPy installation), every analysis ended with `NameError: err`; the real cause was lost.
+- Resolve script: length of the clip from "Duration" when Resolve gives no frame count for audio clips (before "· ?").
+- Resolve script: the old subtitle track is deleted before the new import. Because Resolve does not delete a clip still in use, `<song> (Timeline).srt` clips used to pile up in the Media Pool with every run.
+- Resolve script on Windows: files and folders with umlauts in the path are deleted and created with the Unicode functions; before, deleting left a file open and the working folder behind.
+- Resolve script: the intermediate clip `<song> (Timeline).srt` is removed on every path, also when the subtitle track cannot be created; if removing fails, the result names the clip.
+- Resolve script: "Remove BeatAnalyzer markers" without a chosen JSON only acts on selected clips, not on entries without a file name (e.g. timelines).
+- Resolve script: if Resolve closes the window during the work anyway, the script ends once the work is done instead of running on invisibly.
+- The length warning shows tenths of a second when both lengths would otherwise look the same.
+- `/api/health` no longer starts CUDA only to read the name of the graphics card; otherwise the first analysis after the start could run in the browser instead of with beat_this.
 
-### Bekannt, kommt in einer späteren Version
-- Die Web-App dekodiert die Datei zuerst im Browser und rechnet ohne Rückmeldung im Browser weiter, wenn der Server nicht antwortet oder die Analyse dort scheitert. Die Oberfläche der Web-App ist noch nur deutsch.
-- Das README beschreibt noch den Ablauf von 0.0.5 (SRT neben der JSON, „Nur Downbeats“ im Export).
-- Analyse direkt aus Resolve ohne JSON.
+### Known, coming in a later version
+- The web app first decodes the file in the browser and silently goes on in the browser when the server does not answer or the analysis fails there. The web app is still German only.
+- The README still describes the flow of 0.0.5 (SRT next to the JSON, "Downbeats only" in the export).
+- Analysis straight from Resolve without a JSON.
 
 ## [0.0.5] – 2026-11-12
 
-### Geändert
-- Das Programm heißt **BeatAnalyzer** (vorher BeatThis): Oberfläche, Browser-Tab, Batch-Fenster, Server-Meldungen, README.
-- Resolve-Skript heißt `BeatAnalyzer_Markers.lua`, Media-Pool-Ordner und Untertitelspur heißen **BeatAnalyzer** bzw. „BeatAnalyzer - <Song>“. Ein neuer Lauf löscht auch die alte Spur „BeatThis - <Song>“.
-- Release-Datei heißt `BeatAnalyzer.zip`. Umgebungsvariable für private Repositories: `BEATANALYZER_GITHUB_TOKEN` (`BEATTHIS_GITHUB_TOKEN` gilt weiter).
+### Changed
+- The program is called **BeatAnalyzer** (before BeatThis): interface, browser tab, batch window, server messages, README.
+- The Resolve script is called `BeatAnalyzer_Markers.lua`, the Media Pool bin and subtitle track are called **BeatAnalyzer** and "BeatAnalyzer - <song>". A new run also deletes the old track "BeatThis - <song>".
+- The release file is called `BeatAnalyzer.zip`. Environment variable for private repositories: `BEATANALYZER_GITHUB_TOKEN` (`BEATTHIS_GITHUB_TOKEN` still works).
 
-### Übergang von 0.0.4
-- Jedes Release enthält zusätzlich `BeatThis.zip`, weil der Updater bis 0.0.4 diese Datei sucht.
-- `resolve/BeatThis_Markers.lua` bleibt als Übergangsskript: Der Updater bis 0.0.4 installiert es, und es startet `BeatAnalyzer_Markers.lua`. *In Resolve aktualisieren* installiert das neue Skript und entfernt das alte aus Resolve.
-- Unverändert und damit weiter gültig: Kennung der Marker-JSON und der Marker, sodass alte JSONs funktionieren und alte Marker ersetzt werden.
+### Transition from 0.0.4
+- Every release also contains `BeatThis.zip`, because the updater up to 0.0.4 looks for this file.
+- `resolve/BeatThis_Markers.lua` stays as a transition script: the updater up to 0.0.4 installs it, and it starts `BeatAnalyzer_Markers.lua`. *Update in Resolve* installs the new script and removes the old one from Resolve.
+- Unchanged and therefore still valid: the identifier of the marker JSON and of the markers, so old JSON files work and old markers are replaced.
 
 ## [0.0.4] – 2026-11-11
 
-### Hinzugefügt
-- Resolve-Skript: legt zusätzlich eine Untertiteldatei mit dem Namen des Songs an (`<Song>.srt`, neben der Marker-JSON) und importiert sie in den Media-Pool-Ordner `BeatThis`. Ein Untertitel pro Beat, bis zum nächsten Beat, mit vier Zeilen: Typ (`Downbeat (1)` / `Beat 2`), `Takt 24 - Beat 1`, `01:02.880 - 89.6 BPM`, `Konfidenz 75%`. Der erste Untertitel läuft von 0 s bis zum ersten Beat, damit die Zeiten passen, wenn die SRT am Anfang des Clips liegt. Ein neuer Lauf ersetzt den Untertitel-Clip des letzten Laufs.
-- Resolve-Skript: Ist eine Timeline offen, in der der Song auf einer Audiospur liegt, kommen die Untertitel auf die Untertitelspur „BeatThis - <Song>“, genau unter das erste Vorkommen des Songs. Berücksichtigt werden Startposition und vorne abgeschnittener Teil des Clips; Beats außerhalb des sichtbaren Teils fallen weg. Ein neuer Lauf löscht diese Spur und legt sie neu an. Andere Untertitelspuren bleiben, werden aber deaktiviert, weil Resolve nur eine aktive Untertitelspur erlaubt. Danach prüft das Skript, ob der erste Untertitel am erwarteten Frame liegt.
-- `resolve/tools/probe_timeline.lua`: Prüfskript für Resolve. Misst Position und Trim des Clips, legt zwei Test-Untertitel an, vergleicht mit den erwarteten Frames und räumt danach auf.
-- Marker-JSON: Konfidenz pro Beat (`confidence`).
+### Added
+- Resolve script: also creates a subtitle file named after the song (`<song>.srt`, next to the marker JSON) and imports it into the Media Pool bin `BeatThis`. One subtitle per beat, until the next beat, with four lines: type (`Downbeat (1)` / `Beat 2`), `Bar 24 - Beat 1`, `01:02.880 - 89.6 BPM`, `Confidence 75%`. The first subtitle runs from 0 s to the first beat so the times fit when the SRT sits at the start of the clip. A new run replaces the subtitle clip of the last run.
+- Resolve script: if a timeline is open in which the song is on an audio track, the subtitles go onto the subtitle track "BeatThis - <song>", exactly under the first use of the song. Start position and the part trimmed at the start are taken into account; beats outside the visible part are dropped. A new run deletes this track and creates it anew. Other subtitle tracks stay but are disabled, because Resolve allows only one active subtitle track. Afterwards the script checks whether the first subtitle is at the expected frame.
+- `resolve/tools/probe_timeline.lua`: check script for Resolve. Measures position and trim of the clip, creates two test subtitles, compares them with the expected frames and cleans up afterwards.
+- Marker JSON: confidence per beat (`confidence`).
 
 ## [0.0.3] – 2026-11-11
 
-### Behoben
-- Resolve-Skript: `GetSelectedClips()` lieferte in Resolve Studio 21.2 neben dem ausgewählten Clip einen Eintrag ohne Clip-Methoden. Das Skript zählte ihn als Clip („2 clip(s): ?, …“), meldete 359 übersprungene Marker und warnte fälschlich, der Clip passe nicht zur JSON. Einträge ohne `AddMarker` werden jetzt ignoriert und im Log mit Typ genannt.
-- Resolve-Skript: Dieselbe Meldung „API not available“ steht höchstens dreimal im Log.
+### Fixed
+- Resolve script: `GetSelectedClips()` in Resolve Studio 21.2 returned an entry without clip methods next to the selected clip. The script counted it as a clip ("2 clip(s): ?, …"), reported 359 skipped markers and wrongly warned that the clip did not match the JSON. Entries without `AddMarker` are now ignored and named with their type in the log.
+- Resolve script: the same message "API not available" appears at most three times in the log.
 
 ## [0.0.2] – 2026-11-11
 
-### Hinzugefügt
-- DaVinci Resolve: Export „Marker-JSON“ und Skript `resolve/BeatThis_Markers.lua`. Das Skript setzt einen Marker pro Beat auf den Audio-Clip im Media Pool (Red = Downbeat, Cyan = Beat). Ziel ist der im Media Pool ausgewählte Clip, ohne Auswahl der Clip mit dem Dateinamen aus der JSON. Ein neuer Lauf ersetzt die Marker des letzten Laufs.
-- Installation des Resolve-Skripts direkt aus der App (Export → DaVinci Resolve) und automatisch durch `install_and_run.bat`, wenn Resolve installiert ist.
-- Update von GitHub: Hinweis mit Update-Button im Header, `update.bat`, `backend/updater.py`. Ersetzte Dateien kommen nach `update-backup/<alte Version>/`.
-- GitHub Actions: `release.yml` hängt `BeatThis.zip` an jedes Release eines Versions-Tags, `tests.yml` prüft Backend, Frontend und `dist/`.
+### Added
+- DaVinci Resolve: export "marker JSON" and script `resolve/BeatThis_Markers.lua`. The script sets one marker per beat on the audio clip in the Media Pool (Red = downbeat, Cyan = beat). The target is the clip selected in the Media Pool, without a selection the clip with the file name from the JSON. A new run replaces the markers of the last run.
+- Installation of the Resolve script straight from the app (Export → DaVinci Resolve) and automatically by `install_and_run.bat` when Resolve is installed.
+- Update from GitHub: note with an update button in the header, `update.bat`, `backend/updater.py`. Replaced files go to `update-backup/<old version>/`.
+- GitHub Actions: `release.yml` attaches `BeatThis.zip` to every release of a version tag, `tests.yml` checks backend, frontend and `dist/`.
 - CLI: `--export-resolve`, `--only-downbeats`.
-- `LICENSE` (MIT), Abschnitt „Lizenz“ und „Credits“ in der README mit Hinweis und Zitat zu CPJKU beat_this.
-- Der Frontend-Build schreibt die Lizenzen der gebündelten Pakete nach `dist/.vite/license.md`.
-- README neu geschrieben, mit Bildschirmfotos (`docs/images/`); `README_WINDOWS.md` ist darin aufgegangen.
+- `LICENSE` (MIT), sections "Licence" and "Credits" in the README with a note and citation for CPJKU beat_this.
+- The frontend build writes the licences of the bundled packages to `dist/.vite/license.md`.
+- README rewritten, with screenshots (`docs/images/`); `README_WINDOWS.md` was merged into it.
 
-### Behoben
-- Updater: Eine `requirements.txt` mit CRLF-Zeilenenden galt als geändert und löste ein unnötiges `pip install` aus.
+### Fixed
+- Updater: a `requirements.txt` with CRLF line endings counted as changed and caused an unnecessary `pip install`.
 
-### Entfernt
-- Reste aus Google AI Studio: `metadata.json`, `.env.example` und die nicht benutzten Pakete `@google/genai`, `express`, `dotenv`, `tsx`, `motion`.
-- EDL- und CSV-Marker-Export für DaVinci Resolve. Die EDL legte Marker auf die Timeline statt auf den Clip und passte nur bei Clip-Start 01:00:00:00 und gleicher Bildrate.
+### Removed
+- Leftovers from Google AI Studio: `metadata.json`, `.env.example` and the unused packages `@google/genai`, `express`, `dotenv`, `tsx`, `motion`.
+- EDL and CSV marker export for DaVinci Resolve. The EDL put markers on the timeline instead of the clip and only fitted with a clip start of 01:00:00:00 and the same frame rate.
 
 ## [0.0.1] – 2026-11-11
 
-Erste versionierte Fassung.
+First versioned release.
 
-### Hinzugefügt
-- Projekt `beatanalyzer4` importiert: Python-Backend (CPJKU beat_this / Librosa-Fallback), React/Vite-Frontend, CLI, Windows-Batchskripte
-- `VERSION`-Datei; Version erscheint im Server-Banner und in `/api/health`
-- Backend-Tests (`backend/tests`)
+### Added
+- Project `beatanalyzer4` imported: Python backend (CPJKU beat_this / librosa fallback), React/Vite frontend, CLI, Windows batch scripts
+- `VERSION` file; the version appears in the server banner and in `/api/health`
+- Backend tests (`backend/tests`)
 
-### Behoben
-- Installation unter Python 3.13 (Windows): `numpy<2` entfernt
-- `install_and_run.bat`: Paketversionen quotiert (`>` war Umleitung), CRLF-Zeilenenden
-- `npm install`: esbuild-Konflikt mit Vite 8
-- beat_this über `Audio2Beats` mit dekodiertem Signal (keine FFmpeg/TorchCodec-Abhängigkeit)
-- Fertig gebautes Frontend in `dist/` mitgeliefert
+### Fixed
+- Installation with Python 3.13 (Windows): `numpy<2` removed
+- `install_and_run.bat`: package versions quoted (`>` was a redirect), CRLF line endings
+- `npm install`: esbuild conflict with Vite 8
+- beat_this via `Audio2Beats` with the decoded signal (no FFmpeg/TorchCodec dependency)
+- Ready-built frontend shipped in `dist/`

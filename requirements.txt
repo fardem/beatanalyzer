@@ -1,12 +1,12 @@
-# Python Dependencies für BeatAnalyzer (CPJKU beat_this)
-# Getestet mit Python 3.9, 3.10, 3.11, 3.12, 3.13 (Windows 10 / 11)
+# Python dependencies of BeatAnalyzer (CPJKU beat_this)
+# Tested with Python 3.10, 3.11, 3.12, 3.13 (Windows 10 / 11)
 
 # Audio & Signalverarbeitung (High-Performance MIR)
-numpy>=1.24  # kein <2: fuer Python 3.13+ gibt es keine numpy-1.x-Wheels
+numpy>=1.24  # no <2: there are no numpy 1.x wheels for Python 3.13+
 scipy>=1.10.0
 librosa>=0.10.0
 soundfile>=0.12.1
-# m4a/AAC, ALAC, Opus, WMA ... lesen, bringt eigene FFmpeg-Bibliotheken mit (ohne installiertes ffmpeg)
+# reads m4a/AAC, ALAC, Opus, WMA ... with its own FFmpeg libraries (no installed ffmpeg needed)
 av>=12.0
 
 # Deep Learning / PyTorch Engine
@@ -16,6 +16,6 @@ torchaudio>=2.0.0
 # CPJKU beat_this Transformer Modell direkt von GitHub
 git+https://github.com/CPJKU/beat_this.git#egg=beat_this
 
-# Optional: Masked Diffusion (fosfrancesco/md_beat_this) - NUR nicht-kommerzielle Nutzung (CC BY-NC 4.0)!
-# Benötigt ffmpeg (Ordner in der Web-App einstellbar):
+# Optional: Masked Diffusion (fosfrancesco/md_beat_this) - NON-COMMERCIAL use only (CC BY-NC 4.0)!
+# Needs ffmpeg (folder can be set in the web app):
 # https://github.com/fosfrancesco/md_beat_this/archive/main.zip

@@ -61,7 +61,7 @@ export async function analyzeAudioFile(
   onProgress?.(30, 'web.progress.waveform');
   const waveformPeaks = extractWaveformPeaks(audioBuffer, 2400);
 
-  // Prüfe, ob das lokale Python Backend aktiv ist (z.B. via install_and_run.bat)
+  // is the local Python server running (e.g. started by install_and_run.bat)?
   let pythonResult: AnalysisResult | null = null;
   // the server answered: an error of its analysis is shown, never replaced by the browser analysis without a word
   // (test 0.2.3: an m4a failed on the server and the browser silently computed a much worse result)
@@ -101,7 +101,7 @@ export async function analyzeAudioFile(
     }
   } catch (err) {
     if (options.requireServer) throw err;
-    // Kein lokales Backend aktiv -> Web Audio MIR Engine übernimmt (das Banner zeigt "Fallback aktiv")
+    // no local server -> the browser analysis takes over (the banner shows "fallback active")
   }
   if (serverError) throw serverError;
 

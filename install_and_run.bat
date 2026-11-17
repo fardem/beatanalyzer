@@ -167,12 +167,14 @@ if !errorlevel! neq 0 (
 )
 
 echo   - Installing PyTorch ^& torchaudio...
-!VENV_PIP! install "torch>=2.0.0" "torchaudio>=2.0.0" >> "%LOGFILE%" 2>&1
+:: backend\torch_setup.py picks the build: CUDA for an NVIDIA card with a recent driver, otherwise CPU.
+:: Override: set BEATANALYZER_TORCH=cpu, cu126 or cu128 before running this file. Only the venv changes.
+!VENV_PY! backend\torch_setup.py --log "%LOGFILE%"
 if !errorlevel! neq 0 (
-    echo   [WARNING] Standard PyTorch install failed, trying the CPU version...
-    !VENV_PIP! install torch torchaudio --index-url https://download.pytorch.org/whl/cpu >> "%LOGFILE%" 2>&1
+    echo   [WARNING] PyTorch is missing - beat_this cannot run. See install_log.txt.
+) else (
+    echo   [OK] PyTorch ready.
 )
-echo   [OK] PyTorch ready.
 
 echo   - Checking Git and CPJKU beat_this...
 where git >nul 2>&1
