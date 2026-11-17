@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.4.0** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
+**Version 0.4.1** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
 
 BeatAnalyzer finds the **beats, downbeats, tempo and time signature** of a song and puts them into
 **DaVinci Resolve** as **coloured markers on your audio clip** and as a **subtitle track** under the song. The
@@ -22,8 +22,9 @@ You can start it straight from a window inside Resolve, or use the web app in yo
 - **Your choice of model:** beat_this (MIT, also for commercial work) or md_beat_this for non-commercial projects.
 - **Check before you cut:** waveform with beat grid, model curves, loop, metronome on the detected beats and a beat
   table to correct single beats.
-- **Fix the grid in one click:** the folded bar shows where kick and snare really sit in the bar; one click moves
-  the "1", the grid, the tempo or the time signature – undoable, and kept when you change Smoothing.
+- **Fix the grid in one click:** the folded bar shows where kick and snare really sit in the bar; BeatAnalyzer
+  suggests the fix (bar start, half beat, tempo, time signature) with a preview – for the whole song or a section,
+  undoable, and kept when you change Smoothing.
 - **Local and private:** everything runs on your PC; no upload, no account.
 
 ---
@@ -214,8 +215,10 @@ window shows it before and after. MP3 files without that delay need no correctio
 - **Beat evidence & grid fixes:** band lanes for kick (< 150 Hz), snare/body and hi-hats, in step with the zoom
   of the waveform (drag the grip below them up to twice the height); the **folded bar** lays all bars – of the
   section or the whole song – on top of each other and says whether the kick sits on the "1". **1-click fixes:**
-  bar start ±1 beat, grid ±½ beat, tempo ½× / 2×, **beats per bar** (2–7); undo and reset. The fixes stay when you
-  move Smoothing and go into every export – also the marker JSON for Resolve.
+  bar start ±1 beat, grid ±½ beat, tempo ½× / 2×, **beats per bar** (2–7); undo and reset. A **suggestion** tries
+  these fixes on the folded bar and offers the best one with a dashed preview – *Apply* takes it over. Fixes work on
+  the **whole song or only the section** in the blue frame (e.g. ½× only where the model counted double). They stay
+  when you move Smoothing and go into every export – also the marker JSON for Resolve.
 - **Expert diagnostics** (click the title to open): spectrogram, energy spectrum of the "1", the other beats and
   the off-beats, **Live** spectrum while playing (flash on every beat, stronger on the "1"), tempo histogram.
 - **Tempo curve** over the whole song (folded while the tempo is steady).
@@ -315,7 +318,8 @@ On Windows the Python path is `venv\Scripts\python.exe`.
 | `resolve/BeatAnalyzer_Markers.lua` | script and window for DaVinci Resolve |
 | `src/` | web app (React, TypeScript) |
 | `src/utils/beatEvidence.ts` | band curves, folded bar, tempo histogram, spectra (web app) |
-| `src/utils/beatTransforms.ts` | 1-click grid fixes as replayable steps (web app) |
+| `src/utils/beatTransforms.ts` | 1-click grid fixes as replayable steps, also for a section (web app) |
+| `src/utils/fixSuggestion.ts` | suggestion: tries the fixes on the folded bar (web app) |
 | `dist/` | built web app; checked in |
 | `VERSION` | version number for app, script and release |
 

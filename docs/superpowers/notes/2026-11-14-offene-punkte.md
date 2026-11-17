@@ -107,9 +107,13 @@ Unit-Tests abgedeckt. Bei der ersten Rückmeldung eines neuen Nutzers darauf ach
 **Zusammenführung umgesetzt in 0.4.0 (2026-11-17):** Panel Beat-Evidenz & Takt-Korrektur, Experten-Diagnose (über
 dem Tempo-Verlauf, Wunsch Nutzer), Live-Spektrum (war in test2 `eb612c4`, im letzten Commit entfernt; Wunsch Nutzer:
 „für den verspielten DJ“), Spuren bis 2× Höhe ziehbar (Wunsch Nutzer), dazu Idee 2 (Beats pro Takt) und Idee 4
-(Korrekturen als Schritte, überstehen Glätten). **Offen für 0.4.1:** Idee 1 (Vorschlag mit einem Klick: Kandidaten
-bewerten, Vorschau im gefalteten Takt) und Idee 3 (Korrektur nur im Ausschnitt/blauen Rahmen, z. B. „Teoman – Ağır
-Kapı“). Idee 5 (Kennzeichnung „korrigiert“ in der Marker-JSON) nicht umgesetzt – Resolve-Fenster bleibt unverändert.
+(Korrekturen als Schritte, überstehen Glätten). **0.4.1:** Idee 1 (Vorschlag mit einem Klick, Vorschau im gefalteten
+Takt; Bewertung: Phase über alle Bänder im Fenster, Kick auf der 1, Backbeat; Tempo-Schritte nur bei librosa/Browser
+oder extremen BPM) und Idee 3 (Korrektur nur im Ausschnitt). Geprüft an „Mensch“ (Audio + md_beat_this-JSON des
+Nutzers): Vorschlag „½× · 4“ trifft die Referenz; kein Fehlalarm auf der Referenz; künstlich verfälschte Raster werden
+zurückgeführt. Erkenntnis: Der Kick-Bereich allein unterscheidet Beat und Off-Beat nicht (Bass auf dem „und“); doppeltes
+vs. richtiges Tempo ist aus dem gefalteten Takt allein nicht sicher zu entscheiden. Test 0.4.0 + 0.4.1 gemeinsam:
+`docs/resolve-test-0.4.1.md`. Idee 5 (Kennzeichnung „korrigiert“ in der Marker-JSON) nicht umgesetzt – Resolve-Fenster bleibt unverändert.
 Hinweis Nutzer: Experten-Diagnose ist schwer zu finden (nur Überschrift klickbar).
 
 **Nächste Zusammenführung (nach Teilprojekt 5, Nutzer):** parallele Entwicklung des Nutzers mit dem Panel

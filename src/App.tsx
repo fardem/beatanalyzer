@@ -272,11 +272,8 @@ export default function App() {
     [commitGrid]
   );
 
-  const addGridOp = useCallback((op: GridOp) => commitGrid([...gridOpsRef.current, op]), [commitGrid]);
-  const handleShiftDownbeat = useCallback((dir: -1 | 1) => addGridOp({ kind: 'downbeat', dir }), [addGridOp]);
-  const handleShiftHalfBeat = useCallback((dir: -1 | 1) => addGridOp({ kind: 'half', dir }), [addGridOp]);
-  const handleScaleTempo = useCallback((factor: 0.5 | 2) => addGridOp({ kind: 'tempo', factor }), [addGridOp]);
-  const handleSetMeter = useCallback((beats: number) => addGridOp({ kind: 'meter', beats }), [addGridOp]);
+  // fix buttons and the suggestion add steps (with a range when only the section is fixed)
+  const handleApplyOps = useCallback((ops: GridOp[]) => commitGrid([...gridOpsRef.current, ...ops]), [commitGrid]);
   const handleUndoGrid = useCallback(() => commitGrid(gridOpsRef.current.slice(0, -1)), [commitGrid]);
   const handleResetGrid = useCallback(() => commitGrid([]), [commitGrid]);
 
@@ -422,10 +419,7 @@ export default function App() {
               currentTime={currentTime}
               viewRange={viewRange}
               onSeek={handleSeek}
-              onShiftDownbeat={handleShiftDownbeat}
-              onShiftHalfBeat={handleShiftHalfBeat}
-              onScaleTempo={handleScaleTempo}
-              onSetMeter={handleSetMeter}
+              onApplyOps={handleApplyOps}
               onUndoGrid={handleUndoGrid}
               onResetGrid={handleResetGrid}
               canUndoGrid={gridOps.length > 0}
