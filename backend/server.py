@@ -10,6 +10,8 @@ import json
 import tempfile
 import mimetypes
 import traceback
+import threading
+import webbrowser
 from http.server import HTTPServer, ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
@@ -927,6 +929,13 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
+def open_browser(url):
+    try:
+        webbrowser.open(url)
+    except Exception as err:   # no browser (e.g. a server without desktop): the URL is in the banner
+        print(f"Browser not opened: {err}")
+
+
 def main():
     port = int(os.environ.get("PORT", 8000))
     server_address = ("127.0.0.1", port)
@@ -956,6 +965,12 @@ def main():
             print(f"[Resolve] Script adapted to language and folder: {path}")
     except Exception as err:
         print(f"[Resolve] Script not adapted: {err}")
+
+    # --open-browser (start.bat, install_and_run): open the web app only now that the server listens. Before, the
+    # scripts opened the browser at once and it showed an empty page while torch and the model were loading.
+    if "--open-browser" in sys.argv[1:]:
+        url = f"http://localhost:{port}"
+        threading.Thread(target=open_browser, args=(url,), daemon=True).start()
 
     try:
         httpd.serve_forever()

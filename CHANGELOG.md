@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.1] – 2026-11-17
+
+Rückmeldungen aus dem Test von 0.3.0.
+
+### Behoben
+- **Leeres Browserfenster beim Start:** `start.bat`, `install_and_run.bat` und `install_and_run.sh` öffneten den Browser sofort, während der Server noch lud (torch, Modell). Jetzt öffnet der Server die Web-App selbst, sobald er bereit ist (`server.py --open-browser`).
+- **Doppelte Fortschrittszeile im Resolve-Fenster:** „Track wird analysiert (Analysieren)“ bzw. TR „Parça analiz ediliyor (analiz ediliyor)“ heißt jetzt „… (Beats erkennen)“ / „(detecting beats)“ / „(beat'ler algılanıyor)“.
+- **Türkisch: „marker“ statt „işaretçi“** überall (Resolve gibt es nicht auf Türkisch; Resolve-Begriffe bleiben englisch, wie im Glossar). Ein Test prüft das.
+
 ## [0.3.0] – 2026-11-16
 
 Teilprojekt 4 fertig: Web-App und Resolve-Fenster sprechen dieselbe Sprache, Begriffe und Farben. Korrekturen aus dem Test von 0.2.14.

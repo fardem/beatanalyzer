@@ -14,8 +14,8 @@ echo Activating the Python environment...
 call venv\Scripts\activate.bat
 
 echo Starting the BeatAnalyzer server on http://localhost:8000 ...
-start "" http://localhost:8000
-venv\Scripts\python.exe backend\server.py
+echo The web app opens in your browser as soon as the server is ready.
+venv\Scripts\python.exe backend\server.py --open-browser
 
 if %errorlevel% neq 0 (
     echo.

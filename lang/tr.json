@@ -112,7 +112,7 @@
     "analyze_no_path": "Seçili öğenin dosyası yok (ör. Timeline veya Compound Clip).",
     "step_analysis": "„{clip}“ analizi",
     "step_model": "model yükleniyor",
-    "step_analyze": "analiz ediliyor",
+    "step_analyze": "beat'ler algılanıyor",
     "step_write": "sonuç yazılıyor",
     "step_analysis_hint": "İptal yalnızca şimdi mümkün. Buraya kadar projede hiçbir şey değişmedi.",
     "msg_cancelled": "Analiz iptal edildi. Projede hiçbir şey değişmedi.",
@@ -138,10 +138,10 @@
     "md_confirm": "md_beat_this'i yalnızca ticari olmayan amaçlarla kullanıyorum (CC BY-NC 4.0)",
     "md_confirm_needed": "md_beat_this ile analiz için lisans kutusunu işaretleyin.",
     "reason_md_not_installed": "md_beat_this kurulu değil",
-    "warn_mp3": "MP3: Resolve MP3 dosyalarını BeatAnalyzer'ın analiz ettiğinden yaklaşık 50 ms geç çalar. Bu JSON düzeltme içermiyor (eski JSON veya tarayıcıda analiz): işaretçiler vuruştan bu kadar önce durur. Sunucuyla yeniden analiz edin veya şarkıyı WAV ya da FLAC olarak kullanın.",
-    "note_mp3": "MP3: Resolve MP3 dosyalarını yaklaşık 50 ms geç çalar; BeatAnalyzer işaretçileri buna göre kaydırır.",
-    "msg_mp3_shift": "MP3: işaretçiler {ms} ms ileri kaydırıldı (Resolve MP3'ü bu kadar geç çalar).",
-    "note_mp3_json": "MP3: işaretçiler {ms} ms sonra konur (Resolve MP3 dosyalarını bu kadar geç çalar).",
+    "warn_mp3": "MP3: Resolve MP3 dosyalarını BeatAnalyzer'ın analiz ettiğinden yaklaşık 50 ms geç çalar. Bu JSON düzeltme içermiyor (eski JSON veya tarayıcıda analiz): marker'lar beat'ten bu kadar önce durur. Sunucuyla yeniden analiz edin veya şarkıyı WAV ya da FLAC olarak kullanın.",
+    "note_mp3": "MP3: Resolve MP3 dosyalarını yaklaşık 50 ms geç çalar; BeatAnalyzer marker'ları buna göre kaydırır.",
+    "msg_mp3_shift": "MP3: marker'lar {ms} ms ileri kaydırıldı (Resolve MP3'ü bu kadar geç çalar).",
+    "note_mp3_json": "MP3: marker'lar {ms} ms sonra konur (Resolve MP3 dosyalarını bu kadar geç çalar).",
     "note_mp3_json_zero": "MP3: düzeltme gerekmiyor (dosyada kodlayıcı gecikmesi yok; Resolve gecikmesiz çalar)."
   },
   "web": {
@@ -195,14 +195,14 @@
       "mp3_offset": "Resolve MP3 dosyalarını analiz edildiklerinden {ms} ms geç çalar. JSON bu düzeltmeyi içerir; betik MP3 klibindeki Marker ve Subtitle'ları buna göre kaydırır ve bunu bildirir.",
       "preview": "Önizleme:",
       "resolve_intro": "Bir Marker JSON dosyası dışa aktarır. BeatAnalyzer_Markers.lua betiği bununla Media Pool'daki klibe ve şarkının Timeline'daki kliplerine her beat için bir Marker koyar. Kare hızını betik klipten okur.",
-      "resolve_more": "Yeni bir çalıştırma önceki işaretçilerin yerini alır; elle konan Marker'lar kalır. Betik ayrıca Media Pool'daki BeatAnalyzer klasöründe “{srt}” Subtitle'ını (her beat için tür, ölçü, zaman, tempo, confidence) oluşturur. Şarkının olduğu bir Timeline açıksa şarkının altındaki bir Subtitle Track'e konur.",
+      "resolve_more": "Yeni bir çalıştırma önceki marker'ların yerini alır; elle konan Marker'lar kalır. Betik ayrıca Media Pool'daki BeatAnalyzer klasöründe “{srt}” Subtitle'ını (her beat için tür, ölçü, zaman, tempo, confidence) oluşturur. Şarkının olduğu bir Timeline açıksa şarkının altındaki bir Subtitle Track'e konur.",
       "resolve_steps": "Marker'lar DaVinci Resolve Studio'ya şöyle aktarılır:",
       "resolve_title": "DaVinci Resolve: ses klibinde Marker",
       "step_download": "Marker JSON dosyasını indirin.",
       "step_install": "Bir kez: betiği Resolve'a kurun (yukarıdaki alan).",
       "step_open": "çalıştırın, “{way}” seçeneğini seçip dosyayı seçin.",
       "step_select": "Resolve'da Media Pool'daki ses klibini seçin. Seçim yoksa betik şu dosya adlı klibi arar:",
-      "title": "Sonuçları ve işaretçileri dışa aktar"
+      "title": "Sonuçları ve marker'ları dışa aktar"
     },
     "ffmpeg": {
       "available": "ffmpeg çalıştırılabilir ({source})",

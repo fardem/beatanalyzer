@@ -114,6 +114,25 @@
 - Wege: (a) Lua-Skript ohne Fenster (ausgewählter Clip + neueste JSON aus festem Ordner, Meldungen in der Konsole) –
   ob die Marker-API in Free geht, ist zu prüfen; (b) ohne Skript: Web-App exportiert Marker als EDL und Subtitles
   als SRT zum Import von Hand.
+- **Wunsch des Nutzers (nach 0.3.0, „eins nach dem anderen“):** am liebsten **Marker auf dem Clip** auch in Free;
+  zusätzlich/ersatzweise **SRT-Export in der Web-App** zum Import von Hand. Zu prüfen: welcher Import-Weg in Free
+  Marker auf den Clip bringt (Resolve importiert Marker von Hand nur auf die Timeline, z. B. aus EDL – auf den Clip
+  vermutlich nur per Skript); erst recherchieren und in Resolve Free testen, dann entscheiden.
+- **Recherche (2026-11-17, nur Community-Berichte/Blogs, nichts offiziell, nicht selbst getestet):**
+  - Free 19.1+: externe Skripte (Python von außen) und `UIManager`-Fenster nur Studio; Lua aus Workspace → Scripts
+    läuft weiter. Free 21.1: Python ganz entfernt; Lua in einer Sandbox – `io` (io.open), `require`, `ffi`,
+    `bmd.readfile` sollen fehlen, `print` evtl. ohne Ausgabe; Arbeit an Timeline/Projekt/Bins geht weiter.
+  - **JSON in Free einlesen:** wahrscheinlich nicht (keine Dateizugriffe, kein Dateidialog-Fenster).
+  - **SRT-Weg (Idee Nutzer):** SRT von Hand importieren (Resolve-Bordmittel, auch Free) und auf eine Subtitle-Spur
+    legen; ein Lua-Skript ohne Fenster und ohne Dateizugriff liest die Subtitles über
+    `timeline:GetItemListInTrack("subtitle", n)` + `GetName()`/`GetStart()` und setzt per `AddMarker` die Marker auf
+    den Clip. Braucht keinen Dateizugriff – aussichtsreichster Weg. Offen: ob `AddMarker` in der Free-Sandbox geht;
+    SRT-Text sprachunabhängig auswertbar machen (z. B. Kennzeichen „D“/„B2“ im Text).
+  - Variante: Marker als EDL von Hand importieren (Timeline → Import → Timeline Markers from EDL, Bordmittel) und per
+    Lua von der Timeline auf den Clip übertragen.
+  - Nächster Schritt: kleines Prüf-Skript (Lua, ohne Fenster) für Resolve Free: io.open, AddMarker auf
+    ausgewähltem Clip, Subtitles lesen, Ergebnis als Marker sichtbar (falls print stumm ist). Test braucht Resolve
+    Free (nicht parallel zu Studio auf demselben Rechner installierbar – anderer Rechner/VM).
 
 ## 4. Zurückgestellte Kleinigkeiten
 

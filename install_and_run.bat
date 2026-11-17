@@ -262,11 +262,9 @@ echo  To stop, press CTRL + C in this console window.
 echo ======================================================================
 echo.
 
-:: Open the browser after a short delay
-start "" http://localhost:8000
-
+:: the server opens the browser as soon as it is ready (--open-browser)
 echo Starting backend\server.py ... >> "%LOGFILE%"
-!VENV_PY! backend\server.py
+!VENV_PY! backend\server.py --open-browser
 
 :: When the server crashes or stops:
 echo.

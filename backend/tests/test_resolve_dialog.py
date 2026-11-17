@@ -724,7 +724,7 @@ class AnalysisDialogTests(DialogTests):
             self.assertFalse(self.item("OK").Enabled)
             self.python_writes(step="analyze")
             self.tick(25)
-            self.assertIn("Analysieren", self.item("Status").Text)
+            self.assertIn("Track wird analysiert (Beats erkennen)", self.item("Status").Text)   # not "(Analysieren)" twice
             self.lua.execute("MOCK.selected = {}")                 # the selection may change meanwhile
             self.python_writes(done="ok")
             self.tick(60)

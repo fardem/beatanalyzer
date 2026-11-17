@@ -111,7 +111,7 @@
     "analyze_no_path": "The selected item has no file (e.g. a Timeline or a Compound Clip).",
     "step_analysis": "Analysis of '{clip}'",
     "step_model": "loading the model",
-    "step_analyze": "analysing",
+    "step_analyze": "detecting beats",
     "step_write": "writing the result",
     "step_analysis_hint": "Cancel works only now. Up to here nothing in the project has changed.",
     "msg_cancelled": "Analysis cancelled. Nothing in the project has changed.",

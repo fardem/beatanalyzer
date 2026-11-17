@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.3.0"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.3.1"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -149,7 +149,7 @@ local BA = {
       ["plugin.smooth_tip"] = "0 % = off: bars as beat_this hears them.\nMore % = a more even grid.\n100 % = fully smoothed; starts anew only where the '1' is clearly elsewhere.\nThe beats never change.",
       ["plugin.step_analysis"] = "Analysis of '{clip}'",
       ["plugin.step_analysis_hint"] = "Cancel works only now. Up to here nothing in the project has changed.",
-      ["plugin.step_analyze"] = "analysing",
+      ["plugin.step_analyze"] = "detecting beats",
       ["plugin.step_bin"] = "Folder BeatAnalyzer in the Media Pool, Subtitle '{srt}'",
       ["plugin.step_markers"] = "Markers on the clip '{clip}' in the Media Pool",
       ["plugin.step_markers_hint"] = "Resolve sets every marker on its own, this takes a while.",
