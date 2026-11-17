@@ -111,7 +111,7 @@
     "analyze_no_path": "Der ausgewählte Eintrag hat keine Datei (z. B. Timeline oder Compound Clip).",
     "step_analysis": "Analyse von „{clip}“",
     "step_model": "Modell laden",
-    "step_analyze": "Analysieren",
+    "step_analyze": "Beats erkennen",
     "step_write": "Ergebnis schreiben",
     "step_analysis_hint": "Abbrechen geht nur jetzt. Bis hier ist im Projekt nichts verändert.",
     "msg_cancelled": "Analyse abgebrochen. Im Projekt wurde nichts verändert.",

@@ -35,11 +35,5 @@ echo "======================================================================"
 echo " Starting the server on http://localhost:8000 ..."
 echo "======================================================================"
 
-# Open browser if possible
-if command -v xdg-open &> /dev/null; then
-    xdg-open http://localhost:8000 &
-elif command -v open &> /dev/null; then
-    open http://localhost:8000 &
-fi
-
-python3 backend/server.py
+# the server opens the browser as soon as it is ready
+python3 backend/server.py --open-browser
