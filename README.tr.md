@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Sürüm 0.3.2** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
+**Sürüm 0.4.0** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
 
 BeatAnalyzer bir şarkıdaki **beat'leri, downbeat'leri, tempoyu ve ölçüyü** bulur ve bunları **DaVinci Resolve**'a
 aktarır: **ses klibinizde renkli marker'lar** ve şarkının altında bir **Subtitle Track** olarak. Analiz,
@@ -22,6 +22,8 @@ Analizi doğrudan Resolve içindeki bir pencereden başlatabilir ya da tarayıc�
 - **Model sizin seçiminiz:** beat_this (MIT, ticari işler için de) veya ticari olmayan projeler için md_beat_this.
 - **Kesmeden önce kontrol:** beat ızgaralı dalga formu, model eğrileri, döngü, algılanan beat'lerde metronom ve tek
   tek beat'leri düzeltmek için bir beat tablosu.
+- **Izgarayı tek tıkla ayarlayın:** katlanmış ölçü kick ve snare'in ölçüde gerçekten nerede olduğunu gösterir; tek
+  tık “1”i, ızgarayı, tempoyu veya ölçüyü kaydırır – geri alınabilir ve “Düzeltme” kaydırıcısı değişince korunur.
 - **Yerel ve gizli:** her şey bilgisayarınızda çalışır – yükleme yok, hesap yok.
 
 ---
@@ -212,7 +214,14 @@ atlamaz). BeatAnalyzer kesin gecikmeyi dosyadan okur ve marker'larla subtitle'la
 - **Oynatıcı:** istenen yerden çalma, **döngü** (gri = kapalı, sarı A-B = mavi çerçevedeki bölüm, yeşil = tüm
   şarkı), şarkının ses düzeyi, algılanan beat'lerde **metronom** (downbeat'te daha yüksek tık), hız 0,5× – 1,5×,
   tap tempo.
-- Tüm şarkı boyunca **tempo eğrisi**.
+- **Beat kanıtları ve ölçü ayarı:** kick (< 150 Hz), snare/gövde ve hi-hat için şeritler, dalga formunun
+  yakınlaştırmasıyla birlikte (altındaki tutamaçla iki kat yüksekliğe kadar sürüklenebilir); **katlanmış ölçü** tüm
+  ölçüleri – bölümün veya tüm şarkının – üst üste koyar ve kick'in “1”de olup olmadığını söyler. **Tek tıkla
+  ayar:** ölçü başı ±1 beat, ızgara ±½ beat, tempo ½× / 2×, **ölçü başına beat** (2–7); geri alma ve sıfırlama.
+  Ayarlar “Düzeltme” kaydırıcısı değişince korunur ve tüm dışa aktarımlara – Resolve için marker JSON'a da – gider.
+- **Uzman tanılama** (açmak için başlığa tıklayın): spektrogram, “1”in, diğer beat'lerin ve off-beat'lerin enerji
+  spektrumu, çalarken **Canlı** spektrum (her beat'te parlama, “1”de daha güçlü), tempo histogramı.
+- Tüm şarkı boyunca **tempo eğrisi** (tempo sabitken katlanmış).
 - **Beat tablosu:** bir beat'i ±10 ms kaydırın ya da downbeat yapın (`1/X`); düzeltmeler tüm dışa aktarımlara gider.
 
 4. **Dışa aktar** – sağ üstteki düğme.
@@ -310,6 +319,8 @@ Windows'ta Python yolu `venv\Scripts\python.exe`'dir.
 | `lang/*.json` | İngilizce, Almanca ve Türkçe metinler (web uygulaması ve Resolve penceresi) |
 | `resolve/BeatAnalyzer_Markers.lua` | DaVinci Resolve betiği ve penceresi |
 | `src/` | web uygulaması (React, TypeScript) |
+| `src/utils/beatEvidence.ts` | bant eğrileri, katlanmış ölçü, tempo histogramı, spektrumlar (web uygulaması) |
+| `src/utils/beatTransforms.ts` | tekrar uygulanabilir adımlar olarak tek tıkla ayarlar (web uygulaması) |
 | `dist/` | derlenmiş web uygulaması; depoya eklenir |
 | `VERSION` | uygulama, betik ve sürüm için sürüm numarası |
 
@@ -326,6 +337,10 @@ Denetimler:
 
 ```bash
 npm run lint
+```
+
+```bash
+npm test
 ```
 
 ```bash

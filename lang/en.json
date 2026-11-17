@@ -507,7 +507,17 @@
       "help_spec_2": "Horizontal streaks: Sustained bass notes, synth pads, or vocals.",
       "help_spec_tip": "Tip: Rose (T1) and cyan beat lines should align cleanly with the leading edge of bright vertical columns. Click anywhere to seek.",
       "tip_peak_downbeat": "Dominant frequency of beat “1” (downbeats) in the active window. Low values (50–110 Hz) usually mean kick punch.",
-      "tip_peak_beats": "Dominant frequency of beats “2–4” in the active window. Often higher (150 Hz–4 kHz) when snares or claps land on 2 & 4."
+      "tip_peak_beats": "Dominant frequency of beats “2–4” in the active window. Often higher (150 Hz–4 kHz) when snares or claps land on 2 & 4.",
+      "mode_live": "Live",
+      "live_idle": "Press play – the live spectrum moves with the music",
+      "legend_live": "Live · flash on every beat, stronger on the “1”",
+      "zone_short_kick": "Kick",
+      "zone_short_snare": "Snare",
+      "zone_short_hihat": "Hats",
+      "help_live_summary": "The spectrum of what is playing right now, on a logarithmic frequency axis: bass on the left, hi-hats on the right. The caps show the latest peaks.",
+      "help_live_1": "Rose / cyan / indigo: kick (< 150 Hz), snare and body (150 Hz – 4 kHz), hi-hats and air (> 4 kHz); the three meters on the right show each zone.",
+      "help_live_2": "The glow flashes on every beat of the grid – strongly on the “1”. If the kick jumps but the flash comes a little before or after, the grid is off.",
+      "help_live_tip": "Tip: loop a section (A-B) and watch whether kick and flash land together."
     },
     "evidence": {
       "title": "Beat Evidence & Grid Fixes",
@@ -572,7 +582,12 @@
       "help_tempo_2": "Rose & Amber (½× / 2×): Reveals secondary tempo clusters, tempo shifts, or half-/double-time ambiguity.",
       "help_tempo_tip": "Tip: If a secondary cluster sits near ½× or 2× of the main peak, the tracker briefly flipped octave.",
       "tip_tempo_primary": "Most frequent BPM in the song. Higher % (e.g. >85%) means beat intervals stay tightly locked around this speed.",
-      "tip_tempo_bimodal": "A noticeable second BPM cluster — either an intentional tempo shift in the song or half-/double-time ambiguity."
+      "tip_tempo_bimodal": "A noticeable second BPM cluster — either an intentional tempo shift in the song or half-/double-time ambiguity.",
+      "fix_meter_group": "Beats per bar (time signature)",
+      "fix_meter_tip": "{n} beats per bar: every {n}th beat from the first “1” becomes a “1”",
+      "fix_count": "{n} step(s) active",
+      "fix_count_tip": "Corrections stay when you move Smoothing; Undo removes the last step, Reset all of them.",
+      "lanes_resize": "Drag to change the height (up to 2×); double-click: normal height"
     },
     "expert": {
       "title": "Expert Diagnostics / Audio Details",

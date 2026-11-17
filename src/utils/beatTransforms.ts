@@ -259,3 +259,93 @@ export function scaleGridTempo(result: AnalysisResult, factor: 0.5 | 2): Analysi
   }));
   return recomputeBeatStats(result, remapped, { updateGlobalBpm: true });
 }
+
+/**
+ * Sets the number of beats per bar (time signature correction). The first downbeat stays; from it every
+ * `beatsPerBar`-th beat becomes a "1", also backwards into a pickup. Smoothing restarts are given up – the
+ * user decides the bar length here.
+ */
+export function setBeatsPerBar(result: AnalysisResult, beatsPerBar: number): AnalysisResult {
+  const n = Math.max(2, Math.min(12, Math.round(beatsPerBar)));
+  if (result.beats.length < 2) return result;
+  const sorted = [...result.beats].sort((a, b) => a.time - b.time);
+  const first = Math.max(0, sorted.findIndex((b) => b.isDownbeat));
+  const den = result.timeSignature.denominator || 4;
+  const withMeter: AnalysisResult = {
+    ...result,
+    timeSignature: { ...result.timeSignature, numerator: n, denominator: den, name: `${n}/${den}` },
+  };
+  const beats = sorted.map((b, i) => ({ ...b, isDownbeat: (((i - first) % n) + n) % n === 0 }));
+  return recomputeBeatStats(withMeter, beats);
+}
+
+/**
+ * One step of a grid correction. The web app keeps the steps instead of results: after a re-analysis with other
+ * smoothing (same beats, other bars) the same steps are applied to the new result, so no correction is lost; undo
+ * drops the last step. Beat-table edits are steps too ("nudge", "toggle"); they find their beat by time.
+ */
+export type GridOp =
+  | { kind: 'downbeat'; dir: -1 | 1 }
+  | { kind: 'half'; dir: -1 | 1 }
+  | { kind: 'tempo'; factor: 0.5 | 2 }
+  | { kind: 'meter'; beats: number }
+  | { kind: 'nudge'; time: number; to: number }
+  | { kind: 'toggle'; time: number; downbeat: boolean };
+
+const SAME_BEAT_S = 0.0015;   // beat times are rounded to 1 ms
+
+function findBeat(beats: BeatItem[], time: number): number {
+  let best = -1;
+  let bestDt = SAME_BEAT_S;
+  for (let i = 0; i < beats.length; i++) {
+    const dt = Math.abs(beats[i].time - time);
+    if (dt <= bestDt) {
+      best = i;
+      bestDt = dt;
+    }
+  }
+  return best;
+}
+
+export function applyGridOp(result: AnalysisResult, op: GridOp): AnalysisResult {
+  switch (op.kind) {
+    case 'downbeat':
+      return shiftDownbeat(result, op.dir);
+    case 'half':
+      return shiftGridHalfBeat(result, op.dir);
+    case 'tempo':
+      return scaleGridTempo(result, op.factor);
+    case 'meter':
+      return setBeatsPerBar(result, op.beats);
+    case 'nudge':
+    case 'toggle': {
+      const idx = findBeat(result.beats, op.time);
+      if (idx < 0) return result;   // the beat is gone (e.g. after ½× tempo): nothing to do
+      const beats = result.beats.map((b, i) =>
+        i !== idx
+          ? b
+          : op.kind === 'nudge'
+          ? { ...b, time: Math.max(0, Math.round(op.to * 1000) / 1000) }
+          : { ...b, isDownbeat: op.downbeat }
+      );
+      return recomputeBeatStats(result, beats);
+    }
+  }
+}
+
+export function applyGridOps(base: AnalysisResult, ops: GridOp[]): AnalysisResult {
+  return ops.reduce(applyGridOp, base);
+}
+
+/** Steps for an edit of the beat table (same beats in the same order; changed time or downbeat flag). */
+export function opsFromBeatEdit(prev: BeatItem[], next: BeatItem[]): GridOp[] {
+  if (prev.length !== next.length) return [];
+  const ops: GridOp[] = [];
+  for (let i = 0; i < prev.length; i++) {
+    if (next[i].time !== prev[i].time) ops.push({ kind: 'nudge', time: prev[i].time, to: next[i].time });
+    if (next[i].isDownbeat !== prev[i].isDownbeat) {
+      ops.push({ kind: 'toggle', time: next[i].time, downbeat: next[i].isDownbeat });
+    }
+  }
+  return ops;
+}

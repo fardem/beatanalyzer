@@ -104,6 +104,14 @@ Stärken. Offen: Aussage zu CUDA prüfen.
 `torch_setup.py` (CUDA-Download, CPU-Fassung ersetzen, `BEATANALYZER_TORCH`) vom Nutzer nicht durchgeführt – nur durch
 Unit-Tests abgedeckt. Bei der ersten Rückmeldung eines neuen Nutzers darauf achten.
 
+**Zusammenführung umgesetzt in 0.4.0 (2026-11-17):** Panel Beat-Evidenz & Takt-Korrektur, Experten-Diagnose (über
+dem Tempo-Verlauf, Wunsch Nutzer), Live-Spektrum (war in test2 `eb612c4`, im letzten Commit entfernt; Wunsch Nutzer:
+„für den verspielten DJ“), Spuren bis 2× Höhe ziehbar (Wunsch Nutzer), dazu Idee 2 (Beats pro Takt) und Idee 4
+(Korrekturen als Schritte, überstehen Glätten). **Offen für 0.4.1:** Idee 1 (Vorschlag mit einem Klick: Kandidaten
+bewerten, Vorschau im gefalteten Takt) und Idee 3 (Korrektur nur im Ausschnitt/blauen Rahmen, z. B. „Teoman – Ağır
+Kapı“). Idee 5 (Kennzeichnung „korrigiert“ in der Marker-JSON) nicht umgesetzt – Resolve-Fenster bleibt unverändert.
+Hinweis Nutzer: Experten-Diagnose ist schwer zu finden (nur Überschrift klickbar).
+
 **Nächste Zusammenführung (nach Teilprojekt 5, Nutzer):** parallele Entwicklung des Nutzers mit dem Panel
 „Beat-Evidenz & Takt-Korrektur“ – Onset-Spuren in drei Bändern (Low < 150 Hz Bass/Kick, Mid 150 Hz–2,5 kHz
 Snare/Körper, High > 2,5 kHz Hats/Air) mit Takt-Fähnchen, „gefalteter Takt“ (alle Takte gemittelt, je Band eine

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { AlertTriangle, Settings } from 'lucide-react';
 import { AnalysisModel, AnalysisResult, BeatItem, PlaybackSpeed } from './types/analyzer';
 import { analyzeAudioFile, LocalizedError } from './utils/audioAnalyzer';
@@ -13,8 +13,9 @@ import { PlayerControls } from './components/PlayerControls';
 import { BeatEvidenceLab } from './components/BeatEvidenceLab';
 import { TempoCurveChart } from './components/TempoCurveChart';
 import { ExpertDiagnosticsPanel } from './components/ExpertDiagnosticsPanel';
+import { LiveSpectrumSource } from './components/LiveSpectrum';
 import { BeatTable } from './components/BeatTable';
-import { recomputeBeatStats, scaleGridTempo, shiftDownbeat, shiftGridHalfBeat } from './utils/beatTransforms';
+import { applyGridOps, GridOp, opsFromBeatEdit } from './utils/beatTransforms';
 import { ExportModal } from './components/ExportModal';
 import { ModelInfoModal } from './components/ModelInfoModal';
 import { LocalSetupModal } from './components/LocalSetupModal';
@@ -23,6 +24,8 @@ import { NonCommercialNoticeModal } from './components/NonCommercialNoticeModal'
 export default function App() {
   const { t, pctValue } = useI18n();
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const resultRef = useRef<AnalysisResult | null>(null);
+  resultRef.current = result;
   const [selectedModel, setSelectedModel] = useState<AnalysisModel>('beat_this');
   const [mdConfirmedInSession, setMdConfirmedInSession] = useState<boolean>(false);
   const [showMdSetupModal, setShowMdSetupModal] = useState<boolean>(false);
@@ -36,8 +39,10 @@ export default function App() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [smoothBars, setSmoothBars] = useState<boolean>(true);
   const [protect, setProtect] = useState<number>(0.95); // protection of clear "1"s; 0.95 = "Glätten" 90 %
-  const [originalResult, setOriginalResult] = useState<AnalysisResult | null>(null);
-  const [gridUndoStack, setGridUndoStack] = useState<AnalysisResult[]>([]);
+  // analysis result as the server gave it, and the grid corrections on top of it (see commitGrid)
+  const baseRef = useRef<AnalysisResult | null>(null);
+  const [gridOps, setGridOps] = useState<GridOp[]>([]);
+  const gridOpsRef = useRef<GridOp[]>([]);
   const lastAudioRef = useRef<AudioBuffer | null>(null);
   const lastFileRef = useRef<{ file: File | Blob; name: string } | null>(null);
 
@@ -141,13 +146,17 @@ export default function App() {
         setViewRange(null);
         playerRef.current?.setLoop(null);
       }
-      setResult(analysisResult);
-      setOriginalResult(analysisResult);
-      setGridUndoStack([]);
+      // a re-analysis (smoothing) keeps the corrections; a new file starts without
+      const ops = opts.reanalysis ? gridOpsRef.current : [];
+      const shown = applyGridOps(analysisResult, ops);
+      baseRef.current = analysisResult;
+      gridOpsRef.current = ops;
+      setGridOps(ops);
+      setResult(shown);
       setSmoothBars(smooth); // only now: a failed re-analysis leaves box and slider as they were
       setProtect(protectValue);
       if (playerRef.current) {
-        playerRef.current.loadBuffer(audioBuffer, analysisResult.beats);
+        playerRef.current.loadBuffer(audioBuffer, shown.beats);
       }
     } catch (err: unknown) {
       console.error('Analysis error:', err);
@@ -240,63 +249,46 @@ export default function App() {
     playerRef.current?.setMetronomeVolume(vol);
   }, []);
 
-  const handleUpdateBeats = useCallback((updatedBeats: BeatItem[]) => {
-    setResult((prev) => {
-      if (!prev) return null;
-      const next = recomputeBeatStats(prev, updatedBeats);
-      playerRef.current?.updateBeats(next.beats);
-      return next;
-    });
+  // Grid corrections are kept as steps (GridOp) on top of the analysis result (baseRef): undo drops the last step,
+  // a re-analysis with other smoothing applies the same steps to the new result (before, every correction was
+  // lost silently when the smoothing slider moved).
+  const commitGrid = useCallback((ops: GridOp[]) => {
+    const base = baseRef.current;
+    if (!base) return;
+    const next = applyGridOps(base, ops);
+    gridOpsRef.current = ops;
+    setGridOps(ops);
+    setResult(next);
+    playerRef.current?.updateBeats(next.beats);
   }, []);
 
-  const applyGridTransform = useCallback((transform: (curr: AnalysisResult) => AnalysisResult) => {
-    setResult((prev) => {
-      if (!prev) return null;
-      const next = transform(prev);
-      if (next === prev) return prev;
-      setGridUndoStack((stack) => [...stack.slice(-11), prev]);
-      playerRef.current?.updateBeats(next.beats);
-      return next;
-    });
-  }, []);
-
-  const handleShiftDownbeat = useCallback(
-    (direction: -1 | 1) => {
-      applyGridTransform((curr) => shiftDownbeat(curr, direction));
+  const handleUpdateBeats = useCallback(
+    (updatedBeats: BeatItem[]) => {
+      const current = resultRef.current;
+      if (!current) return;
+      const ops = opsFromBeatEdit(current.beats, updatedBeats);
+      if (ops.length > 0) commitGrid([...gridOpsRef.current, ...ops]);
     },
-    [applyGridTransform]
+    [commitGrid]
   );
 
-  const handleShiftHalfBeat = useCallback(
-    (direction: -1 | 1) => {
-      applyGridTransform((curr) => shiftGridHalfBeat(curr, direction));
-    },
-    [applyGridTransform]
+  const addGridOp = useCallback((op: GridOp) => commitGrid([...gridOpsRef.current, op]), [commitGrid]);
+  const handleShiftDownbeat = useCallback((dir: -1 | 1) => addGridOp({ kind: 'downbeat', dir }), [addGridOp]);
+  const handleShiftHalfBeat = useCallback((dir: -1 | 1) => addGridOp({ kind: 'half', dir }), [addGridOp]);
+  const handleScaleTempo = useCallback((factor: 0.5 | 2) => addGridOp({ kind: 'tempo', factor }), [addGridOp]);
+  const handleSetMeter = useCallback((beats: number) => addGridOp({ kind: 'meter', beats }), [addGridOp]);
+  const handleUndoGrid = useCallback(() => commitGrid(gridOpsRef.current.slice(0, -1)), [commitGrid]);
+  const handleResetGrid = useCallback(() => commitGrid([]), [commitGrid]);
+
+  // live spectrum of the player for the expert view ("Live"); stable object, reads the player at call time
+  const liveSource = useMemo<LiveSpectrumSource>(
+    () => ({
+      read: (target) => playerRef.current?.readFrequencyData(target) ?? false,
+      config: () =>
+        playerRef.current?.getSpectrumConfig() ?? { binCount: 2048, sampleRate: 44100, minDecibels: -85, maxDecibels: -10 },
+    }),
+    []
   );
-
-  const handleScaleTempo = useCallback(
-    (factor: 0.5 | 2) => {
-      applyGridTransform((curr) => scaleGridTempo(curr, factor));
-    },
-    [applyGridTransform]
-  );
-
-  const handleUndoGrid = useCallback(() => {
-    setGridUndoStack((stack) => {
-      if (stack.length === 0) return stack;
-      const previous = stack[stack.length - 1];
-      setResult(previous);
-      playerRef.current?.updateBeats(previous.beats);
-      return stack.slice(0, -1);
-    });
-  }, []);
-
-  const handleResetGrid = useCallback(() => {
-    if (!originalResult) return;
-    setResult(originalResult);
-    setGridUndoStack([]);
-    playerRef.current?.updateBeats(originalResult.beats);
-  }, [originalResult]);
 
   const handleReset = useCallback(() => {
     playerRef.current?.stop();
@@ -304,8 +296,9 @@ export default function App() {
     setCurrentTime(0);
     setActiveBeat(null);
     setViewRange(null);
-    setOriginalResult(null);
-    setGridUndoStack([]);
+    baseRef.current = null;
+    gridOpsRef.current = [];
+    setGridOps([]);
     setResult(null);
     setError(null);
   }, []);
@@ -432,24 +425,29 @@ export default function App() {
               onShiftDownbeat={handleShiftDownbeat}
               onShiftHalfBeat={handleShiftHalfBeat}
               onScaleTempo={handleScaleTempo}
+              onSetMeter={handleSetMeter}
               onUndoGrid={handleUndoGrid}
               onResetGrid={handleResetGrid}
-              canUndoGrid={gridUndoStack.length > 0}
-              canResetGrid={Boolean(originalResult && result && result !== originalResult)}
+              canUndoGrid={gridOps.length > 0}
+              canResetGrid={gridOps.length > 0}
+              correctionCount={gridOps.length}
             />
 
-            {/* 4. Tempo Curve Over Time (auto-collapsed on stable tempo) */}
-            <TempoCurveChart
-              result={result}
-              currentTime={currentTime}
-              onSeek={handleSeek}
-            />
-
-            {/* 4b. Collapsed-by-default Expert Diagnostics (Spectrogram, Energy Spectrum, Tempo Histogram) */}
+            {/* 4. Collapsed-by-default Expert Diagnostics (Spectrogram, Energy Spectrum, Live, Tempo Histogram);
+                above the tempo curve (wish of the user) */}
             <ExpertDiagnosticsPanel
               result={result}
               audioBuffer={audioBuffer}
               viewRange={viewRange}
+              currentTime={currentTime}
+              onSeek={handleSeek}
+              liveSource={liveSource}
+              isPlaying={isPlaying}
+            />
+
+            {/* 4b. Tempo Curve Over Time (auto-collapsed on stable tempo) */}
+            <TempoCurveChart
+              result={result}
               currentTime={currentTime}
               onSeek={handleSeek}
             />

@@ -5,6 +5,7 @@ import { computeTempoHistogram, TempoHistogramData } from '../utils/beatEvidence
 import { useI18n } from '../i18n';
 import { DiagramInfoTooltip, ValueTooltip } from './DiagramInfoTooltip';
 import { SpectrumAnalyzer } from './SpectrumAnalyzer';
+import { LiveSpectrumSource } from './LiveSpectrum';
 
 interface ExpertDiagnosticsPanelProps {
   result: AnalysisResult;
@@ -12,6 +13,8 @@ interface ExpertDiagnosticsPanelProps {
   viewRange: { start: number; end: number } | null;
   currentTime: number;
   onSeek: (time: number) => void;
+  liveSource?: LiveSpectrumSource;
+  isPlaying?: boolean;
 }
 
 const STORAGE_EXPERT_EXPANDED_KEY = 'beatanalyzer.expertExpanded';
@@ -30,6 +33,8 @@ export const ExpertDiagnosticsPanel: React.FC<ExpertDiagnosticsPanelProps> = ({
   viewRange,
   currentTime,
   onSeek,
+  liveSource,
+  isPlaying,
 }) => {
   const { t, num, pctValue } = useI18n();
   const [isExpanded, setIsExpanded] = useState<boolean>(readExpertExpanded);
@@ -226,6 +231,8 @@ export const ExpertDiagnosticsPanel: React.FC<ExpertDiagnosticsPanelProps> = ({
                 viewRange={viewRange}
                 currentTime={currentTime}
                 onSeek={onSeek}
+                liveSource={liveSource}
+                isPlaying={isPlaying}
               />
             </div>
           )}

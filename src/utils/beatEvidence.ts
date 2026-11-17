@@ -43,6 +43,10 @@ export interface BeatEvidenceData {
   lowOnset: Float32Array;
   midOnset: Float32Array;
   highOnset: Float32Array;
+  /** curves the folded bar is built from (72 % onset + 28 % energy), see bandEvidence() */
+  foldLow: Float32Array;
+  foldMid: Float32Array;
+  foldHigh: Float32Array;
   foldedBar: FoldedBarData;
   tempoHistogram: TempoHistogramData;
 }
@@ -483,8 +487,23 @@ export function computeTempoHistogram(beats: BeatItem[], globalBpm: number): Tem
   };
 }
 
-export function computeBeatEvidence(buffer: AudioBuffer, result: AnalysisResult): BeatEvidenceData {
-  const { frameRate, lowBand, midBand, highBand, lowOnset, midOnset, highOnset } = computeBandCurves(buffer);
+type BandEvidence = ReturnType<typeof computeBandCurves> & {
+  foldLow: Float32Array;
+  foldMid: Float32Array;
+  foldHigh: Float32Array;
+};
+
+const bandCache = new WeakMap<AudioBuffer, BandEvidence>();
+
+/**
+ * Band curves of a song, computed once per audio buffer. Filtering the whole song takes a noticeable moment, and a
+ * grid correction changes only the beats, not the audio (before, every 1-click fix filtered the song again).
+ */
+export function bandEvidence(buffer: AudioBuffer): BandEvidence {
+  const cached = bandCache.get(buffer);
+  if (cached) return cached;
+  const bands = computeBandCurves(buffer);
+  const { lowBand, midBand, highBand, lowOnset, midOnset, highOnset } = bands;
   // Folded Bar blends 72% transient onset + 28% RMS energy so sustained basslines don't obscure kick attacks
   const foldLow = new Float32Array(lowBand.length);
   const foldMid = new Float32Array(midBand.length);
@@ -494,6 +513,14 @@ export function computeBeatEvidence(buffer: AudioBuffer, result: AnalysisResult)
     foldMid[i] = 0.72 * midOnset[i] + 0.28 * midBand[i];
     foldHigh[i] = 0.72 * highOnset[i] + 0.28 * highBand[i];
   }
+  const out = { ...bands, foldLow, foldMid, foldHigh };
+  bandCache.set(buffer, out);
+  return out;
+}
+
+export function computeBeatEvidence(buffer: AudioBuffer, result: AnalysisResult): BeatEvidenceData {
+  const { frameRate, lowBand, midBand, highBand, lowOnset, midOnset, highOnset, foldLow, foldMid, foldHigh } =
+    bandEvidence(buffer);
 
   const foldedBar = computeFoldedBar(
     result.beats,
@@ -514,6 +541,9 @@ export function computeBeatEvidence(buffer: AudioBuffer, result: AnalysisResult)
     lowOnset,
     midOnset,
     highOnset,
+    foldLow,
+    foldMid,
+    foldHigh,
     foldedBar,
     tempoHistogram,
   };

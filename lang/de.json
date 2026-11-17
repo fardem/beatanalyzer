@@ -507,7 +507,17 @@
       "help_spec_2": "Waagerechte Bänder: Liegender Bass oder gehaltene Synths/Vocals.",
       "help_spec_tip": "Praxistipp: Jede rote (T1) und blaue Beat-Linie sollte links direkt auf der Kante einer senkrechten hellen Säule stehen. Klick springt an die Stelle.",
       "tip_peak_downbeat": "Schwerpunkt-Frequenz der „1“ (Downbeats) im sichtbaren Fenster. Liegt er tief (z. B. 50–110 Hz), sitzt dort meist die Bassdrum.",
-      "tip_peak_beats": "Schwerpunkt-Frequenz der übrigen Zählzeiten (2–4) im Fenster. Oft etwas höher (150 Hz–4 kHz), wenn auf 2 & 4 Snare oder Clap liegen."
+      "tip_peak_beats": "Schwerpunkt-Frequenz der übrigen Zählzeiten (2–4) im Fenster. Oft etwas höher (150 Hz–4 kHz), wenn auf 2 & 4 Snare oder Clap liegen.",
+      "mode_live": "Live",
+      "live_idle": "Abspielen drücken – das Live-Spektrum bewegt sich mit der Musik",
+      "legend_live": "Live · Blitz auf jedem Beat, stärker auf der „1“",
+      "zone_short_kick": "Kick",
+      "zone_short_snare": "Snare",
+      "zone_short_hihat": "Hats",
+      "help_live_summary": "Das Spektrum dessen, was gerade spielt, auf einer logarithmischen Frequenzachse: Bass links, Hi-Hats rechts. Die Kappen zeigen die letzten Spitzen.",
+      "help_live_1": "Rose / Cyan / Indigo: Kick (< 150 Hz), Snare und Körper (150 Hz – 4 kHz), Hi-Hats und Luft (> 4 kHz); die drei Anzeigen rechts zeigen jede Zone.",
+      "help_live_2": "Der Schein blitzt auf jedem Beat des Rasters – kräftig auf der „1“. Springt die Kick, aber der Blitz kommt etwas davor oder danach, liegt das Raster daneben.",
+      "help_live_tip": "Tipp: einen Ausschnitt loopen (A-B) und schauen, ob Kick und Blitz zusammen kommen."
     },
     "evidence": {
       "title": "Beat-Evidenz & Takt-Korrektur",
@@ -572,7 +582,12 @@
       "help_tempo_2": "Rose & Amber (½× / 2×): Markiert ein zweites Tempo (z. B. Temposprung oder Doppel-/Halbzeit-Verwechslung).",
       "help_tempo_tip": "Praxistipp: Taucht neben dem Haupt-Peak ein zweiter Balken nahe 2× oder ½× auf, wechselt das Tracking zwischendurch in die doppelte/halbe Zählweise.",
       "tip_tempo_primary": "Der häufigste BPM-Wert im Track. Je höher der %-Wert (z. B. >85 %), desto sauberer bleiben alle Beat-Abstände auf demselben Tempo.",
-      "tip_tempo_bimodal": "Ein zweiter, häufig gemessener Tempo-Wert. Entsteht entweder durch einen echten Tempowechsel im Song oder wenn Beats stellenweise doppelt/halb so schnell gezählt wurden."
+      "tip_tempo_bimodal": "Ein zweiter, häufig gemessener Tempo-Wert. Entsteht entweder durch einen echten Tempowechsel im Song oder wenn Beats stellenweise doppelt/halb so schnell gezählt wurden.",
+      "fix_meter_group": "Beats pro Takt (Taktart)",
+      "fix_meter_tip": "{n} Beats pro Takt: ab der ersten „1“ wird jeder {n}. Beat eine „1“",
+      "fix_count": "{n} Schritt(e) aktiv",
+      "fix_count_tip": "Korrekturen bleiben erhalten, wenn du „Glätten“ verstellst; Rückgängig nimmt den letzten Schritt zurück, Zurücksetzen alle.",
+      "lanes_resize": "Ziehen ändert die Höhe (bis 2×); Doppelklick: normale Höhe"
     },
     "expert": {
       "title": "Experten-Diagnose / Audio-Details",

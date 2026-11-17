@@ -9,6 +9,7 @@ import {
 } from '../utils/beatEvidence';
 import { useI18n } from '../i18n';
 import { DiagramHelpContent, DiagramInfoTooltip, ValueTooltip } from './DiagramInfoTooltip';
+import { LiveSpectrum, LiveSpectrumSource } from './LiveSpectrum';
 
 interface SpectrumAnalyzerProps {
   result: AnalysisResult;
@@ -16,10 +17,13 @@ interface SpectrumAnalyzerProps {
   viewRange: { start: number; end: number } | null;
   currentTime: number;
   onSeek: (time: number) => void;
+  /** live spectrum of the player (mode "Live"); without it the mode is not offered */
+  liveSource?: LiveSpectrumSource;
+  isPlaying?: boolean;
 }
 
 type BeatZoneId = 'kick' | 'snare' | 'hihat';
-type SpectrumViewMode = 'spectrogram' | 'spectrum';
+type SpectrumViewMode = 'spectrogram' | 'spectrum' | 'live';
 
 interface HoverProbe {
   xRatio: number;
@@ -86,7 +90,7 @@ const COLORMAP_LUT = (() => {
 function readViewMode(): SpectrumViewMode {
   try {
     const saved = localStorage.getItem(STORAGE_VIEW_MODE_KEY);
-    return saved === 'spectrum' ? 'spectrum' : 'spectrogram';
+    return saved === 'spectrum' || saved === 'live' ? saved : 'spectrogram';
   } catch {
     return 'spectrogram';
   }
@@ -133,9 +137,12 @@ export const SpectrumAnalyzer: React.FC<SpectrumAnalyzerProps> = ({
   viewRange,
   currentTime,
   onSeek,
+  liveSource,
+  isPlaying = false,
 }) => {
   const { t, num } = useI18n();
-  const [viewMode, setViewMode] = useState<SpectrumViewMode>(readViewMode);
+  const [savedMode, setViewMode] = useState<SpectrumViewMode>(readViewMode);
+  const viewMode: SpectrumViewMode = savedMode === 'live' && !liveSource ? 'spectrogram' : savedMode;
   const [hoverProbe, setHoverProbe] = useState<HoverProbe | null>(null);
 
   const windowDist: WindowBeatSpectrumData | null = useMemo(() => {
@@ -708,6 +715,17 @@ export const SpectrumAnalyzer: React.FC<SpectrumAnalyzerProps> = ({
   );
 
   const spectrumHelp = useMemo<DiagramHelpContent>(() => {
+    if (viewMode === 'live') {
+      return {
+        title: `${t('web.spectrum.title')} · ${t('web.spectrum.mode_live')}`,
+        summary: t('web.spectrum.help_live_summary'),
+        items: [
+          { color: 'rose', text: t('web.spectrum.help_live_1') },
+          { color: 'cyan', text: t('web.spectrum.help_live_2') },
+        ],
+        actionTip: t('web.spectrum.help_live_tip'),
+      };
+    }
     if (viewMode === 'spectrogram') {
       return {
         title: `${t('web.spectrum.title')} · ${t('web.spectrum.mode_spectrogram')}`,
@@ -763,11 +781,25 @@ export const SpectrumAnalyzer: React.FC<SpectrumAnalyzerProps> = ({
             >
               {t('web.spectrum.mode_spectrum')}
             </button>
+            {liveSource && (
+              <button
+                type="button"
+                onClick={() => selectViewMode('live')}
+                aria-pressed={viewMode === 'live'}
+                className={`px-2.5 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+                  viewMode === 'live' ? 'bg-slate-800 text-rose-300' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {t('web.spectrum.mode_live')}
+              </button>
+            )}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
-          {viewMode === 'spectrogram' && spectrogramData ? (
+          {viewMode === 'live' ? (
+            <span className="whitespace-nowrap">{t('web.spectrum.legend_live')}</span>
+          ) : viewMode === 'spectrogram' && spectrogramData ? (
             <span className="whitespace-nowrap">{t('web.spectrum.legend_spectrogram')}</span>
           ) : windowDist ? (
             <div className="flex items-center gap-2 whitespace-nowrap">
@@ -854,9 +886,14 @@ export const SpectrumAnalyzer: React.FC<SpectrumAnalyzerProps> = ({
         </div>
       </div>
 
+      {viewMode === 'live' && liveSource && (
+        <LiveSpectrum source={liveSource} isPlaying={isPlaying} result={result} currentTime={currentTime} />
+      )}
       <div
         ref={containerRef}
-        className="relative h-36 w-full rounded-xl bg-slate-950/90 border border-slate-800/80 overflow-hidden"
+        className={`relative h-36 w-full rounded-xl bg-slate-950/90 border border-slate-800/80 overflow-hidden ${
+          viewMode === 'live' ? 'hidden' : ''
+        }`}
       >
         <canvas
           ref={canvasRef}

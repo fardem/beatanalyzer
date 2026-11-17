@@ -14,15 +14,34 @@ interface BeatEvidenceLabProps {
   onShiftDownbeat: (direction: -1 | 1) => void;
   onShiftHalfBeat: (direction: -1 | 1) => void;
   onScaleTempo: (factor: 0.5 | 2) => void;
+  /** time signature correction: beats per bar */
+  onSetMeter: (beatsPerBar: number) => void;
   onUndoGrid: () => void;
   onResetGrid: () => void;
   canUndoGrid: boolean;
   canResetGrid: boolean;
+  /** number of active correction steps (shown next to the title) */
+  correctionCount: number;
 }
+
+const METER_CHOICES = [2, 3, 4, 5, 6, 7];
 
 const STORAGE_EXPANDED_KEY = 'beatanalyzer.evidenceExpanded';
 const STORAGE_LANES_VISIBLE_KEY = 'beatanalyzer.lanesVisible';
 const STORAGE_FOLDED_SCOPE_KEY = 'beatanalyzer.foldedScope';
+const STORAGE_LANES_HEIGHT_KEY = 'beatanalyzer.lanesHeight';
+// height of the band lanes: drag the grip below them, up to twice the normal height (wish of the user)
+const LANES_MIN_H = 108;
+const LANES_MAX_H = LANES_MIN_H * 2;
+
+function readLanesHeight(): number {
+  try {
+    const v = Number(localStorage.getItem(STORAGE_LANES_HEIGHT_KEY));
+    return Number.isFinite(v) && v >= LANES_MIN_H && v <= LANES_MAX_H ? v : LANES_MIN_H;
+  } catch {
+    return LANES_MIN_H;
+  }
+}
 
 function readExpanded(): boolean {
   try {
@@ -66,15 +85,51 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
   onShiftDownbeat,
   onShiftHalfBeat,
   onScaleTempo,
+  onSetMeter,
   onUndoGrid,
   onResetGrid,
   canUndoGrid,
   canResetGrid,
+  correctionCount,
 }) => {
   const { t, meter } = useI18n();
   const [isExpanded, setIsExpanded] = useState<boolean>(readExpanded);
   const [lanesVisible, setLanesVisible] = useState<boolean>(readLanesVisible);
   const [foldedScope, setFoldedScope] = useState<'window' | 'all'>(readFoldedScope);
+  const [lanesHeight, setLanesHeight] = useState<number>(readLanesHeight);
+  const lanesDrag = useRef<{ y: number; h: number } | null>(null);
+
+  const storeLanesHeight = useCallback((h: number) => {
+    try {
+      localStorage.setItem(STORAGE_LANES_HEIGHT_KEY, String(Math.round(h)));
+    } catch {
+      // Ignore storage errors
+    }
+  }, []);
+  const onGripDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      lanesDrag.current = { y: e.clientY, h: lanesHeight };
+    },
+    [lanesHeight]
+  );
+  const onGripMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const d = lanesDrag.current;
+    if (!d) return;
+    setLanesHeight(Math.max(LANES_MIN_H, Math.min(LANES_MAX_H, d.h + e.clientY - d.y)));
+  }, []);
+  const onGripUp = useCallback(() => {
+    if (!lanesDrag.current) return;
+    lanesDrag.current = null;
+    setLanesHeight((h) => {
+      storeLanesHeight(h);
+      return h;
+    });
+  }, [storeLanesHeight]);
+  const onGripReset = useCallback(() => {
+    setLanesHeight(LANES_MIN_H);
+    storeLanesHeight(LANES_MIN_H);
+  }, [storeLanesHeight]);
 
   const lanesWrapRef = useRef<HTMLDivElement>(null);
   const lanesCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -95,23 +150,13 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
   const activeFoldedBar: FoldedBarData | null = useMemo(() => {
     if (!evidence) return null;
     if (foldedScope === 'window' && isZoomed) {
-      const fr = evidence.frameRate;
-      const n = evidence.lowBand.length;
-      const foldLow = new Float32Array(n);
-      const foldMid = new Float32Array(n);
-      const foldHigh = new Float32Array(n);
-      for (let i = 0; i < n; i++) {
-        foldLow[i] = 0.72 * evidence.lowOnset[i] + 0.28 * evidence.lowBand[i];
-        foldMid[i] = 0.72 * evidence.midOnset[i] + 0.28 * evidence.midBand[i];
-        foldHigh[i] = 0.72 * evidence.highOnset[i] + 0.28 * evidence.highBand[i];
-      }
       const winFolded = computeFoldedBar(
         result.beats,
         result.timeSignature.numerator || 4,
-        fr,
-        foldLow,
-        foldMid,
-        foldHigh,
+        evidence.frameRate,
+        evidence.foldLow,
+        evidence.foldMid,
+        evidence.foldHigh,
         { start: winStart, end: winEnd }
       );
       if (winFolded.barCount >= 2) return winFolded;
@@ -600,16 +645,34 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
               )}
             </div>
             {lanesVisible && (
-              <div
-                ref={lanesWrapRef}
-                className="relative h-[6.75rem] w-full rounded-xl bg-slate-950/90 border border-slate-800/80 overflow-hidden"
-              >
-                <canvas
-                  ref={lanesCanvasRef}
-                  onClick={handleLanesClick}
-                  className="w-full h-full block cursor-pointer"
-                />
-              </div>
+              <>
+                <div
+                  ref={lanesWrapRef}
+                  style={{ height: lanesHeight }}
+                  className="relative w-full rounded-xl bg-slate-950/90 border border-slate-800/80 overflow-hidden"
+                >
+                  <canvas
+                    ref={lanesCanvasRef}
+                    onClick={handleLanesClick}
+                    className="w-full h-full block cursor-pointer"
+                  />
+                </div>
+                {/* grip: drag to make the lanes up to twice as high; double-click = normal height */}
+                <div
+                  role="separator"
+                  aria-orientation="horizontal"
+                  aria-label={t('web.evidence.lanes_resize')}
+                  title={t('web.evidence.lanes_resize')}
+                  onPointerDown={onGripDown}
+                  onPointerMove={onGripMove}
+                  onPointerUp={onGripUp}
+                  onPointerCancel={onGripUp}
+                  onDoubleClick={onGripReset}
+                  className="group -mt-1 h-3 w-full flex items-center justify-center cursor-ns-resize touch-none select-none"
+                >
+                  <span className="h-1 w-12 rounded-full bg-slate-700 group-hover:bg-slate-500 transition-colors" />
+                </div>
+              </>
             )}
           </div>
 
@@ -673,6 +736,14 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                 >
                   {t('web.evidence.fix_title')}
                 </ValueTooltip>
+                {correctionCount > 0 && (
+                  <span
+                    className="text-[10px] font-medium text-amber-300 whitespace-nowrap"
+                    title={t('web.evidence.fix_count_tip')}
+                  >
+                    {t('web.evidence.fix_count', { n: correctionCount })}
+                  </span>
+                )}
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
@@ -794,6 +865,31 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                 >
                   {t('web.evidence.fix_doubletime')}
                 </button>
+              </div>
+              {/* time signature: beats per bar, from the first "1" on */}
+              <div className="space-y-1">
+                <div className="text-[10px] font-medium text-slate-400">{t('web.evidence.fix_meter_group')}</div>
+                <div className="grid grid-cols-6 gap-1" role="group" aria-label={t('web.evidence.fix_meter_group')}>
+                  {METER_CHOICES.map((n) => {
+                    const active = result.timeSignature.numerator === n;
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => !active && onSetMeter(n)}
+                        aria-pressed={active}
+                        title={t('web.evidence.fix_meter_tip', { n })}
+                        className={`px-1 py-1 rounded-lg border text-[11px] font-mono font-medium transition-colors ${
+                          active
+                            ? 'bg-cyan-950/60 border-cyan-700/80 text-cyan-200 cursor-default'
+                            : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-700 cursor-pointer'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
