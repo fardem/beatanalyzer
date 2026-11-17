@@ -121,3 +121,30 @@ test('a step whose beat is gone does nothing', () => {
   const r = song(8);
   assert.deepEqual(applyGridOps(r, [{ kind: 'nudge', time: 99, to: 100 }]).beats.map((b) => b.time), r.beats.map((b) => b.time));
 });
+
+test('section: tempo ½× only inside the range, beats outside untouched', () => {
+  const r = song(40);   // beats 0.5 ... 20.0 s
+  const out = applyGridOps(r, [{ kind: 'tempo', factor: 0.5, range: { start: 5, end: 10 } }]);
+  const times = out.beats.map((b) => b.time);
+  assert.deepEqual(times.filter((t) => t < 5), r.beats.map((b) => b.time).filter((t) => t < 5));
+  assert.deepEqual(times.filter((t) => t > 10), r.beats.map((b) => b.time).filter((t) => t > 10));
+  // 11 beats in 5 ... 10 s; every second one stays, in step with the first "1" in the section (6.5 s)
+  assert.deepEqual(times.filter((t) => t >= 5 && t <= 10), [5.5, 6.5, 7.5, 8.5, 9.5]);
+  assert.ok(out.beats.find((b) => b.time === 6.5)?.isDownbeat);
+  assert.equal(out.globalBpm, r.globalBpm);                          // the song tempo stays
+});
+
+test('section: bar start +1 only inside the range', () => {
+  const r = song(40);
+  const out = applyGridOps(r, [{ kind: 'downbeat', dir: 1, range: { start: 8.4, end: 12.6 } }]);
+  const downTimes = out.beats.filter((b) => b.isDownbeat).map((b) => b.time);
+  assert.ok(downTimes.includes(0.5) && downTimes.includes(16.5));   // outside unchanged
+  assert.ok(downTimes.includes(9) && !downTimes.includes(8.5));     // inside one beat later
+});
+
+test('section: half beat keeps a gap to the beats after the section', () => {
+  const r = song(40);
+  const out = applyGridOps(r, [{ kind: 'half', dir: 1, range: { start: 5, end: 10 } }]);
+  const t = out.beats.map((b) => b.time);
+  for (let i = 1; i < t.length; i++) assert.ok(t[i] - t[i - 1] >= 0.08, `${t[i - 1]} -> ${t[i]}`);
+});

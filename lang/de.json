@@ -587,7 +587,21 @@
       "fix_meter_tip": "{n} Beats pro Takt: ab der ersten „1“ wird jeder {n}. Beat eine „1“",
       "fix_count": "{n} Schritt(e) aktiv",
       "fix_count_tip": "Korrekturen bleiben erhalten, wenn du „Glätten“ verstellst; Rückgängig nimmt den letzten Schritt zurück, Zurücksetzen alle.",
-      "lanes_resize": "Ziehen ändert die Höhe (bis 2×); Doppelklick: normale Höhe"
+      "lanes_resize": "Ziehen ändert die Höhe (bis 2×); Doppelklick: normale Höhe",
+      "scope_fix_label": "Gilt für",
+      "scope_fix_song": "Ganzer Song",
+      "scope_fix_section": "Ausschnitt {range}",
+      "scope_fix_section_plain": "Ausschnitt",
+      "scope_fix_section_tip": "Korrigiert nur die Beats im blauen Rahmen der Übersicht – z. B. ½× nur dort, wo das Modell doppelt gezählt hat.",
+      "scope_fix_need_zoom": "Erst hineinzoomen oder den blauen Rahmen verschieben, um nur einen Ausschnitt zu korrigieren",
+      "suggest_title": "Vorschlag",
+      "suggest_apply": "Anwenden",
+      "suggest_none": "Raster passt – kein Vorschlag",
+      "suggest_unclear": "Kein klares Kick-Muster – kein Vorschlag, nach Gehör prüfen",
+      "suggest_meter": "{n} Beats pro Takt",
+      "suggest_shift": "{n} Beat",
+      "suggest_preview": "gestrichelt = nach dem Vorschlag",
+      "suggest_tip": "BeatAnalyzer hat die Kombinationen aus Takt-Start, Halb-Beat, Beats pro Takt und Tempo am gefalteten Takt ausprobiert. Diese legt die Kick am deutlichsten auf die „1“ (und bei 4/4 die Snare auf 2 und 4). Vor dem Export anhören – Rückgängig nimmt es zurück."
     },
     "expert": {
       "title": "Experten-Diagnose / Audio-Details",

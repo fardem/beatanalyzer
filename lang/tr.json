@@ -588,7 +588,21 @@
       "fix_meter_tip": "Ölçü başına {n} beat: ilk “1”den itibaren her {n}. beat bir “1” olur",
       "fix_count": "{n} adım etkin",
       "fix_count_tip": "“Düzeltme” kaydırıcısını değiştirdiğinizde ayarlar korunur; Geri al son adımı, Sıfırla hepsini kaldırır.",
-      "lanes_resize": "Yüksekliği değiştirmek için sürükleyin (2×’e kadar); çift tıklama: normal yükseklik"
+      "lanes_resize": "Yüksekliği değiştirmek için sürükleyin (2×’e kadar); çift tıklama: normal yükseklik",
+      "scope_fix_label": "Kapsam",
+      "scope_fix_song": "Tüm şarkı",
+      "scope_fix_section": "Bölüm {range}",
+      "scope_fix_section_plain": "Bölüm",
+      "scope_fix_section_tip": "Yalnızca genel görünümdeki mavi çerçevenin içindeki beat’leri ayarlar – örn. ½× yalnızca modelin çift saydığı yerde.",
+      "scope_fix_need_zoom": "Yalnızca bir bölümü ayarlamak için önce yakınlaştırın veya mavi çerçeveyi kaydırın",
+      "suggest_title": "Öneri",
+      "suggest_apply": "Uygula",
+      "suggest_none": "Izgara doğru görünüyor – öneri yok",
+      "suggest_unclear": "Belirgin kick deseni yok – öneri yok, kulakla kontrol edin",
+      "suggest_meter": "Ölçü başına {n} beat",
+      "suggest_shift": "{n} beat",
+      "suggest_preview": "kesikli çizgi = öneriden sonra",
+      "suggest_tip": "BeatAnalyzer ölçü başı, yarım beat, ölçü başına beat ve tempo kombinasyonlarını katlanmış ölçüde denedi. Bu, kick’i en açık şekilde “1”e (4/4’te snare’i 2 ve 4’e) koyar. Dışa aktarmadan önce dinleyin – Geri al bunu geri alır."
     },
     "expert": {
       "title": "Uzman Tanılaması / Ses Ayrıntıları",

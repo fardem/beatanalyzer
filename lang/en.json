@@ -587,7 +587,21 @@
       "fix_meter_tip": "{n} beats per bar: every {n}th beat from the first “1” becomes a “1”",
       "fix_count": "{n} step(s) active",
       "fix_count_tip": "Corrections stay when you move Smoothing; Undo removes the last step, Reset all of them.",
-      "lanes_resize": "Drag to change the height (up to 2×); double-click: normal height"
+      "lanes_resize": "Drag to change the height (up to 2×); double-click: normal height",
+      "scope_fix_label": "Apply to",
+      "scope_fix_song": "Whole song",
+      "scope_fix_section": "Section {range}",
+      "scope_fix_section_plain": "Section",
+      "scope_fix_section_tip": "Fixes only the beats in the blue frame of the overview – e.g. ½× only where the model counted double.",
+      "scope_fix_need_zoom": "Zoom in or move the blue frame first to fix only a section",
+      "suggest_title": "Suggestion",
+      "suggest_apply": "Apply",
+      "suggest_none": "Grid looks right – no suggestion",
+      "suggest_unclear": "No clear kick pattern – no suggestion, check by ear",
+      "suggest_meter": "{n} beats per bar",
+      "suggest_shift": "{n} beat",
+      "suggest_preview": "dashed line = after the suggestion",
+      "suggest_tip": "BeatAnalyzer tried the combinations of bar start, half beat, beats per bar and tempo on the folded bar. This one puts the kick most clearly on the “1” (and in 4/4 the snare on 2 and 4). Listen before you export – Undo takes it back."
     },
     "expert": {
       "title": "Expert Diagnostics / Audio Details",

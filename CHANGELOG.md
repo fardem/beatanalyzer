@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1] – 2026-11-17
+
+### Added
+- **Suggestion with one click** (web app, fix panel): BeatAnalyzer tries the combinations of bar start (±1…), half beat (±½), beats per bar (3 / 4) and tempo (½× / 2×) on the folded bar and offers the best one when it is clearly better than the grid as it is – with a **dashed preview** in the folded bar (own beat marks when the time signature changes) and *Apply*. The score: beats on the attacks (all three bands, in a small window, so a grid 10–15 ms behind the attack still counts), kick on the "1", in 4/4 snare on 2 and 4; each extra step costs a little, so simple fixes win. Tempo steps only where a tempo error is likely (librosa/browser analyses from 120 or up to 80 BPM; otherwise only above 160 or below 60 BPM). No suggestion when there is no clear kick pattern (four on the floor) – then by ear.
+  Checked on "Mensch" (librosa: 174 BPM 3/4 → suggestion "Tempo ½× · 4 beats per bar" → the downbeats of the md_beat_this reference within 15 ms); the reference grid itself gets no suggestion; a reference grid broken by ±1, +2 beats, ½ beat or 3/4 is restored.
+- **Fixes for a section only:** "Apply to: Whole song | Section 1:23–1:38" – the steps then change only the beats in the blue frame of the overview (e.g. ½× only where the model counted double); the beats around it stay, bars are counted again. The suggestion works on the section too.
+
 ## [0.4.0] – 2026-11-17
 
 Merge of the user's parallel development (fardem/BeatAnalyzer_test2, base 0.2.12) – web app only; the Resolve window stays as it is (final).

@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.4.0** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
+**Version 0.4.1** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
 
 BeatAnalyzer erkennt in einem Song **Beats, Downbeats, Tempo und Taktart** und bringt sie nach
 **DaVinci Resolve** – als **farbige Marker auf deinem Audio-Clip** und als **Subtitle Track** unter dem Song. Die
@@ -23,9 +23,9 @@ Du startest sie direkt aus einem Fenster in Resolve oder nutzt die Web-App im Br
   Projekte.
 - **Prüfen vor dem Schnitt:** Wellenform mit Beat-Raster, Kurven des Modells, Loop, Metronom auf den erkannten Beats
   und eine Beat-Tabelle zum Korrigieren einzelner Beats.
-- **Raster mit einem Klick richten:** Der gefaltete Takt zeigt, wo Kick und Snare wirklich im Takt liegen; ein Klick
-  verschiebt die „1“, das Raster, das Tempo oder die Taktart – rückgängig zu machen und beim Verstellen von
-  „Glätten“ erhalten.
+- **Raster mit einem Klick richten:** Der gefaltete Takt zeigt, wo Kick und Snare wirklich im Takt liegen;
+  BeatAnalyzer schlägt die Korrektur vor (Takt-Start, Halb-Beat, Tempo, Taktart) – mit Vorschau, für den ganzen Song
+  oder einen Ausschnitt, rückgängig zu machen und beim Verstellen von „Glätten“ erhalten.
 - **Lokal und privat:** Alles läuft auf deinem PC – kein Upload, kein Konto.
 
 ---
@@ -223,8 +223,10 @@ brauchen keinen Ausgleich – das Fenster sagt es dann.
   dem Zoom der Wellenform (über den Griff darunter bis auf doppelte Höhe ziehbar); der **gefaltete Takt** legt alle
   Takte – des Ausschnitts oder des ganzen Songs – übereinander und sagt, ob die Kick auf der „1“ sitzt.
   **1-Klick-Korrektur:** Takt-Start ±1 Beat, Raster ±½ Beat, Tempo ½× / 2×, **Beats pro Takt** (2–7);
-  Rückgängig und Zurücksetzen. Die Korrekturen bleiben beim Verstellen von „Glätten“ erhalten und gehen in alle
-  Exporte – auch in die Marker-JSON für Resolve.
+  Rückgängig und Zurücksetzen. Ein **Vorschlag** probiert diese Korrekturen am gefalteten Takt aus und bietet die
+  beste mit gestrichelter Vorschau an – *Anwenden* übernimmt sie. Korrekturen gelten für den **ganzen Song oder nur
+  den Ausschnitt** im blauen Rahmen (z. B. ½× nur dort, wo das Modell doppelt gezählt hat). Sie bleiben beim
+  Verstellen von „Glätten“ erhalten und gehen in alle Exporte – auch in die Marker-JSON für Resolve.
 - **Experten-Diagnose** (Überschrift anklicken zum Aufklappen): Spektrogramm, Energiespektrum der „1“, der übrigen
   Beats und der Off-Beats, **Live**-Spektrum beim Abspielen (Blitz auf jedem Beat, stärker auf der „1“),
   Tempo-Histogramm.
@@ -328,7 +330,8 @@ Unter Windows heißt der Python-Pfad `venv\Scripts\python.exe`.
 | `resolve/BeatAnalyzer_Markers.lua` | Skript und Fenster für DaVinci Resolve |
 | `src/` | Web-App (React, TypeScript) |
 | `src/utils/beatEvidence.ts` | Bandkurven, gefalteter Takt, Tempo-Histogramm, Spektren (Web-App) |
-| `src/utils/beatTransforms.ts` | 1-Klick-Korrekturen als wiederholbare Schritte (Web-App) |
+| `src/utils/beatTransforms.ts` | 1-Klick-Korrekturen als wiederholbare Schritte, auch für einen Ausschnitt (Web-App) |
+| `src/utils/fixSuggestion.ts` | Vorschlag: probiert die Korrekturen am gefalteten Takt aus (Web-App) |
 | `dist/` | gebaute Web-App; wird mit eingecheckt |
 | `VERSION` | Versionsnummer für App, Skript und Release |
 

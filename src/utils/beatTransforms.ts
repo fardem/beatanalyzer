@@ -284,11 +284,17 @@ export function setBeatsPerBar(result: AnalysisResult, beatsPerBar: number): Ana
  * smoothing (same beats, other bars) the same steps are applied to the new result, so no correction is lost; undo
  * drops the last step. Beat-table edits are steps too ("nudge", "toggle"); they find their beat by time.
  */
+export interface TimeRange {
+  start: number;
+  end: number;
+}
+
+/** `range`: the step works only on the beats in this section (e.g. ½× only where the model counted double). */
 export type GridOp =
-  | { kind: 'downbeat'; dir: -1 | 1 }
-  | { kind: 'half'; dir: -1 | 1 }
-  | { kind: 'tempo'; factor: 0.5 | 2 }
-  | { kind: 'meter'; beats: number }
+  | { kind: 'downbeat'; dir: -1 | 1; range?: TimeRange }
+  | { kind: 'half'; dir: -1 | 1; range?: TimeRange }
+  | { kind: 'tempo'; factor: 0.5 | 2; range?: TimeRange }
+  | { kind: 'meter'; beats: number; range?: TimeRange }
   | { kind: 'nudge'; time: number; to: number }
   | { kind: 'toggle'; time: number; downbeat: boolean };
 
@@ -307,7 +313,34 @@ function findBeat(beats: BeatItem[], time: number): number {
   return best;
 }
 
+const RANGE_EPS = 0.001;
+const MIN_GAP_S = 0.08;   // a beat moved or added at the edge of a section keeps this distance to the beats outside
+
+/**
+ * Applies a step only to the beats inside `range`: the inside beats are corrected as a song of their own and put
+ * back between the untouched beats before and after; bars are counted again over the whole song.
+ */
+function applyInRange(result: AnalysisResult, op: GridOp & { range: TimeRange }): AnalysisResult {
+  const { start, end } = op.range;
+  const sorted = [...result.beats].sort((a, b) => a.time - b.time);
+  const before = sorted.filter((b) => b.time < start - RANGE_EPS);
+  const inside = sorted.filter((b) => b.time >= start - RANGE_EPS && b.time <= end + RANGE_EPS);
+  const after = sorted.filter((b) => b.time > end + RANGE_EPS);
+  if (inside.length < 2) return result;
+  const section = recomputeBeatStats(result, inside);
+  const whole = { ...op } as GridOp & { range?: TimeRange };
+  delete whole.range;
+  const fixed = applyGridOp(section, whole);
+  const lo = before.length ? before[before.length - 1].time + MIN_GAP_S : -Infinity;
+  const hi = after.length ? after[0].time - MIN_GAP_S : Infinity;
+  const kept = fixed.beats.filter((b) => b.time >= lo && b.time <= hi);
+  return recomputeBeatStats(result, [...before, ...kept, ...after]);
+}
+
 export function applyGridOp(result: AnalysisResult, op: GridOp): AnalysisResult {
+  if (op.kind !== 'nudge' && op.kind !== 'toggle' && op.range) {
+    return applyInRange(result, op as GridOp & { range: TimeRange });
+  }
   switch (op.kind) {
     case 'downbeat':
       return shiftDownbeat(result, op.dir);

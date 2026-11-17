@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp, Eye, EyeOff, Layers, RotateCcw, Undo2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { AnalysisResult } from '../types/analyzer';
 import { BeatEvidenceData, computeBeatEvidence, computeFoldedBar, FoldedBarData } from '../utils/beatEvidence';
+import { GridOp, TimeRange } from '../utils/beatTransforms';
+import { FixSuggestion, suggestFix } from '../utils/fixSuggestion';
 import { useI18n } from '../i18n';
 import { DiagramInfoTooltip, ValueTooltip } from './DiagramInfoTooltip';
 
@@ -11,11 +13,8 @@ interface BeatEvidenceLabProps {
   currentTime: number;
   viewRange: { start: number; end: number } | null;
   onSeek: (time: number) => void;
-  onShiftDownbeat: (direction: -1 | 1) => void;
-  onShiftHalfBeat: (direction: -1 | 1) => void;
-  onScaleTempo: (factor: 0.5 | 2) => void;
-  /** time signature correction: beats per bar */
-  onSetMeter: (beatsPerBar: number) => void;
+  /** adds correction steps (bar start, half beat, tempo, beats per bar – whole song or a section) */
+  onApplyOps: (ops: GridOp[]) => void;
   onUndoGrid: () => void;
   onResetGrid: () => void;
   canUndoGrid: boolean;
@@ -76,16 +75,27 @@ function formatClock(sec: number): string {
   return `${m}:${String(rem).padStart(2, '0')}`;
 }
 
+/** Short text for a list of steps, e.g. "Tempo ½× · 4 beats per bar · +1 beat". */
+function describeOps(ops: GridOp[], t: (key: string, params?: Record<string, string | number>) => string): string {
+  const parts: string[] = [];
+  let shift = 0;
+  for (const op of ops) {
+    if (op.kind === 'tempo') parts.push(t(op.factor === 0.5 ? 'web.evidence.fix_halftime' : 'web.evidence.fix_doubletime'));
+    else if (op.kind === 'meter') parts.push(t('web.evidence.suggest_meter', { n: op.beats }));
+    else if (op.kind === 'half') parts.push(t(op.dir > 0 ? 'web.evidence.fix_half_beat_next' : 'web.evidence.fix_half_beat_prev'));
+    else if (op.kind === 'downbeat') shift += op.dir;
+  }
+  if (shift !== 0) parts.push(t('web.evidence.suggest_shift', { n: `${shift > 0 ? '+' : '−'}${Math.abs(shift)}` }));
+  return parts.join(' · ');
+}
+
 export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
   result,
   audioBuffer,
   currentTime,
   viewRange,
   onSeek,
-  onShiftDownbeat,
-  onShiftHalfBeat,
-  onScaleTempo,
-  onSetMeter,
+  onApplyOps,
   onUndoGrid,
   onResetGrid,
   canUndoGrid,
@@ -147,9 +157,31 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
     viewRange && (viewRange.start > 0.25 || viewRange.end < (result.metadata.duration || 1) - 0.25)
   );
 
+  // where the fixes apply: the whole song, or only the section in the blue frame (needs a zoomed view)
+  const [fixScope, setFixScope] = useState<'song' | 'section'>('song');
+  const sectionActive = fixScope === 'section' && isZoomed;
+  const fixRange: TimeRange | null = useMemo(
+    () => (sectionActive ? { start: winStart, end: winEnd } : null),
+    [sectionActive, winStart, winEnd]
+  );
+  const apply = useCallback(
+    (op: GridOp) => onApplyOps([fixRange && op.kind !== 'nudge' && op.kind !== 'toggle' ? { ...op, range: fixRange } : op]),
+    [onApplyOps, fixRange]
+  );
+
+  // suggestion: tries the fixes on the folded bar; computed a moment after the view rests (cheap, but the frame
+  // can be dragged)
+  const [suggestion, setSuggestion] = useState<FixSuggestion | null | undefined>(undefined);
+  useEffect(() => {
+    if (!evidence || !isExpanded) return;
+    const timer = setTimeout(() => setSuggestion(suggestFix(result, evidence, fixRange)), 120);
+    return () => clearTimeout(timer);
+  }, [evidence, result, fixRange, isExpanded]);
+  const preview = suggestion && suggestion.ops.length > 0 ? suggestion.preview : null;
+
   const activeFoldedBar: FoldedBarData | null = useMemo(() => {
     if (!evidence) return null;
-    if (foldedScope === 'window' && isZoomed) {
+    if ((foldedScope === 'window' || sectionActive) && isZoomed) {
       const winFolded = computeFoldedBar(
         result.beats,
         result.timeSignature.numerator || 4,
@@ -162,7 +194,7 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
       if (winFolded.barCount >= 2) return winFolded;
     }
     return evidence.foldedBar;
-  }, [evidence, foldedScope, isZoomed, result.beats, result.timeSignature.numerator, winStart, winEnd]);
+  }, [evidence, foldedScope, sectionActive, isZoomed, result.beats, result.timeSignature.numerator, winStart, winEnd]);
 
   const toggleExpanded = useCallback(() => {
     setIsExpanded((prev) => {
@@ -438,6 +470,7 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
       if (fb.mid[i] > maxVal) maxVal = fb.mid[i];
       if (fb.high[i] > maxVal) maxVal = fb.high[i];
     }
+    if (preview) for (let i = 0; i < preview.low.length; i++) maxVal = Math.max(maxVal, preview.low[i]);
 
     ctx.font = '700 10px ui-monospace, SFMono-Regular, Menlo, monospace';
     ctx.textBaseline = 'top';
@@ -518,8 +551,44 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
     drawSeries(fb.mid, 'rgba(34, 211, 238, 0.9)', null);
     drawSeries(fb.low, 'rgba(251, 113, 133, 0.98)', 'rgba(244, 63, 94, 0.2)');
 
+    // preview of the suggestion: the kick (low band) as it would fold after the suggested steps
+    if (preview && preview.low.length > 1) {
+      const pb = preview.low.length;
+      ctx.save();
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = 'rgba(241, 245, 249, 0.85)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < pb; i++) {
+        const x = padL + (i / pb) * plotW;
+        const y = padT + plotH - (preview.low[i] / maxVal) * plotH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.lineTo(padL + plotW, padT + plotH - (preview.low[0] / maxVal) * plotH);
+      ctx.stroke();
+      // other beats per bar in the preview: its own beat marks at the top, so the dashed peaks can be read
+      if (preview.numerator !== fb.numerator) {
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(241, 245, 249, 0.85)';
+        ctx.strokeStyle = 'rgba(241, 245, 249, 0.6)';
+        ctx.font = '600 9px ui-monospace, SFMono-Regular, Menlo, monospace';
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'left';
+        for (let b = 0; b < preview.numerator; b++) {
+          const x = padL + (b / preview.numerator) * plotW;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, 6);
+          ctx.stroke();
+          ctx.fillText(`${b + 1}`, x + 3, 0);
+        }
+      }
+      ctx.restore();
+    }
+
     ctx.restore();
-  }, [activeFoldedBar]);
+  }, [activeFoldedBar, preview]);
 
   const drawLanesRef = useRef(drawLanes);
   drawLanesRef.current = drawLanes;
@@ -534,7 +603,7 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
   useEffect(() => {
     if (!isExpanded) return;
     drawFoldedRef.current();
-  }, [isExpanded, activeFoldedBar]);
+  }, [isExpanded, activeFoldedBar, preview]);
 
   useEffect(() => {
     if (!isExpanded) return;
@@ -776,6 +845,76 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                 </div>
               </div>
 
+              {/* where the fixes apply: whole song or only the section in the blue frame */}
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <span className="text-slate-400 shrink-0">{t('web.evidence.scope_fix_label')}</span>
+                <div className="inline-flex p-0.5 rounded-md bg-slate-900 border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setFixScope('song')}
+                    aria-pressed={!sectionActive}
+                    className={`px-1.5 py-0.5 rounded font-medium cursor-pointer whitespace-nowrap ${
+                      !sectionActive ? 'bg-cyan-950/70 text-cyan-200' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {t('web.evidence.scope_fix_song')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => isZoomed && setFixScope('section')}
+                    aria-pressed={sectionActive}
+                    disabled={!isZoomed}
+                    title={isZoomed ? t('web.evidence.scope_fix_section_tip') : t('web.evidence.scope_fix_need_zoom')}
+                    className={`px-1.5 py-0.5 rounded font-medium whitespace-nowrap font-mono tabular-nums ${
+                      sectionActive
+                        ? 'bg-cyan-950/70 text-cyan-200 cursor-pointer'
+                        : isZoomed
+                        ? 'text-slate-400 hover:text-slate-200 cursor-pointer'
+                        : 'text-slate-600 cursor-not-allowed'
+                    }`}
+                  >
+                    {isZoomed
+                      ? t('web.evidence.scope_fix_section', { range: `${formatClock(winStart)}–${formatClock(winEnd)}` })
+                      : t('web.evidence.scope_fix_section_plain')}
+                  </button>
+                </div>
+              </div>
+
+              {/* suggestion: the best fix found on the folded bar, with a dashed preview there */}
+              {suggestion !== undefined && (
+                <div
+                  className={`rounded-lg border px-2 py-1.5 text-[11px] ${
+                    suggestion && suggestion.ops.length > 0
+                      ? 'border-cyan-800/70 bg-cyan-950/40 text-cyan-100'
+                      : suggestion
+                      ? 'border-emerald-800/50 bg-emerald-950/30 text-emerald-300'
+                      : 'border-slate-800 bg-slate-900/60 text-slate-400'
+                  }`}
+                  title={t('web.evidence.suggest_tip')}
+                >
+                  {suggestion && suggestion.ops.length > 0 ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-semibold">{t('web.evidence.suggest_title')}</div>
+                        <div className="truncate">{describeOps(suggestion.ops, t)}</div>
+                        <div className="text-[10px] text-cyan-300/70">{t('web.evidence.suggest_preview')}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onApplyOps(suggestion.ops)}
+                        className="shrink-0 px-2.5 py-1 rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold cursor-pointer"
+                      >
+                        {t('web.evidence.suggest_apply')}
+                      </button>
+                    </div>
+                  ) : suggestion ? (
+                    t('web.evidence.suggest_none')
+                  ) : (
+                    t('web.evidence.suggest_unclear')
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
                 {/* Downbeat -1 / +1 Beat */}
                 <div className="space-y-1">
@@ -785,7 +924,7 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       type="button"
-                      onClick={() => onShiftDownbeat(-1)}
+                      onClick={() => apply({ kind: 'downbeat', dir: -1 })}
                       title={t('web.evidence.fix_downbeat_prev_tip')}
                       className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                         fb.verdict === 'shifted_backbeat'
@@ -798,7 +937,7 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => onShiftDownbeat(1)}
+                      onClick={() => apply({ kind: 'downbeat', dir: 1 })}
                       title={t('web.evidence.fix_downbeat_next_tip')}
                       className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                         fb.verdict === 'shifted_backbeat'
@@ -820,7 +959,7 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       type="button"
-                      onClick={() => onShiftHalfBeat(-1)}
+                      onClick={() => apply({ kind: 'half', dir: -1 })}
                       title={t('web.evidence.fix_half_beat_prev_tip')}
                       className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                         fb.verdict === 'shifted_offbeat'
@@ -833,7 +972,7 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => onShiftHalfBeat(1)}
+                      onClick={() => apply({ kind: 'half', dir: 1 })}
                       title={t('web.evidence.fix_half_beat_next_tip')}
                       className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                         fb.verdict === 'shifted_offbeat'
@@ -851,7 +990,7 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
               <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                 <button
                   type="button"
-                  onClick={() => onScaleTempo(0.5)}
+                  onClick={() => apply({ kind: 'tempo', factor: 0.5 })}
                   title={t('web.evidence.fix_tempo_tip')}
                   className="px-2 py-1 rounded-lg border border-slate-800 bg-slate-900/80 text-[11px] font-medium text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-700 transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                 >
@@ -859,7 +998,7 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onScaleTempo(2)}
+                  onClick={() => apply({ kind: 'tempo', factor: 2 })}
                   title={t('web.evidence.fix_tempo_tip')}
                   className="px-2 py-1 rounded-lg border border-slate-800 bg-slate-900/80 text-[11px] font-medium text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-700 transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                 >
@@ -871,12 +1010,12 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                 <div className="text-[10px] font-medium text-slate-400">{t('web.evidence.fix_meter_group')}</div>
                 <div className="grid grid-cols-6 gap-1" role="group" aria-label={t('web.evidence.fix_meter_group')}>
                   {METER_CHOICES.map((n) => {
-                    const active = result.timeSignature.numerator === n;
+                    const active = !sectionActive && result.timeSignature.numerator === n;
                     return (
                       <button
                         key={n}
                         type="button"
-                        onClick={() => !active && onSetMeter(n)}
+                        onClick={() => (!active || sectionActive) && apply({ kind: 'meter', beats: n })}
                         aria-pressed={active}
                         title={t('web.evidence.fix_meter_tip', { n })}
                         className={`px-1 py-1 rounded-lg border text-[11px] font-mono font-medium transition-colors ${
