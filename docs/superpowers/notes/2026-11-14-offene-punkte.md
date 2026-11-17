@@ -92,6 +92,11 @@
 
 ## 2. Teilprojekt 5 – README (Gesamtkonzept Abschnitt 10)
 
+**Stand 2026-11-17:** README in drei Sprachen fertig (`README.md` englisch, `README.de.md`, `README.tr.md`) mit
+Screenshots aus 0.3.1 (`docs/images/`; Projektname und Timeline-Vorschauen unkenntlich). Offen in Teilprojekt 5:
+CHANGELOG auf Englisch übersetzen, übrige Doku/Code-Kommentare auf Englisch, Vergleich mit Resolves „Show Beats“
+und mit librosa (bewusst noch nicht in der README – erst Fakten prüfen), Aussage zu CUDA prüfen.
+
 - Ablauf von 0.1.x statt 0.0.5 (Resolve-Fenster mit beiden Wegen, Glätten, Farben, Entfernen, Sprachen, Anzeige
   des Analyse-Programms, Subtitle Track je Spur).
 - **Vergleich mit Resolves „Show Beats“:** warum beat_this anders arbeitet und welche Vorteile das bringt
