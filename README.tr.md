@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Sürüm 0.3.1** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
+**Sürüm 0.3.2** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
 
 BeatAnalyzer bir şarkıdaki **beat'leri, downbeat'leri, tempoyu ve ölçüyü** bulur ve bunları **DaVinci Resolve**'a
 aktarır: **ses klibinizde renkli marker'lar** ve şarkının altında bir **Subtitle Track** olarak. Analiz,
@@ -78,11 +78,14 @@ Analizi doğrudan Resolve içindeki bir pencereden başlatabilir ya da tarayıc�
 | Windows | 10 veya 11 | Linux ve macOS da çalışır, aşağıya bakın |
 | Python | 3.10 – 3.13 | Kurulumda *Add python.exe to PATH* kutusunu işaretleyin |
 | Git | herhangi | beat_this kurulumu için. Git olmadan BeatAnalyzer librosa ile hesaplar |
-| NVIDIA ekran kartı | isteğe bağlı | beat_this'i hızlandırır. Olmadan CPU'da çalışır |
+| NVIDIA ekran kartı | isteğe bağlı | beat_this'i belirgin şekilde hızlandırır. Sürücü CUDA 12.8 veya üstünü destekliyorsa kurulum PyTorch'un CUDA sürümünü seçer (RTX 50 kartları bunu gerektirir); olmadan CPU'da çalışır |
 | DaVinci Resolve **Studio** | 21 | Yalnızca Resolve penceresi için. Ücretsiz sürüm pencereli ve dosya erişimli betiklere izin vermez ([Sorun giderme](#sorun-giderme)) |
 | Disk alanı | yaklaşık 5 GB | Çoğu `venv\` klasöründeki PyTorch |
 
 Node.js gerekmez: web uygulaması `dist/` içinde hazır derlenmiş olarak gelir.
+
+**Test edildiği ortam:** Windows, Python 3.13, PyTorch 2.8.0+cu128, NVIDIA GeForce RTX 5080 (sürücü 621.24) ve
+DaVinci Resolve Studio 21 – tüm paket sürümleri [docs/tested-environment.md](docs/tested-environment.md) dosyasında.
 
 ## Kurulum (Windows)
 
@@ -96,7 +99,9 @@ Node.js gerekmez: web uygulaması `dist/` içinde hazır derlenmiş olarak gelir
 
 - Python'u arar,
 - BeatAnalyzer klasöründe kendi ortamı `venv\`'i oluşturur – sisteminizin geri kalanı değişmez,
-- NumPy, SciPy, librosa, soundfile, PyAV, PyTorch ve beat_this'i kurar,
+- NumPy, SciPy, librosa, soundfile, PyAV, PyTorch ve beat_this'i kurar – güncel sürücülü bir NVIDIA kartı varsa
+  PyTorch'u **CUDA sürümü** olarak, yoksa CPU sürümü olarak (eski bir kurulumdaki CPU sürümü değiştirilir, çalışan
+  bir CUDA sürümü korunur),
 - beat_this modelini önceden indirir,
 - bilgisayarda Resolve varsa betiği DaVinci Resolve'a kurar,
 - sunucuyu başlatır ve hazır olur olmaz <http://localhost:8000> adresini açar.
@@ -275,6 +280,7 @@ Windows'ta Python yolu `venv\Scripts\python.exe`'dir.
 | Mesaj / davranış | Neden | Çözüm |
 |---|---|---|
 | "'python' is not recognized …" | Python PATH'te değil | Python kurulumu → *Modify* → *Add Python to environment variables* |
+| Bilgisayarda NVIDIA kartı olduğu hâlde üst satırda „beat_this · CPU“ | PyTorch'un CPU sürümü kurulu (eski kurulum) | `install_and_run.bat`'ı yeniden çalıştırın: CUDA sürümünü kurar. Belirli bir sürümü korumak için önce `set BEATANALYZER_TORCH=cpu` (veya `cu126`, `cu128`) |
 | Üst satırda „librosa (fallback) – beat_this not installed“ | beat_this eksik, genellikle Git olmadığı için | Git'i kurun, `install_and_run.bat`'ı yeniden çalıştırın |
 | *Workspace → Scripts* altında `BeatAnalyzer_Markers` yok | kurulumdan sonra Resolve yeniden başlatılmadı | Resolve'u yeniden başlatın; ya da web uygulamasında *Resolve'a kur* |
 | Resolve penceresinde „Python of BeatAnalyzer not found“ | betik kurulmak yerine elle kopyalandı | web uygulamasında *Resolve'da güncelle* (BeatAnalyzer klasörünü ve Python'u betiğe yalnızca kurulum yazar) |
@@ -300,6 +306,7 @@ Windows'ta Python yolu `venv\Scripts\python.exe`'dir.
 | `backend/analyze_cli.py` | komut satırı |
 | `backend/resolve_plugin.py` | Resolve betiğini kurar (dil, klasör, Python) |
 | `backend/updater.py` | en son GitHub sürümünden güncelleme |
+| `backend/torch_setup.py` | doğru PyTorch sürümünü kurar (CUDA veya CPU) |
 | `lang/*.json` | İngilizce, Almanca ve Türkçe metinler (web uygulaması ve Resolve penceresi) |
 | `resolve/BeatAnalyzer_Markers.lua` | DaVinci Resolve betiği ve penceresi |
 | `src/` | web uygulaması (React, TypeScript) |

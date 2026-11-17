@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.2] – 2026-11-17
+
+### Fixed
+- **GPU speed on Windows:** `install_and_run.bat` installed PyTorch from PyPI, which on Windows is the **CPU build only** – an NVIDIA card was not used unless PyTorch was installed again by hand. The new `backend/torch_setup.py` reads the CUDA version of the NVIDIA driver from `nvidia-smi` (old "CUDA Version" and new "CUDA UMD Version" format) and installs the tested **PyTorch 2.8.0** as the **CUDA 12.8 build** (driver with CUDA 12.8 or newer, needed by RTX 50 cards), the CUDA 12.6 build for older drivers, otherwise the CPU build. A CPU build from an older installation is replaced; a working CUDA build is never touched. If the CUDA build cannot be installed, it falls back to the newest build of that index and then to the CPU build. `BEATANALYZER_TORCH=cpu|cu126|cu128` sets the build by hand. Only the venv of BeatAnalyzer changes – other Python environments (e.g. Whisper) and the driver stay as they are.
+- `debug_check.py` (`debug_system.bat`) printed German texts, and two error messages of the audio decoding were German; all English now.
+
+### Added
+- The server banner shows the PyTorch version and whether it is the CUDA or the CPU build; `debug_system.bat` too.
+- `docs/tested-environment.md`: the tested PC and all package versions; README "Tested with".
+
 ## [0.3.1] – 2026-11-17
 
 Feedback from the test of 0.3.0.

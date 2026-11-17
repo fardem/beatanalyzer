@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.3.1** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
+**Version 0.3.2** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
 
 BeatAnalyzer erkennt in einem Song **Beats, Downbeats, Tempo und Taktart** und bringt sie nach
 **DaVinci Resolve** – als **farbige Marker auf deinem Audio-Clip** und als **Subtitle Track** unter dem Song. Die
@@ -78,11 +78,14 @@ Du startest sie direkt aus einem Fenster in Resolve oder nutzt die Web-App im Br
 | Windows | 10 oder 11 | Linux und macOS gehen auch, siehe unten |
 | Python | 3.10 bis 3.13 | Beim Installer das Häkchen bei *Add python.exe to PATH* setzen |
 | Git | beliebig | Für die Installation von beat_this. Ohne Git rechnet BeatAnalyzer mit librosa |
-| NVIDIA-Grafikkarte | optional | Beschleunigt beat_this. Ohne läuft es auf der CPU |
+| NVIDIA-Grafikkarte | optional | Beschleunigt beat_this deutlich. Der Installer nimmt die CUDA-Fassung von PyTorch, wenn der Treiber CUDA 12.8 oder neuer kann (RTX-50-Karten brauchen das); ohne läuft es auf der CPU |
 | DaVinci Resolve **Studio** | 21 | Nur für das Resolve-Fenster. Die kostenlose Version erlaubt keine Skripte mit Fenster und Dateizugriff (siehe [Fehlersuche](#fehlersuche)) |
 | Speicherplatz | ca. 5 GB | Hauptsächlich PyTorch im Ordner `venv\` |
 
 Node.js brauchst du nicht: Die Web-App liegt fertig gebaut in `dist/`.
+
+**Getestet mit** Windows, Python 3.13, PyTorch 2.8.0+cu128, NVIDIA GeForce RTX 5080 (Treiber 621.24) und DaVinci
+Resolve Studio 21 – alle Paketversionen stehen in [docs/tested-environment.md](docs/tested-environment.md).
 
 ## Installation (Windows)
 
@@ -97,7 +100,9 @@ Node.js brauchst du nicht: Die Web-App liegt fertig gebaut in `dist/`.
 
 - sucht Python,
 - legt die eigene Umgebung `venv\` im BeatAnalyzer-Ordner an – das übrige System bleibt unverändert,
-- installiert NumPy, SciPy, librosa, soundfile, PyAV, PyTorch und beat_this,
+- installiert NumPy, SciPy, librosa, soundfile, PyAV, PyTorch und beat_this – PyTorch als **CUDA-Fassung**, wenn
+  eine NVIDIA-Karte mit aktuellem Treiber da ist, sonst die CPU-Fassung (eine CPU-Fassung aus einer älteren
+  Installation wird ersetzt, eine funktionierende CUDA-Fassung bleibt),
 - lädt das Modell von beat_this vorab,
 - installiert das Skript in DaVinci Resolve, wenn Resolve auf dem PC ist,
 - startet den Server und öffnet <http://localhost:8000>, sobald er bereit ist.
@@ -280,6 +285,7 @@ Unter Windows heißt der Python-Pfad `venv\Scripts\python.exe`.
 | Meldung / Verhalten | Ursache | Lösung |
 |---|---|---|
 | „'python' is not recognized …“ | Python ist nicht im PATH | Python-Installer → *Modify* → *Add Python to environment variables* |
+| Kopfzeile zeigt „beat_this · CPU“, obwohl eine NVIDIA-Karte im PC ist | die CPU-Fassung von PyTorch ist installiert (ältere Installation) | `install_and_run.bat` erneut starten: Es installiert die CUDA-Fassung. Eine bestimmte Fassung behalten: vorher `set BEATANALYZER_TORCH=cpu` (oder `cu126`, `cu128`) |
 | Kopfzeile zeigt „librosa (fallback) – beat_this not installed“ | beat_this fehlt, meist weil Git fehlte | Git installieren, `install_and_run.bat` erneut starten |
 | `BeatAnalyzer_Markers` fehlt unter *Workspace → Scripts* | Resolve wurde nach der Installation nicht neu gestartet | Resolve neu starten; sonst *In Resolve installieren* in der Web-App |
 | „Python of BeatAnalyzer not found“ im Resolve-Fenster | das Skript wurde von Hand kopiert statt installiert | *In Resolve aktualisieren* in der Web-App (nur der Installer trägt BeatAnalyzer-Ordner und Python ins Skript ein) |
@@ -305,6 +311,7 @@ Unter Windows heißt der Python-Pfad `venv\Scripts\python.exe`.
 | `backend/analyze_cli.py` | Kommandozeile |
 | `backend/resolve_plugin.py` | installiert das Resolve-Skript (Sprache, Ordner, Python) |
 | `backend/updater.py` | Update aus dem neuesten GitHub-Release |
+| `backend/torch_setup.py` | installiert die passende PyTorch-Fassung (CUDA oder CPU) |
 | `lang/*.json` | Texte auf Englisch, Deutsch und Türkisch (Web-App und Resolve-Fenster) |
 | `resolve/BeatAnalyzer_Markers.lua` | Skript und Fenster für DaVinci Resolve |
 | `src/` | Web-App (React, TypeScript) |

@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.3.1** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
+**Version 0.3.2** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
 
 BeatAnalyzer finds the **beats, downbeats, tempo and time signature** of a song and puts them into
 **DaVinci Resolve** as **coloured markers on your audio clip** and as a **subtitle track** under the song. The
@@ -75,11 +75,14 @@ You can start it straight from a window inside Resolve, or use the web app in yo
 | Windows | 10 or 11 | Linux and macOS work too, see below |
 | Python | 3.10 to 3.13 | Tick *Add python.exe to PATH* in the installer |
 | Git | any | Needed to install beat_this. Without Git BeatAnalyzer uses librosa |
-| NVIDIA graphics card | optional | Makes beat_this faster. Without it, it runs on the CPU |
+| NVIDIA graphics card | optional | Makes beat_this much faster. The installer picks the CUDA build of PyTorch when the driver supports CUDA 12.8 or newer (RTX 50 cards need it); without it, it runs on the CPU |
 | DaVinci Resolve **Studio** | 21 | Only for the Resolve window. The free version does not allow scripts with windows and file access (see [Troubleshooting](#troubleshooting)) |
 | Disk space | about 5 GB | Mostly PyTorch in the folder `venv\` |
 
 You do not need Node.js: the web app is shipped ready-built in `dist/`.
+
+**Tested with** Windows, Python 3.13, PyTorch 2.8.0+cu128, NVIDIA GeForce RTX 5080 (driver 621.24) and DaVinci
+Resolve Studio 21 – all package versions are in [docs/tested-environment.md](docs/tested-environment.md).
 
 ## Installation (Windows)
 
@@ -93,7 +96,9 @@ You do not need Node.js: the web app is shipped ready-built in `dist/`.
 
 - looks for Python,
 - creates its own environment `venv\` in the BeatAnalyzer folder – the rest of your system stays untouched,
-- installs NumPy, SciPy, librosa, soundfile, PyAV, PyTorch and beat_this,
+- installs NumPy, SciPy, librosa, soundfile, PyAV, PyTorch and beat_this – PyTorch as the **CUDA build** when an
+  NVIDIA card with a recent driver is found, otherwise the CPU build (a CPU build from an older installation is
+  replaced; a working CUDA build is kept),
 - downloads the beat_this model in advance,
 - installs the script in DaVinci Resolve if Resolve is on the PC,
 - starts the server and opens <http://localhost:8000> as soon as it is ready.
@@ -270,6 +275,7 @@ On Windows the Python path is `venv\Scripts\python.exe`.
 | Message / behaviour | Cause | Fix |
 |---|---|---|
 | "'python' is not recognized …" | Python is not on the PATH | Python installer → *Modify* → *Add Python to environment variables* |
+| Header shows "beat_this · CPU" although the PC has an NVIDIA card | the CPU build of PyTorch is installed (older installation) | run `install_and_run.bat` again: it installs the CUDA build. To keep a certain build: `set BEATANALYZER_TORCH=cpu` (or `cu126`, `cu128`) before running it |
 | Header shows "librosa (fallback) – beat_this not installed" | beat_this is missing, usually because Git was missing | install Git, run `install_and_run.bat` again |
 | `BeatAnalyzer_Markers` missing under *Workspace → Scripts* | Resolve was not restarted after the installation | restart Resolve; or *Install in Resolve* in the web app |
 | "Python of BeatAnalyzer not found" in the Resolve window | the script was copied by hand, not installed | *Update in Resolve* in the web app (only the installer writes the BeatAnalyzer folder and Python into the script) |
@@ -295,6 +301,7 @@ On Windows the Python path is `venv\Scripts\python.exe`.
 | `backend/analyze_cli.py` | command line |
 | `backend/resolve_plugin.py` | installs the Resolve script (language, folder, Python) |
 | `backend/updater.py` | update from the latest GitHub release |
+| `backend/torch_setup.py` | installs the right PyTorch build (CUDA or CPU) |
 | `lang/*.json` | texts in English, German and Turkish (web app and Resolve window) |
 | `resolve/BeatAnalyzer_Markers.lua` | script and window for DaVinci Resolve |
 | `src/` | web app (React, TypeScript) |

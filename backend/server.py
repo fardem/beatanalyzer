@@ -953,6 +953,11 @@ def main():
         print(" Analysis:       NOT POSSIBLE - analyzer.py not loaded (see above)")
     elif BEAT_THIS_AVAILABLE:
         print(" Analysis:       CPJKU beat_this")
+        torch = sys.modules.get("torch")   # loaded with beat_this; torch.version.cuda does not start CUDA
+        if torch is not None:
+            cuda = getattr(torch.version, "cuda", None)
+            build = f"CUDA {cuda} build" if cuda else "CPU build - for GPU speed run install_and_run.bat again"
+            print(f" PyTorch:        {torch.__version__} ({build})")
     else:
         print(" Analysis:       librosa - beat_this is NOT installed (run install_and_run.bat again)")
     print("======================================================================")

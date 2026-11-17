@@ -181,7 +181,7 @@ def decode_with_av(file_path: str):
         for out in resampler.resample(None):   # flush
             chunks.append(out.to_ndarray().reshape(-1))
     if not chunks:
-        raise RuntimeError(f"keine Audiodaten in {os.path.basename(file_path)}")
+        raise RuntimeError(f"no audio data in {os.path.basename(file_path)}")
     return np.concatenate(chunks).astype(np.float32), int(sr)
 
 
@@ -198,7 +198,7 @@ def decode_with_ffmpeg(file_path: str, target_sr: int):
                           capture_output=True, creationflags=flags)
     if proc.returncode != 0 or not proc.stdout:
         detail = proc.stderr.decode("utf-8", "replace").strip().splitlines()
-        raise RuntimeError(f"ffmpeg: {detail[-1] if detail else 'keine Audiodaten'}")
+        raise RuntimeError(f"ffmpeg: {detail[-1] if detail else 'no audio data'}")
     return np.frombuffer(proc.stdout, dtype=np.float32).copy(), target_sr
 
 
