@@ -1,7 +1,7 @@
 """
-FFmpeg-Erkennung und optionales benutzerdefiniertes FFmpeg-Verzeichnis (settings.json).
-Wenn `ffmpeg` nicht im System-PATH ausführbar ist, kann ein Verzeichnis angegeben werden;
-dieses wird vor den System-PATH gesetzt, sodass Aufrufe von `ffmpeg` das Binary dort ausführen.
+FFmpeg detection and an optional user-defined FFmpeg folder (settings.json).
+If `ffmpeg` cannot be run from the system PATH, a folder can be given; it is put in front of the
+system PATH, so calls of `ffmpeg` run the binary there.
 """
 
 from __future__ import annotations
@@ -42,9 +42,9 @@ def _is_executable_file(path: Path) -> bool:
 
 def find_ffmpeg_in_dir(raw_dir: str) -> Tuple[Optional[str], Optional[str]]:
     """
-    Sucht ein ausführbares `ffmpeg` im angegebenen Ordner (oder dessen `bin`-Unterordner).
-    Akzeptiert auch den direkten Pfad zu `ffmpeg` / `ffmpeg.exe`.
-    Gibt `(exe_path, bin_dir)` zurück oder `(None, None)`.
+    Looks for a runnable `ffmpeg` in the given folder (or its `bin` subfolder).
+    Also accepts the direct path to `ffmpeg` / `ffmpeg.exe`.
+    Returns `(exe_path, bin_dir)` or `(None, None)`.
     """
     cleaned = _clean_dir_input(raw_dir)
     if not cleaned:
@@ -72,7 +72,7 @@ def find_ffmpeg_in_dir(raw_dir: str) -> Tuple[Optional[str], Optional[str]]:
 
 
 def verify_ffmpeg_executable(exe_path: str) -> Tuple[bool, str]:
-    """Prüft, ob sich die gefundene ffmpeg-Datei tatsächlich ausführen lässt (`ffmpeg -version`)."""
+    """Checks whether the ffmpeg file found can really be run (`ffmpeg -version`)."""
     try:
         proc = subprocess.run(
             [exe_path, "-version"],
@@ -94,8 +94,8 @@ def verify_ffmpeg_executable(exe_path: str) -> Tuple[bool, str]:
 
 def apply_ffmpeg_dir(custom_dir: Optional[str]) -> Dict[str, Any]:
     """
-    Aktualisiert `PATH` für den laufenden Prozess anhand von `custom_dir` und
-    liefert den aktuellen FFmpeg-Status zurück.
+    Updates `PATH` of the running process from `custom_dir` and
+    returns the current FFmpeg status.
     """
     cleaned = _clean_dir_input(custom_dir)
     if cleaned:
@@ -133,9 +133,9 @@ def apply_ffmpeg_dir(custom_dir: Optional[str]) -> Dict[str, Any]:
 
 def validate_and_resolve_ffmpeg_dir(raw_dir: Any) -> Tuple[str, Dict[str, Any]]:
     """
-    Validiert eine Benutzereingabe für `ffmpegDir`.
-    Leerer String setzt auf System-PATH zurück.
-    Wirft `ValueError`, wenn ein Pfad angegeben wurde, dort aber kein ausführbares `ffmpeg` liegt.
+    Validates a user input for `ffmpegDir`.
+    An empty string resets to the system PATH.
+    Raises `ValueError` when a path was given but there is no runnable `ffmpeg` in it.
     """
     cleaned = _clean_dir_input(raw_dir)
     if not cleaned:

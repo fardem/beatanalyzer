@@ -173,7 +173,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         </div>
       </div>
 
-      {/* 3. Takte / Bars */}
+      {/* 3. Bars */}
       <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 shadow-sm relative overflow-hidden group hover:border-rose-500/50 transition-all">
         <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
@@ -191,7 +191,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         </div>
       </div>
 
-      {/* 4. Tempo-Stabilität */}
+      {/* 4. Tempo stability */}
       <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 shadow-sm relative overflow-hidden group hover:border-emerald-500/50 transition-all">
         <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">

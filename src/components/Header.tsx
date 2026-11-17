@@ -143,8 +143,8 @@ export const Header: React.FC<HeaderProps> = ({
   );
 };
 
-// "beat_this · CUDA (RTX 5080)", "md_beat_this · CPU", "librosa (Ersatz) – beat_this nicht installiert",
-// "Browser-Analyse (Ersatz) – kein Server"
+// "beat_this · CUDA (RTX 5080)", "md_beat_this · CPU", "librosa (fallback) – beat_this not installed",
+// "Browser analysis (fallback) – no server"
 function engineLabel(
   result: AnalysisResult | null,
   serverEngine: EngineInfo | null,

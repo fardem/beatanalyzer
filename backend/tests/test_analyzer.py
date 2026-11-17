@@ -13,7 +13,7 @@ import unittest
 import numpy as np
 import soundfile as sf
 
-# Vorab laden, damit ein torch-Stub im Test scipys Backend-Erkennung nicht stoert
+# load it first, so a torch stub in a test does not disturb the backend detection of scipy
 import librosa.onset  # noqa: F401
 import librosa.beat  # noqa: F401
 import scipy.signal  # noqa: F401
@@ -191,7 +191,7 @@ class AnalyzerTests(unittest.TestCase):
 
         class ExplodingFile2Beats(FakeBeatThis):
             def __call__(self, audio_path):
-                raise AssertionError("File2Beats darf nicht benutzt werden (torchaudio/FFmpeg-Abhaengigkeit)")
+                raise AssertionError("File2Beats must not be used (torchaudio/FFmpeg dependency)")
 
         fake = types.ModuleType("beat_this.inference")
         fake.Audio2Beats = FakeBeatThis

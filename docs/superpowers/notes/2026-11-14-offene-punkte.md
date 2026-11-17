@@ -94,7 +94,9 @@
 
 **Stand 2026-11-17:** README in drei Sprachen fertig (`README.md` englisch, `README.de.md`, `README.tr.md`) mit
 Screenshots aus 0.3.1 (`docs/images/`; Projektname und Timeline-Vorschauen unkenntlich). CHANGELOG ist englisch
-(übersetzt); neue Einträge nur noch englisch. Offen in Teilprojekt 5: übrige Doku/Code-Kommentare auf Englisch, Vergleich mit Resolves „Show Beats“
+(übersetzt); neue Einträge nur noch englisch. Code-Kommentare, Docstrings und `requirements.txt` englisch
+(2026-11-17; zwei deutsche Konsolenausgaben in `analyzer.py` gefunden und übersetzt). Interne Arbeitsdokumente unter
+`docs/superpowers/` bleiben deutsch (Verlauf). Offen in Teilprojekt 5: übrige Doku/Code-Kommentare auf Englisch, Vergleich mit Resolves „Show Beats“
 und mit librosa (bewusst noch nicht in der README – erst Fakten prüfen), Aussage zu CUDA prüfen.
 
 - Ablauf von 0.1.x statt 0.0.5 (Resolve-Fenster mit beiden Wegen, Glätten, Farben, Entfernen, Sprachen, Anzeige

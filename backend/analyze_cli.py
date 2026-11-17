@@ -1,7 +1,7 @@
 """
-Kommandozeilen-Tool (CLI) für BeatAnalyzer
-Erlaubt die direkte Analyse von MP3, WAV, AAC, FLAC im Terminal
-Beispiel: python backend/analyze_cli.py meinsong.mp3
+Command line tool (CLI) of BeatAnalyzer
+Analyses MP3, WAV, AAC, FLAC and more straight in the terminal
+Example: python backend/analyze_cli.py mysong.mp3
 """
 
 import sys
@@ -68,13 +68,13 @@ def main():
 
     base_name = os.path.splitext(audio_path)[0]
 
-    # Standard JSON Export wenn nicht anders angegeben
+    # JSON export by default, unless another path is given
     out_json = args.export_json or f"{base_name}_beat_this.json"
     with open(out_json, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
     print(f"[OK] JSON saved: {out_json}")
 
-    # DaVinci Resolve Marker-JSON (fuer resolve/BeatAnalyzer_Markers.lua)
+    # DaVinci Resolve marker JSON (for resolve/BeatAnalyzer_Markers.lua)
     out_resolve = args.export_resolve or f"{base_name}_resolve_markers.json"
     with open(out_resolve, "w", encoding="utf-8") as f:
         json.dump(resolve_marker_data(result, args.only_downbeats), f, indent=2, ensure_ascii=False)

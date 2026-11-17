@@ -1,7 +1,7 @@
 """
 BeatAnalyzer Python Backend Server
-Verwendet den nativen Python HTTP-Server (http.server.ThreadingHTTPServer)
-100% frei von Pydantic/FastAPI-Abhängigkeitsproblemen, voll kompatibel mit Python 3.9 bis 3.13+
+Uses the built-in Python HTTP server (http.server.ThreadingHTTPServer):
+no Pydantic/FastAPI dependencies, works with Python 3.9 to 3.13+
 """
 
 import os
@@ -15,14 +15,14 @@ import webbrowser
 from http.server import HTTPServer, ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
-# Füge Verzeichnisse zum Suchpfad hinzu
+# add the folders to the module search path
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
 DIST_DIR = os.path.join(PROJECT_ROOT, "dist")
 sys.path.insert(0, CURRENT_DIR)
 sys.path.insert(0, PROJECT_ROOT)
 
-# Initialisiere MIME-Types für modernes React-Frontend
+# MIME types for the React frontend
 mimetypes.init()
 mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("application/javascript", ".mjs")
@@ -30,7 +30,7 @@ mimetypes.add_type("text/css", ".css")
 mimetypes.add_type("image/svg+xml", ".svg")
 mimetypes.add_type("application/json", ".json")
 
-# Lade Analyzer
+# load the analyzer
 ANALYZER_ERROR = ""   # why analyzer.py could not be loaded (e.g. a broken NumPy in venv)
 try:
     from analyzer import (
@@ -108,8 +108,8 @@ APP_VERSION = read_app_version()
 
 def extract_uploaded_file(headers, rfile):
     """
-    Nativer, robuster Multipart-Form-Data Parser ohne externe Abhängigkeiten.
-    Kompatibel mit Python 3.9, 3.10, 3.11, 3.12 und 3.13.
+    Multipart form-data parser without external dependencies.
+    Works with Python 3.9 to 3.13.
     """
     try:
         content_length = int(headers.get('Content-Length', 0))
@@ -121,7 +121,7 @@ def extract_uploaded_file(headers, rfile):
 
     content_type = headers.get('Content-Type', '')
 
-    # Falls RAW Binary gesendet wurde
+    # raw binary body (no multipart)
     if 'boundary=' not in content_type:
         raw_body = rfile.read(content_length)
         return raw_body, "upload_audio.wav"
@@ -159,7 +159,7 @@ def extract_uploaded_file(headers, rfile):
     return None, None
 
 
-# Autarke, vollständige Web-Benutzeroberfläche (funktioniert auch wenn dist/ nicht gebaut wurde!)
+# self-contained fallback page (works even when dist/ was not built)
 STANDALONE_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -245,7 +245,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
             </div>
         </div>
 
-        <!-- Analyse-Ergebnisse (wird nach Upload sichtbar) -->
+        <!-- analysis results (visible after the upload) -->
         <div id="resultsView" class="hidden" style="display:flex; flex-direction:column; gap:20px;">
             <!-- Metrics -->
             <div class="metrics-grid">
@@ -390,7 +390,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
                 if (!res.ok) throw new Error("Server analysis error: " + res.statusText);
                 currentResult = await res.json();
 
-                // Dekodiere Audio im Browser für Player
+                // decode the audio in the browser for the player
                 if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const arrayBuf = await file.arrayBuffer();
                 audioBuffer = await audioContext.decodeAudioData(arrayBuf);
@@ -446,7 +446,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
             const numBuckets = peaks.length / 2;
             const midY = h * 0.5;
 
-            // Wellenform
+            // waveform
             ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
             for (let i = 0; i < numBuckets; i++) {
                 const x = (i / numBuckets) * w;
@@ -493,7 +493,7 @@ STANDALONE_HTML = """<!DOCTYPE html>
             ctx.stroke();
         }
 
-        // Seeking auf Canvas
+        // seeking on the canvas
         canvas.onclick = (e) => {
             if (!audioBuffer) return;
             const rect = canvas.getBoundingClientRect();
@@ -764,7 +764,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             self.send_json(200, info)
             return
 
-        # 2. Statische Frontend-Dateien (aus dist/, falls kompiliert)
+        # 2. static frontend files (from dist/, if built)
         index_file = os.path.join(DIST_DIR, "index.html")
         if os.path.isdir(DIST_DIR) and os.path.exists(index_file):
             clean_path = path.lstrip("/")
@@ -777,7 +777,7 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             self.serve_static_file(index_file)
             return
 
-        # 3. Vollständige integrierte Web-Oberfläche (sofort nutzbar!)
+        # 3. the built-in fallback page
         body = STANDALONE_HTML.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")

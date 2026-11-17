@@ -1,6 +1,6 @@
 """
-Diagnose-Skript für BeatAnalyzer
-Prüft alle Python-Module und gibt Systeminformationen aus.
+Diagnostic script of BeatAnalyzer
+Checks all Python modules and prints system information.
 """
 
 import sys
