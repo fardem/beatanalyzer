@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { AnalysisResult, BeatItem } from '../types/analyzer';
 import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
 import { useI18n } from '../i18n';
+import { DiagramInfoTooltip } from './DiagramInfoTooltip';
 
 interface WaveformBeatVisualizerProps {
   result: AnalysisResult;
@@ -162,13 +163,24 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     beat: BeatItem | null;
   } | null>(null);
 
+  const onViewChangeRef = useRef(onViewChange);
+  onViewChangeRef.current = onViewChange;
+  const lastReportedViewRef = useRef<{ start: number; end: number } | null>(null);
+
   const duration = result.metadata.duration || 1;
   // the smallest quick window (5 s) must stay reachable on long songs
   const maxZoom = Math.max(16.0, duration / QUICK_WINDOWS_SEC[0]);
   const visibleDuration = duration / zoom;
   useEffect(() => {
-    onViewChange?.(scrollOffsetSec, Math.min(duration, scrollOffsetSec + visibleDuration));
-  }, [scrollOffsetSec, visibleDuration, duration, onViewChange]);
+    const start = scrollOffsetSec;
+    const end = Math.min(duration, scrollOffsetSec + visibleDuration);
+    const prev = lastReportedViewRef.current;
+    if (prev && Math.abs(prev.start - start) < 1e-6 && Math.abs(prev.end - end) < 1e-6) {
+      return;
+    }
+    lastReportedViewRef.current = { start, end };
+    onViewChangeRef.current?.(start, end);
+  }, [scrollOffsetSec, visibleDuration, duration]);
   const activeQuickWindow =
     QUICK_WINDOWS_SEC.find((sec) => duration > sec && Math.abs(visibleDuration - sec) < 0.25) ?? null;
 
@@ -207,7 +219,9 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
 
     if (currentTime < scrollOffsetSec || currentTime > scrollOffsetSec + visibleDuration) {
       const newOffset = Math.max(0, Math.min(currentTime - visibleDuration * 0.35, duration - visibleDuration));
-      setScrollOffsetSec(newOffset);
+      if (Math.abs(newOffset - scrollOffsetSec) > 1e-4) {
+        setScrollOffsetSec(newOffset);
+      }
     }
   }, [currentTime, visibleDuration, duration, scrollOffsetSec, minimapDragMode, followPlayhead]);
 
@@ -384,29 +398,43 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       result.beats.forEach((b) => {
         if (b.time < scrollOffsetSec - 0.2 || b.time > scrollOffsetSec + visibleDuration + 0.2) return;
         const x = ((b.time - scrollOffsetSec) / visibleDuration) * width;
+        const isLowConf = b.confidence !== null && b.confidence < 0.6;
 
         if (b.isDownbeat) {
-          // Downbeat (Bar marker): bold magenta/rose line
-          // dense bars (whole song): thin lines, so the waveform stays visible
-          ctx.strokeStyle = barPx >= 24 ? '#f43f5e' : 'rgba(244, 63, 94, 0.55)';
+          // Downbeat (Bar marker): bold magenta/rose line (amber dashed when low confidence)
+          ctx.save();
+          if (isLowConf) {
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.85)';
+            ctx.setLineDash([4, 3]);
+          } else {
+            ctx.strokeStyle = barPx >= 24 ? '#f43f5e' : 'rgba(244, 63, 94, 0.55)';
+          }
           ctx.lineWidth = barPx >= 24 ? 2.5 : 1;
           ctx.beginPath();
           ctx.moveTo(x, 0);
           ctx.lineTo(x, height);
           ctx.stroke();
+          ctx.restore();
           // Bar Flag (only every labelEvery-th bar, counted from bar 1), drawn after all lines
           if ((b.barIndex - 1) % labelEvery === 0) flags.push({ x, bar: b.barIndex });
         } else {
-          // Regular Beat: cyan / amber line
-          ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+          // Regular Beat: cyan line (amber dashed when low confidence)
+          ctx.save();
+          if (isLowConf) {
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.72)';
+            ctx.setLineDash([3, 3]);
+          } else {
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+          }
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(x, 22);
           ctx.lineTo(x, height - 16);
           ctx.stroke();
+          ctx.restore();
 
           if (beatPx >= MIN_BEAT_LABEL_PX) {
-            ctx.fillStyle = '#94a3b8';
+            ctx.fillStyle = isLowConf ? '#fbbf24' : '#94a3b8';
             ctx.font = '9px Inter, monospace';
             ctx.fillText(`${b.beatInBar}`, x + 3, 34);
           }
@@ -727,29 +755,36 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       result.beats.forEach((b) => {
         if (b.time < winStart - 0.05 || b.time > winEnd + 0.05) return;
         const x = ((b.time - winStart) / span) * w;
+        const isLowConf = b.confidence !== null && b.confidence < 0.6;
         if (b.isDownbeat) {
-          ctx.strokeStyle = '#f43f5e';
+          ctx.save();
+          ctx.strokeStyle = isLowConf ? '#f59e0b' : '#f43f5e';
+          if (isLowConf) ctx.setLineDash([4, 3]);
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(x, 0);
           ctx.lineTo(x, h);
           ctx.stroke();
+          ctx.restore();
 
-          ctx.fillStyle = '#f43f5e';
+          ctx.fillStyle = isLowConf ? '#d97706' : '#f43f5e';
           ctx.fillRect(x, 0, 38, 13);
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 9px Inter, sans-serif';
           ctx.fillText(`T${b.barIndex}`, x + 3, 10);
         } else {
-          ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+          ctx.save();
+          ctx.strokeStyle = isLowConf ? 'rgba(245, 158, 11, 0.78)' : 'rgba(56, 189, 248, 0.55)';
+          if (isLowConf) ctx.setLineDash([3, 3]);
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(x, 10);
           ctx.lineTo(x, h);
           ctx.stroke();
+          ctx.restore();
 
           if (span <= 8) {
-            ctx.fillStyle = '#94a3b8';
+            ctx.fillStyle = isLowConf ? '#fbbf24' : '#94a3b8';
             ctx.font = '9px Inter, monospace';
             ctx.fillText(`${b.beatInBar}`, x + 2, 19);
           }
@@ -778,33 +813,51 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     ctx.stroke();
   }, [isLoupeActive, loupeSpan, hoverInfo, duration, result, detail, showBaf, showDaf, showBeats, currentTime]);
 
-  // Resize listener
+  const drawRefs = useRef({ drawMainCanvas, drawMinimap });
+  drawRefs.current = { drawMainCanvas, drawMinimap };
+
+  // Resize listener (decoupled from per-frame draw callbacks so setContainerWidth never loops)
   useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
     const updateSize = () => {
-      if (containerRef.current && canvasRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setContainerWidth(rect.width);
-        canvasRef.current.width = rect.width * window.devicePixelRatio;
-        canvasRef.current.height = 240 * window.devicePixelRatio;
-        canvasRef.current.style.width = `${rect.width}px`;
-        canvasRef.current.style.height = `240px`;
+      const container = containerRef.current;
+      const canvas = canvasRef.current;
+      if (!container || !canvas) return;
+      const cssWidth = Math.round(container.clientWidth);
+      if (cssWidth <= 0) return;
 
-        if (minimapCanvasRef.current) {
-          minimapCanvasRef.current.width = rect.width * window.devicePixelRatio;
-          minimapCanvasRef.current.height = 36 * window.devicePixelRatio;
-          minimapCanvasRef.current.style.width = `${rect.width}px`;
-          minimapCanvasRef.current.style.height = `36px`;
-        }
-
-        drawMainCanvas();
-        drawMinimap();
+      const dpr = window.devicePixelRatio || 1;
+      const targetW = Math.round(cssWidth * dpr);
+      const targetMainH = Math.round(240 * dpr);
+      if (canvas.width !== targetW || canvas.height !== targetMainH) {
+        canvas.width = targetW;
+        canvas.height = targetMainH;
       }
+
+      if (minimapCanvasRef.current) {
+        const targetMiniH = Math.round(36 * dpr);
+        if (minimapCanvasRef.current.width !== targetW || minimapCanvasRef.current.height !== targetMiniH) {
+          minimapCanvasRef.current.width = targetW;
+          minimapCanvasRef.current.height = targetMiniH;
+        }
+      }
+
+      setContainerWidth((prev) => (prev === cssWidth ? prev : cssWidth));
+      drawRefs.current.drawMainCanvas();
+      drawRefs.current.drawMinimap();
     };
 
     updateSize();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateSize) : null;
+    ro?.observe(el);
     window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
-  }, [drawMainCanvas, drawMinimap]);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', updateSize);
+    };
+  }, []);
 
   useEffect(() => {
     drawMainCanvas();
@@ -993,6 +1046,19 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs font-semibold text-slate-300 whitespace-nowrap shrink-0">{t('web.wave.title')}</span>
+          <DiagramInfoTooltip
+            buttonLabel={t('web.wave.help_label')}
+            help={{
+              title: t('web.wave.title'),
+              summary: t('web.wave.help_summary'),
+              items: [
+                { color: 'rose', text: t('web.wave.help_item1') },
+                { color: 'amber', text: t('web.wave.help_item2') },
+                { color: 'cyan', text: t('web.wave.help_item3') },
+              ],
+              actionTip: t('web.wave.help_tip'),
+            }}
+          />
           {/* the analysed song: long names are cut, the full name is in the tooltip */}
           <span
             className="text-xs text-slate-400 truncate min-w-0 max-w-[48ch]"

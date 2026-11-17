@@ -68,7 +68,12 @@ export async function analyzeAudioFile(
   let serverError: Error | null = null;
   try {
     const healthCheck = await fetch('/api/health', { signal: AbortSignal.timeout(3000) });
-    if (healthCheck.ok) {
+    const healthContentType = healthCheck.headers.get('content-type') || '';
+    const healthData =
+      healthCheck.ok && healthContentType.includes('application/json')
+        ? await healthCheck.json().catch(() => null)
+        : null;
+    if (healthData && typeof healthData === 'object' && 'status' in healthData) {
       onProgress?.(40, 'web.progress.connect', { model: modelLabel });
       const formData = new FormData();
       formData.append('audio', file, fileName);

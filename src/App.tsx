@@ -10,8 +10,11 @@ import { UploadZone } from './components/UploadZone';
 import { MetricsCards } from './components/MetricsCards';
 import { WaveformBeatVisualizer } from './components/WaveformBeatVisualizer';
 import { PlayerControls } from './components/PlayerControls';
+import { BeatEvidenceLab } from './components/BeatEvidenceLab';
 import { TempoCurveChart } from './components/TempoCurveChart';
+import { ExpertDiagnosticsPanel } from './components/ExpertDiagnosticsPanel';
 import { BeatTable } from './components/BeatTable';
+import { recomputeBeatStats, scaleGridTempo, shiftDownbeat, shiftGridHalfBeat } from './utils/beatTransforms';
 import { ExportModal } from './components/ExportModal';
 import { ModelInfoModal } from './components/ModelInfoModal';
 import { LocalSetupModal } from './components/LocalSetupModal';
@@ -33,6 +36,8 @@ export default function App() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [smoothBars, setSmoothBars] = useState<boolean>(true);
   const [protect, setProtect] = useState<number>(0.95); // protection of clear "1"s; 0.95 = "Glätten" 90 %
+  const [originalResult, setOriginalResult] = useState<AnalysisResult | null>(null);
+  const [gridUndoStack, setGridUndoStack] = useState<AnalysisResult[]>([]);
   const lastAudioRef = useRef<AudioBuffer | null>(null);
   const lastFileRef = useRef<{ file: File | Blob; name: string } | null>(null);
 
@@ -47,6 +52,7 @@ export default function App() {
   // loop: off, the section the waveform shows at the click, or the whole song
   const [loopMode, setLoopMode] = useState<'off' | 'view' | 'song'>('off');
   const [loopRange, setLoopRange] = useState<{ start: number; end: number } | null>(null);
+  const [viewRange, setViewRange] = useState<{ start: number; end: number } | null>(null);
   const viewRef = useRef<{ start: number; end: number } | null>(null);
   const loopModeRef = useRef<'off' | 'view' | 'song'>('off');
   const loopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -132,9 +138,12 @@ export default function App() {
         setLoopMode('off');   // a new song: no loop (loadBuffer keeps no loop either)
         loopModeRef.current = 'off';
         setLoopRange(null);
+        setViewRange(null);
         playerRef.current?.setLoop(null);
       }
       setResult(analysisResult);
+      setOriginalResult(analysisResult);
+      setGridUndoStack([]);
       setSmoothBars(smooth); // only now: a failed re-analysis leaves box and slider as they were
       setProtect(protectValue);
       if (playerRef.current) {
@@ -194,6 +203,11 @@ export default function App() {
   // end (wish of the user, test 0.2.8); applied when the frame rests for a moment, not at every step of a drag
   const handleViewChange = useCallback((start: number, end: number) => {
     viewRef.current = { start, end };
+    setViewRange((prev) =>
+      prev && Math.abs(prev.start - start) < 1e-6 && Math.abs(prev.end - end) < 1e-6
+        ? prev
+        : { start, end }
+    );
     if (loopModeRef.current !== 'view') return;
     if (loopTimerRef.current) clearTimeout(loopTimerRef.current);
     loopTimerRef.current = setTimeout(() => {
@@ -227,27 +241,71 @@ export default function App() {
   }, []);
 
   const handleUpdateBeats = useCallback((updatedBeats: BeatItem[]) => {
-    if (!result) return;
-    const downbeats = updatedBeats.filter((b) => b.isDownbeat);
-    setResult((prev) =>
-      prev
-        ? {
-            ...prev,
-            beats: updatedBeats,
-            downbeats,
-            totalBeats: updatedBeats.length,
-            totalBars: downbeats.length,
-          }
-        : null
-    );
-    playerRef.current?.updateBeats(updatedBeats);
-  }, [result]);
+    setResult((prev) => {
+      if (!prev) return null;
+      const next = recomputeBeatStats(prev, updatedBeats);
+      playerRef.current?.updateBeats(next.beats);
+      return next;
+    });
+  }, []);
+
+  const applyGridTransform = useCallback((transform: (curr: AnalysisResult) => AnalysisResult) => {
+    setResult((prev) => {
+      if (!prev) return null;
+      const next = transform(prev);
+      if (next === prev) return prev;
+      setGridUndoStack((stack) => [...stack.slice(-11), prev]);
+      playerRef.current?.updateBeats(next.beats);
+      return next;
+    });
+  }, []);
+
+  const handleShiftDownbeat = useCallback(
+    (direction: -1 | 1) => {
+      applyGridTransform((curr) => shiftDownbeat(curr, direction));
+    },
+    [applyGridTransform]
+  );
+
+  const handleShiftHalfBeat = useCallback(
+    (direction: -1 | 1) => {
+      applyGridTransform((curr) => shiftGridHalfBeat(curr, direction));
+    },
+    [applyGridTransform]
+  );
+
+  const handleScaleTempo = useCallback(
+    (factor: 0.5 | 2) => {
+      applyGridTransform((curr) => scaleGridTempo(curr, factor));
+    },
+    [applyGridTransform]
+  );
+
+  const handleUndoGrid = useCallback(() => {
+    setGridUndoStack((stack) => {
+      if (stack.length === 0) return stack;
+      const previous = stack[stack.length - 1];
+      setResult(previous);
+      playerRef.current?.updateBeats(previous.beats);
+      return stack.slice(0, -1);
+    });
+  }, []);
+
+  const handleResetGrid = useCallback(() => {
+    if (!originalResult) return;
+    setResult(originalResult);
+    setGridUndoStack([]);
+    playerRef.current?.updateBeats(originalResult.beats);
+  }, [originalResult]);
 
   const handleReset = useCallback(() => {
     playerRef.current?.stop();
     setIsPlaying(false);
     setCurrentTime(0);
     setActiveBeat(null);
+    setViewRange(null);
+    setOriginalResult(null);
+    setGridUndoStack([]);
     setResult(null);
     setError(null);
   }, []);
@@ -364,9 +422,34 @@ export default function App() {
               onCycleLoop={handleCycleLoop}
             />
 
-            {/* 4. Tempo Curve Over Time */}
+            {/* 3b. Editor-Focused Beat Diagnostics (Compact Band-Onset-Lanes + Folded Bar + 1-Click Fixes) */}
+            <BeatEvidenceLab
+              result={result}
+              audioBuffer={audioBuffer}
+              currentTime={currentTime}
+              viewRange={viewRange}
+              onSeek={handleSeek}
+              onShiftDownbeat={handleShiftDownbeat}
+              onShiftHalfBeat={handleShiftHalfBeat}
+              onScaleTempo={handleScaleTempo}
+              onUndoGrid={handleUndoGrid}
+              onResetGrid={handleResetGrid}
+              canUndoGrid={gridUndoStack.length > 0}
+              canResetGrid={Boolean(originalResult && result && result !== originalResult)}
+            />
+
+            {/* 4. Tempo Curve Over Time (auto-collapsed on stable tempo) */}
             <TempoCurveChart
               result={result}
+              currentTime={currentTime}
+              onSeek={handleSeek}
+            />
+
+            {/* 4b. Collapsed-by-default Expert Diagnostics (Spectrogram, Energy Spectrum, Tempo Histogram) */}
+            <ExpertDiagnosticsPanel
+              result={result}
+              audioBuffer={audioBuffer}
+              viewRange={viewRange}
               currentTime={currentTime}
               onSeek={handleSeek}
             />
