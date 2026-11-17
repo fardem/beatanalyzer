@@ -156,6 +156,9 @@
 - Server versteht nur `smoothBars=0` als „aus“; Kommandozeile gibt `barSmoothing` nicht aus.
 
 **Glätten / Analyse**
+- **Gesamttempo robuster (Idee, nicht entschieden):** `globalBpm` = 60 / Mittelwert der Beat-Abstände. Bei Songs, in
+  denen beat_this abschnittsweise doppelt so viele Beats findet („Teoman – Ağır Kapı“: Tabelle meist 76,9 BPM,
+  Gesamttempo 131,2, Stabilität 59 %, Tempo-Kurve bis 375 BPM), zieht das den Wert hoch. Median wäre robuster.
 - Testlücken: 3/4-Takt und Songende bei `smooth_bars`.
 - Tempo-Sprünge in Abschnitten (z. B. „Küçük Sevgilim“: ≈ 115 ↔ 176 BPM, Faktor 1,5) – beat_this zählt dort auf
   anderer Ebene; nicht untersucht.
