@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AnalysisResult } from '../types/analyzer';
 import { Gauge, Clock, Radio, Music, Zap, Disc3 } from 'lucide-react';
 import { useI18n } from '../i18n';
+import { ValueTooltip } from './DiagramInfoTooltip';
 
 interface MetricsCardsProps {
   result: AnalysisResult;
@@ -94,7 +95,9 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Gauge className="w-3.5 h-3.5 text-cyan-400" />
-          <span>{t('web.metrics.tempo')}</span>
+          <ValueTooltip title={t('web.metrics.tempo')} body={t('web.metrics.tip_bpm')}>
+            <span>{t('web.metrics.tempo')}</span>
+          </ValueTooltip>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
@@ -112,7 +115,9 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Music className="w-3.5 h-3.5 text-purple-400" />
-          <span>{t('web.metrics.meter')}</span>
+          <ValueTooltip title={t('web.metrics.meter')} body={t('web.metrics.tip_meter')}>
+            <span>{t('web.metrics.meter')}</span>
+          </ValueTooltip>
         </div>
         <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
           {/* a longer time signature (Turkish 4/4'lük) one size smaller, so the box fits next to it */}
@@ -178,7 +183,9 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Disc3 className="w-3.5 h-3.5 text-rose-400" />
-          <span>{t('web.metrics.bars')}</span>
+          <ValueTooltip title={t('web.metrics.bars')} body={t('web.metrics.tip_bars')}>
+            <span>{t('web.metrics.bars')}</span>
+          </ValueTooltip>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
@@ -196,7 +203,9 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Zap className="w-3.5 h-3.5 text-emerald-400" />
-          <span>{t('web.metrics.stability')}</span>
+          <ValueTooltip title={t('web.metrics.stability')} body={t('web.metrics.tip_stability')}>
+            <span>{t('web.metrics.stability')}</span>
+          </ValueTooltip>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
@@ -217,7 +226,9 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Clock className="w-3.5 h-3.5 text-amber-400" />
-          <span>{t('web.metrics.interval')}</span>
+          <ValueTooltip title={t('web.metrics.interval')} body={t('web.metrics.tip_ibi')}>
+            <span>{t('web.metrics.interval')}</span>
+          </ValueTooltip>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
@@ -235,7 +246,9 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
         <div className="absolute top-0 right-0 w-16 h-16 bg-sky-500/10 rounded-full blur-xl -mr-4 -mt-4"></div>
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
           <Radio className="w-3.5 h-3.5 text-sky-400" />
-          <span>{t('web.metrics.audio')}</span>
+          <ValueTooltip title={t('web.metrics.audio')} body={t('web.metrics.tip_audio')}>
+            <span>{t('web.metrics.audio')}</span>
+          </ValueTooltip>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-xl lg:text-2xl font-extrabold text-white tracking-tight">

@@ -14,7 +14,8 @@ BeatAnalyzer 0.3.x was tested on this PC (user's system, 2026-11-17).
 | DaVinci Resolve | Studio 21 |
 
 `install_and_run.bat` installs exactly this PyTorch version (`backend/torch_setup.py`): the CUDA 12.8 build when the
-NVIDIA driver supports CUDA 12.8 or newer, otherwise the CPU build.
+NVIDIA driver supports CUDA 12.8 or newer, otherwise the CPU build. On this PC the installer keeps the existing CUDA
+build (tested with 0.3.2); a fresh installation with the new installer has not been run yet.
 
 ## Packages in the environment (`pip freeze`)
 

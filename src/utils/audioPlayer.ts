@@ -9,6 +9,7 @@ export class BeatPlayer {
   private ctx: AudioContext | null = null;
   private audioBuffer: AudioBuffer | null = null;
   private sourceNode: AudioBufferSourceNode | null = null;
+  private analyserNode: AnalyserNode | null = null;
   private gainNode: GainNode | null = null;
   private metronomeGain: GainNode | null = null;
 
@@ -38,9 +39,17 @@ export class BeatPlayer {
   private initContext(): AudioContext {
     if (!this.ctx || this.ctx.state === 'closed') {
       this.ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      this.analyserNode = null;
     }
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
+    }
+    if (!this.analyserNode) {
+      this.analyserNode = this.ctx.createAnalyser();
+      this.analyserNode.fftSize = 4096;
+      this.analyserNode.smoothingTimeConstant = 0.72;
+      this.analyserNode.minDecibels = -85;
+      this.analyserNode.maxDecibels = -10;
     }
     return this.ctx;
   }
@@ -89,7 +98,12 @@ export class BeatPlayer {
     this.metronomeGain = ctx.createGain();
     this.metronomeGain.gain.value = this.metronomeEnabled ? this.metronomeVolume : 0;
 
-    this.sourceNode.connect(this.gainNode);
+    if (this.analyserNode) {
+      this.sourceNode.connect(this.analyserNode);
+      this.analyserNode.connect(this.gainNode);
+    } else {
+      this.sourceNode.connect(this.gainNode);
+    }
     this.gainNode.connect(ctx.destination);
     this.metronomeGain.connect(ctx.destination);
 
@@ -206,6 +220,23 @@ export class BeatPlayer {
     return this.isPlaying;
   }
 
+  public getSpectrumConfig(): { binCount: number; sampleRate: number; minDecibels: number; maxDecibels: number } {
+    return {
+      binCount: this.analyserNode?.frequencyBinCount ?? 2048,
+      sampleRate: this.ctx?.sampleRate ?? 44100,
+      minDecibels: this.analyserNode?.minDecibels ?? -85,
+      maxDecibels: this.analyserNode?.maxDecibels ?? -10,
+    };
+  }
+
+  public readFrequencyData(target: Float32Array<ArrayBuffer>): boolean {
+    if (!this.analyserNode || !this.isPlaying || target.length < this.analyserNode.frequencyBinCount) {
+      return false;
+    }
+    this.analyserNode.getFloatFrequencyData(target);
+    return true;
+  }
+
   private stopSource() {
     if (this.sourceNode) {
       try {
@@ -300,6 +331,7 @@ export class BeatPlayer {
 
   public destroy() {
     this.stop();
+    this.analyserNode = null;
     if (this.ctx) {
       try {
         this.ctx.close();

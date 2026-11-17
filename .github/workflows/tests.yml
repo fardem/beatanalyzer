@@ -35,6 +35,7 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run lint
+      - run: npm test
       - run: npm run build
       - name: dist/ is up to date
         run: git diff --exit-code -- dist || (echo "dist/ is out of date - run npm run build and commit dist/" && exit 1)

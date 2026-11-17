@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.3.2** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
+**Version 0.4.0** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
 
 BeatAnalyzer finds the **beats, downbeats, tempo and time signature** of a song and puts them into
 **DaVinci Resolve** as **coloured markers on your audio clip** and as a **subtitle track** under the song. The
@@ -22,6 +22,8 @@ You can start it straight from a window inside Resolve, or use the web app in yo
 - **Your choice of model:** beat_this (MIT, also for commercial work) or md_beat_this for non-commercial projects.
 - **Check before you cut:** waveform with beat grid, model curves, loop, metronome on the detected beats and a beat
   table to correct single beats.
+- **Fix the grid in one click:** the folded bar shows where kick and snare really sit in the bar; one click moves
+  the "1", the grid, the tempo or the time signature – undoable, and kept when you change Smoothing.
 - **Local and private:** everything runs on your PC; no upload, no account.
 
 ---
@@ -209,7 +211,14 @@ window shows it before and after. MP3 files without that delay need no correctio
 - **Player:** play from any point, **loop** (grey = off, yellow A-B = the section in the blue frame, green = the
   whole song), song volume, **metronome** on the detected beats (higher click on the downbeat), speed 0.5× to 1.5×,
   tap tempo.
-- **Tempo curve** over the whole song.
+- **Beat evidence & grid fixes:** band lanes for kick (< 150 Hz), snare/body and hi-hats, in step with the zoom
+  of the waveform (drag the grip below them up to twice the height); the **folded bar** lays all bars – of the
+  section or the whole song – on top of each other and says whether the kick sits on the "1". **1-click fixes:**
+  bar start ±1 beat, grid ±½ beat, tempo ½× / 2×, **beats per bar** (2–7); undo and reset. The fixes stay when you
+  move Smoothing and go into every export – also the marker JSON for Resolve.
+- **Expert diagnostics** (click the title to open): spectrogram, energy spectrum of the "1", the other beats and
+  the off-beats, **Live** spectrum while playing (flash on every beat, stronger on the "1"), tempo histogram.
+- **Tempo curve** over the whole song (folded while the tempo is steady).
 - **Beat table:** move a beat by ±10 ms or make it a downbeat (`1/X`); the corrections go into every export.
 
 4. **Export** – button at the top right.
@@ -305,6 +314,8 @@ On Windows the Python path is `venv\Scripts\python.exe`.
 | `lang/*.json` | texts in English, German and Turkish (web app and Resolve window) |
 | `resolve/BeatAnalyzer_Markers.lua` | script and window for DaVinci Resolve |
 | `src/` | web app (React, TypeScript) |
+| `src/utils/beatEvidence.ts` | band curves, folded bar, tempo histogram, spectra (web app) |
+| `src/utils/beatTransforms.ts` | 1-click grid fixes as replayable steps (web app) |
 | `dist/` | built web app; checked in |
 | `VERSION` | version number for app, script and release |
 
@@ -321,6 +332,10 @@ Checks:
 
 ```bash
 npm run lint
+```
+
+```bash
+npm test
 ```
 
 ```bash

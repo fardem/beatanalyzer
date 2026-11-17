@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.4.0] – 2026-11-17
+
+Merge of the user's parallel development (fardem/BeatAnalyzer_test2, base 0.2.12) – web app only; the Resolve window stays as it is (final).
+
+### Added
+- **Beat evidence & grid fixes** (web app): band lanes for kick (< 150 Hz), snare/body (150 Hz – 2.5 kHz) and hi-hats (> 2.5 kHz) in step with the zoom of the waveform; the **folded bar** lays all bars of the section or the whole song on top of each other and judges whether the kick sits on the "1" (ok / backbeat shifted / off-beat / even). **1-click fixes:** bar start ±1 beat, grid ±½ beat, tempo ½× / 2× – with undo and reset.
+- **Beats per bar (2–7)** as a fix: corrects a wrong time signature from the first "1" on (e.g. librosa's 174 BPM in 3/4 for a song in 87 BPM 4/4: tempo ½× and 4 → the folded bar shows the kick on the "1").
+- **Corrections survive Smoothing:** fixes are kept as steps on top of the analysis; when Smoothing recomputes the bars, the same steps are applied again (before, every fix was lost silently). Undo now also covers beat-table edits; the panel shows how many steps are active.
+- **Expert diagnostics** (folded; click the title): spectrogram, energy spectrum of the "1", the other beats and the off-beats, tempo histogram with ½× / 2× marks – placed above the tempo curve.
+- **Live spectrum** while playing (in the expert diagnostics, mode "Live"): bars on a log frequency axis with peak caps, levels for kick / snare / hats, a flash on every beat, stronger on the "1".
+- The band lanes can be dragged up to twice their height (grip below them; double-click = normal height).
+- Info tooltips on the tiles and diagrams; the tempo curve is folded while the tempo is steady.
+- Unit tests of the web app (`npm test`, Node test runner + esbuild; also in CI).
+
+### Changed
+- The web app accepts the server only when `/api/health` answers with JSON (a dev server answering with HTML no longer counts as server).
+
+### Fixed (in the merged code)
+- Turkish: "vuruş" for *beat* replaced by "beat" (glossary); the new fix panel is called "Ölçü Ayarı", so it no longer has the same name as the Smoothing slider ("Düzeltme").
+- The band curves of a song are computed once per audio file; before, every 1-click fix filtered the whole song again.
+- Not taken over from the parallel development: `bun.lock`, removal of `dist/` and `package-lock.json`, AI Studio dev server settings, unused images.
+
 ## [0.3.2] – 2026-11-17
 
 ### Fixed
