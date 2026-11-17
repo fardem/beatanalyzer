@@ -2,6 +2,10 @@
 
 All points of 0.3.1 passed. This list only has what changed.
 
+**Result (user, 2026-11-17):** 1–3 passed. 4–6 not run – the fresh installation (CUDA download, replacing a CPU
+build, `BEATANALYZER_TORCH`) is only covered by the unit tests (`backend/tests/test_torch_setup.py`), not by a real
+install.
+
 | # | What to do | What should happen |
 |---|---|---|
 | 1 | Get the new version, run `start.bat` | console: `PyTorch: 2.8.0+cu128 (CUDA 12.8 build)` under "Analysis" |

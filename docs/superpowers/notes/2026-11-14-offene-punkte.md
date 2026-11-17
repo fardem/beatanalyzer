@@ -100,6 +100,10 @@ Screenshots aus 0.3.1 (`docs/images/`; Projektname und Timeline-Vorschauen unken
 (Entscheidung Nutzer: andere nicht schlechtmachen) beschreibt die README im Abschnitt „Why BeatAnalyzer“ unsere
 Stärken. Offen: Aussage zu CUDA prüfen.
 
+**Teilprojekt 5 abgeschlossen (0.3.2, 2026-11-17).** Test 0.3.2: Punkte 1–3 bestanden; frische Installation mit
+`torch_setup.py` (CUDA-Download, CPU-Fassung ersetzen, `BEATANALYZER_TORCH`) vom Nutzer nicht durchgeführt – nur durch
+Unit-Tests abgedeckt. Bei der ersten Rückmeldung eines neuen Nutzers darauf achten.
+
 **Nächste Zusammenführung (nach Teilprojekt 5, Nutzer):** parallele Entwicklung des Nutzers mit dem Panel
 „Beat-Evidenz & Takt-Korrektur“ – Onset-Spuren in drei Bändern (Low < 150 Hz Bass/Kick, Mid 150 Hz–2,5 kHz
 Snare/Körper, High > 2,5 kHz Hats/Air) mit Takt-Fähnchen, „gefalteter Takt“ (alle Takte gemittelt, je Band eine
