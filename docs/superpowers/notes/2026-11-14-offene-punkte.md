@@ -96,8 +96,15 @@
 Screenshots aus 0.3.1 (`docs/images/`; Projektname und Timeline-Vorschauen unkenntlich). CHANGELOG ist englisch
 (übersetzt); neue Einträge nur noch englisch. Code-Kommentare, Docstrings und `requirements.txt` englisch
 (2026-11-17; zwei deutsche Konsolenausgaben in `analyzer.py` gefunden und übersetzt). Interne Arbeitsdokumente unter
-`docs/superpowers/` bleiben deutsch (Verlauf). Offen in Teilprojekt 5: Vergleich mit Resolves „Show Beats“
-und mit librosa (bewusst noch nicht in der README – erst Fakten prüfen), Aussage zu CUDA prüfen.
+`docs/superpowers/` bleiben deutsch (Verlauf). Statt eines Vergleichs mit Resolves „Show Beats“/librosa
+(Entscheidung Nutzer: andere nicht schlechtmachen) beschreibt die README im Abschnitt „Why BeatAnalyzer“ unsere
+Stärken. Offen: Aussage zu CUDA prüfen.
+
+**Nächste Zusammenführung (nach Teilprojekt 5, Nutzer):** parallele Entwicklung des Nutzers mit dem Panel
+„Beat-Evidenz & Takt-Korrektur“ – Onset-Spuren in drei Bändern (Low < 150 Hz Bass/Kick, Mid 150 Hz–2,5 kHz
+Snare/Körper, High > 2,5 kHz Hats/Air) mit Takt-Fähnchen, „gefalteter Takt“ (alle Takte gemittelt, je Band eine
+Kurve, Hinweis bei schwach ausgeprägter Kick-Verteilung) und „1-Klick-Taktkorrektur“ (Takt-Start ±1 Beat,
+Beat-Raster ±½ Beat, Tempo ½×/2×, Rückgängig). Danach in README „Why BeatAnalyzer“ ergänzen.
 
 - Ablauf von 0.1.x statt 0.0.5 (Resolve-Fenster mit beiden Wegen, Glätten, Farben, Entfernen, Sprachen, Anzeige
   des Analyse-Programms, Subtitle Track je Spur).

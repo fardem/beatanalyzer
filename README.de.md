@@ -9,10 +9,27 @@ Du startest sie direkt aus einem Fenster in Resolve oder nutzt die Web-App im Br
 
 ![BeatAnalyzer in DaVinci Resolve: Marker auf dem Clip, Subtitles mit Takt und Beat](docs/images/resolve-result.png)
 
+## Warum BeatAnalyzer
+
+- **Takte, nicht nur Beats:** Jeder Beat kennt seinen Takt und seinen Platz im Takt. Die Downbeats kommen vom
+  Modell selbst, und zur Taktart gibt es den Anteil der Takte, die sie wirklich haben.
+- **Ein gleichmäßiges Taktraster, das du steuerst:** Glätten hält die „1“ dort, wo die Musik sie hat, auch durch
+  Intros und Breaks – und du bestimmst, wie streng.
+- **Marker, die man lesen kann:** eine Farbe je Beat des Takts, und jede Marker-Notiz nennt Takt, Beat, Zeit, Tempo
+  und Confidence. Die Subtitles unter dem Song zeigen dasselbe beim Schneiden.
+- **Genau in Resolve:** Marker auf dem Clip und auf jeder Verwendung in der Timeline, auch auf gekürzten Clips;
+  MP3-Dateien werden um die Verzögerung verschoben, mit der Resolve sie abspielt.
+- **Modell nach Wahl:** beat_this (MIT, auch für kommerzielle Arbeiten) oder md_beat_this für nicht-kommerzielle
+  Projekte.
+- **Prüfen vor dem Schnitt:** Wellenform mit Beat-Raster, Kurven des Modells, Loop, Metronom auf den erkannten Beats
+  und eine Beat-Tabelle zum Korrigieren einzelner Beats.
+- **Lokal und privat:** Alles läuft auf deinem PC – kein Upload, kein Konto.
+
 ---
 
 ## Inhalt
 
+- [Warum BeatAnalyzer](#warum-beatanalyzer)
 - [Funktionen](#funktionen)
 - [Voraussetzungen](#voraussetzungen)
 - [Installation (Windows)](#installation-windows)

@@ -9,10 +9,26 @@ You can start it straight from a window inside Resolve, or use the web app in yo
 
 ![BeatAnalyzer in DaVinci Resolve: markers on the clip, subtitles with bar and beat](docs/images/resolve-result.png)
 
+## Why BeatAnalyzer
+
+- **Bars, not just beats:** every beat knows its bar and its place in the bar. Downbeats come from the model
+  itself, and the time signature comes with the share of bars that really have it.
+- **An even bar grid you control:** Smoothing keeps the "1" where the music has it, also through intros and breaks,
+  and you choose how strictly.
+- **Markers you can read:** one colour per beat of the bar, and every marker note says bar, beat, time, tempo and
+  confidence. Subtitles under the song show the same while you edit.
+- **Exact in Resolve:** markers on the clip and on every use in the timeline, also on trimmed clips; MP3 files are
+  shifted by the delay with which Resolve plays them.
+- **Your choice of model:** beat_this (MIT, also for commercial work) or md_beat_this for non-commercial projects.
+- **Check before you cut:** waveform with beat grid, model curves, loop, metronome on the detected beats and a beat
+  table to correct single beats.
+- **Local and private:** everything runs on your PC; no upload, no account.
+
 ---
 
 ## Contents
 
+- [Why BeatAnalyzer](#why-beatanalyzer)
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation (Windows)](#installation-windows)

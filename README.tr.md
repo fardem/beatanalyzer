@@ -9,10 +9,26 @@ Analizi doğrudan Resolve içindeki bir pencereden başlatabilir ya da tarayıc�
 
 ![DaVinci Resolve'da BeatAnalyzer: klipte marker'lar, ölçü ve beat bilgili subtitle'lar](docs/images/resolve-result.png)
 
+## Neden BeatAnalyzer
+
+- **Yalnızca beat değil, ölçü:** her beat kendi ölçüsünü ve ölçüdeki yerini bilir. Downbeat'ler doğrudan modelden
+  gelir; ölçüyle birlikte, gerçekten bu ölçüye sahip ölçülerin payı da gösterilir.
+- **Kontrolü sizde olan düzenli bir ölçü ızgarası:** Düzeltme, „1“i müziğin onu koyduğu yerde tutar – girişlerde ve
+  break'lerde de – ve ne kadar sıkı olacağını siz seçersiniz.
+- **Okunabilir marker'lar:** ölçünün her beat'i için bir renk; her marker notu ölçüyü, beat'i, zamanı, tempoyu ve
+  confidence değerini söyler. Şarkının altındaki subtitle'lar kurgu sırasında aynısını gösterir.
+- **Resolve'da tam isabet:** marker'lar klipte ve Timeline'daki her kullanımında, kırpılmış kliplerde de; MP3
+  dosyaları Resolve'un onları çaldığı gecikme kadar kaydırılır.
+- **Model sizin seçiminiz:** beat_this (MIT, ticari işler için de) veya ticari olmayan projeler için md_beat_this.
+- **Kesmeden önce kontrol:** beat ızgaralı dalga formu, model eğrileri, döngü, algılanan beat'lerde metronom ve tek
+  tek beat'leri düzeltmek için bir beat tablosu.
+- **Yerel ve gizli:** her şey bilgisayarınızda çalışır – yükleme yok, hesap yok.
+
 ---
 
 ## İçindekiler
 
+- [Neden BeatAnalyzer](#neden-beatanalyzer)
 - [Özellikler](#özellikler)
 - [Gereksinimler](#gereksinimler)
 - [Kurulum (Windows)](#kurulum-windows)
