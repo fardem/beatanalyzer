@@ -105,6 +105,11 @@ Stärken. Offen: Aussage zu CUDA prüfen.
 Snare/Körper, High > 2,5 kHz Hats/Air) mit Takt-Fähnchen, „gefalteter Takt“ (alle Takte gemittelt, je Band eine
 Kurve, Hinweis bei schwach ausgeprägter Kick-Verteilung) und „1-Klick-Taktkorrektur“ (Takt-Start ±1 Beat,
 Beat-Raster ±½ Beat, Tempo ½×/2×, Rückgängig). Danach in README „Why BeatAnalyzer“ ergänzen.
+  Festlegungen (Nutzer, 2026-11-17): Die neuen Funktionen bleiben **nur in der Web-App**; Korrekturen kommen über
+  den JSON-Export nach Resolve. Das **Resolve-Fenster gilt als fertig** (Endstand 0.3.x) und wird dafür nicht
+  erweitert. Der gefaltete Takt mittelt schon über den sichtbaren Ausschnitt bzw. einen gewählten Bereich.
+  Beim Zusammenführen prüfen: Korrektur übersteht neues Glätten; Korrektur landet in der Marker-JSON; Texte in
+  `lang/*.json` (EN/DE/TR); Onset-Spuren standardmäßig eingeklappt bzw. an den Zoom gekoppelt.
 
 - Ablauf von 0.1.x statt 0.0.5 (Resolve-Fenster mit beiden Wegen, Glätten, Farben, Entfernen, Sprachen, Anzeige
   des Analyse-Programms, Subtitle Track je Spur).
