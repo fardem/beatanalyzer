@@ -27,9 +27,9 @@
     },
     "model_line": "Model: {name} – use under the {license} licence",
     "marker_cue": "Cue {n}",
-    "marker_section_up": "Section ▲ {db} dB",
-    "marker_section_down": "Section ▼ {db} dB",
-    "marker_section_change": "Section ◆"
+    "marker_section_up": "Section {label} ▲ {db} dB",
+    "marker_section_down": "Section {label} ▼ {db} dB",
+    "marker_section_change": "Section {label} ◆"
   },
   "plugin": {
     "msg_not_json": "The file is not a BeatAnalyzer marker JSON.",
@@ -587,11 +587,10 @@
       "subtitle": "Where the song changes – and where you are while listening",
       "strip_title": "Song structure",
       "help_label": "Song structure explanation",
-      "help_summary": "Loudness per bar over the whole song. Where the sound changes clearly (intro → verse, build-up → drop, chorus → break), BeatAnalyzer marks a section change – always on a “1”, because that is where a cut on the change belongs.",
-      "help_1": "Green ▲: the song gets louder or fuller (chorus, drop) – a strong place for a hard cut or a new scene.",
-      "help_2": "Blue ▼: the song gets quieter (break, bridge, outro) – good for calm shots, slow motion or a fade. Violet ◆: the sound changes at about the same loudness.",
-      "help_3": "Amber line: playhead. Yellow flags: your cue marks.",
-      "help_tip": "Click the strip or a section button to jump to the “1” there. Section changes go into the DaVinci Resolve export as purple markers. They are a guide from the levels, not a musical analysis – listen before you rely on them.",
+      "help_summary": "Where the song changes and which parts come back. BeatAnalyzer compares every bar with every other – by its notes (chords), its sound colour (instruments) and its loudness – and marks a section change where the bars before differ clearly from the bars after: always on a “1”, because that is where a cut on the change belongs.",
+      "help_1": "Letters: the same letter means the same material – B, then later B again = the chorus comes back. Good for repeating a cut pattern or a look.",
+      "help_2": "▲ louder (chorus, drop) – strong place for a hard cut. ▼ quieter (break, bridge) – calm shots, slow motion, a fade. ◆ different at about the same loudness (new chords or instruments).",
+      "help_tip": "Click the strip or a section button to jump to the “1” there. Section changes go into the DaVinci Resolve export as purple markers (“Section B ▲ +5 dB”). It is computed from the sound, not a musical analysis – listen before you rely on it.",
       "count": "{n} sections",
       "none": "Too few bars for a song structure",
       "hover": "Bar {bar} · {time} · {db} dB",
@@ -600,7 +599,9 @@
       "kind_down": "quieter {db} dB",
       "kind_change": "change",
       "bar": "Bar {bar}",
-      "chip_tip": "{bars} bars – click to jump to the “1”"
+      "chip_tip": "{bars} bars – click to jump to the “1”",
+      "label_tip": "Same letter = same part of the song (e.g. the chorus)",
+      "help_3": "Amber line: playhead. Yellow flags: your cue marks."
     },
     "live": {
       "title": "Live (while playing)",

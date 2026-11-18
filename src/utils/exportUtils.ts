@@ -18,7 +18,8 @@ export function generateAudacityLabels(result: AnalysisResult, options: ResolveM
   (options.cues ?? []).forEach((time, k) => lines.push(`${time.toFixed(6)}\t${time.toFixed(6)}\tCue ${k + 1}`));
   for (const s of options.sections ?? []) {
     const arrow = s.kind === 'up' ? '▲' : s.kind === 'down' ? '▼' : '◆';
-    lines.push(`${s.time.toFixed(6)}\t${s.time.toFixed(6)}\tSection ${arrow} ${s.delta > 0 ? '+' : ''}${s.delta.toFixed(0)} dB`);
+    const name = s.label ? `Section ${s.label}` : 'Section';
+    lines.push(`${s.time.toFixed(6)}\t${s.time.toFixed(6)}\t${name} ${arrow} ${s.delta > 0 ? '+' : ''}${s.delta.toFixed(0)} dB`);
   }
   return lines.join('\n');
 }
@@ -182,7 +183,7 @@ export interface ResolveMarkerOptions {
   /** cue marks set while listening (times of the beats they sit on) */
   cues?: number[];
   /** section changes of the song structure (on their "1"), without the start of the song */
-  sections?: { time: number; kind: 'up' | 'down' | 'change'; delta: number }[];
+  sections?: { time: number; kind: 'up' | 'down' | 'change'; delta: number; label?: string }[];
 }
 
 /** index of the beat at `time` (within 1 ms), or -1 */
@@ -214,7 +215,7 @@ export function generateResolveMarkerJson(
     const i = beatIndexAt(result.beats, time);
     if (i >= 0 && !cueAt.has(i)) cueAt.set(i, k + 1);
   });
-  const sectionAt = new Map<number, { kind: string; delta: number }>();
+  const sectionAt = new Map<number, { kind: string; delta: number; label?: string }>();
   for (const s of options.sections ?? []) {
     const i = beatIndexAt(result.beats, s.time);
     if (i >= 0) sectionAt.set(i, s);
@@ -238,7 +239,11 @@ export function generateResolveMarkerJson(
       confidence: b.confidence,
       ...(cueAt.has(i) ? { cue: cueAt.get(i) } : {}),
       ...(sectionAt.has(i)
-        ? { section: sectionAt.get(i)!.kind, sectionDelta: Math.round(sectionAt.get(i)!.delta * 10) / 10 }
+        ? {
+            section: sectionAt.get(i)!.kind,
+            sectionDelta: Math.round(sectionAt.get(i)!.delta * 10) / 10,
+            ...(sectionAt.get(i)!.label ? { sectionLabel: sectionAt.get(i)!.label } : {}),
+          }
         : {}),
     })),
     ...(result.engineInfo ? { engine: result.engineInfo } : {}),

@@ -26,8 +26,7 @@ import {
   PanelLayout,
   saveLayout,
 } from './utils/panelLayout';
-import { computeSongStructure, nearestBeatIndex } from './utils/songStructure';
-import { bandEvidence } from './utils/beatEvidence';
+import { barFeatures, computeSongStructure, nearestBeatIndex } from './utils/songStructure';
 import { BeatTable } from './components/BeatTable';
 import { applyGridOps, GridOp, opsFromBeatEdit } from './utils/beatTransforms';
 import { ExportModal } from './components/ExportModal';
@@ -319,11 +318,11 @@ export default function App() {
     []
   );
 
-  // song structure: band levels per bar, section changes on a "1"; follows grid corrections
+  // song structure: harmony, sound colour and level per bar, section changes on a "1"; follows grid corrections
   const structure = useMemo(() => {
     if (!result || !audioBuffer) return null;
-    const bands = bandEvidence(audioBuffer);
-    return computeSongStructure(result.beats, result.metadata.duration, bands.frameRate, bands.lowBand, bands.midBand, bands.highBand);
+    const features = barFeatures(audioBuffer, result.beats);
+    return features ? computeSongStructure(features, result.metadata.duration) : null;
   }, [result, audioBuffer]);
 
   // a cue goes on the nearest beat (Shift: the nearest "1"); a second cue on the same beat is ignored
@@ -367,7 +366,7 @@ export default function App() {
       cues: cues.map((c) => c.time),
       sections: (structure?.sections ?? [])
         .filter((x) => x.kind !== 'start')
-        .map((x) => ({ time: x.time, kind: x.kind as 'up' | 'down' | 'change', delta: x.delta })),
+        .map((x) => ({ time: x.time, kind: x.kind as 'up' | 'down' | 'change', delta: x.delta, label: x.label })),
     }),
     [cues, structure]
   );

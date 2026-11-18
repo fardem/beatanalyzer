@@ -28,9 +28,9 @@
     },
     "model_line": "Model: {name} – {license} lisansı kapsamında kullanım",
     "marker_cue": "Cue {n}",
-    "marker_section_up": "Bölüm ▲ {db} dB",
-    "marker_section_down": "Bölüm ▼ {db} dB",
-    "marker_section_change": "Bölüm ◆"
+    "marker_section_up": "Bölüm {label} ▲ {db} dB",
+    "marker_section_down": "Bölüm {label} ▼ {db} dB",
+    "marker_section_change": "Bölüm {label} ◆"
   },
   "plugin": {
     "msg_not_json": "Dosya bir BeatAnalyzer marker JSON'u değil.",
@@ -588,11 +588,10 @@
       "subtitle": "Şarkının nerede değiştiği – ve dinlerken nerede olduğun",
       "strip_title": "Şarkı yapısı",
       "help_label": "Şarkı yapısı açıklaması",
-      "help_summary": "Tüm şarkı boyunca ölçü başına ses seviyesi. Sesin belirgin şekilde değiştiği yerlerde (intro → kıta, yükseliş → drop, nakarat → break) BeatAnalyzer bir bölüm değişimi işaretler – her zaman bir “1” üzerinde, çünkü değişimdeki kesme oraya aittir.",
-      "help_1": "Yeşil ▲: şarkı yükseliyor veya doluyor (nakarat, drop) – sert bir kesme ya da yeni sahne için güçlü bir yer.",
-      "help_2": "Mavi ▼: şarkı sakinleşiyor (break, köprü, outro) – sakin çekimler, ağır çekim veya geçiş için iyi. Mor ◆: ses aşağı yukarı aynı seviyede değişiyor.",
-      "help_3": "Sarı çizgi: çalma konumu. Sarı bayraklar: cue işaretlerin.",
-      "help_tip": "Şeride veya bir bölüm düğmesine tıklamak oradaki “1”e atlar. Bölüm değişimleri DaVinci Resolve dışa aktarımına mor marker olarak girer. Seviyelerden çıkan bir ipucudur, müzikal bir analiz değil – güvenmeden önce dinle.",
+      "help_summary": "Şarkının nerede değiştiği ve hangi kısımların geri geldiği. BeatAnalyzer her ölçüyü diğer tüm ölçülerle karşılaştırır – notalarına (akorlar), ses rengine (enstrümanlar) ve ses seviyesine göre – ve önceki ölçüler sonrakilerden belirgin şekilde farklı olduğunda bir bölüm değişimi işaretler: her zaman bir “1” üzerinde, çünkü değişimdeki kesme oraya aittir.",
+      "help_1": "Harfler: aynı harf aynı malzeme demektir – B, sonra yine B = nakarat geri geliyor. Bir kesme düzenini veya görünümü tekrarlamak için iyi.",
+      "help_2": "▲ daha yüksek (nakarat, drop) – sert bir kesme için güçlü yer. ▼ daha sakin (break, köprü) – sakin çekimler, ağır çekim, geçiş. ◆ aşağı yukarı aynı seviyede farklı (yeni akorlar veya enstrümanlar).",
+      "help_tip": "Şeride veya bir bölüm düğmesine tıklamak oradaki “1”e atlar. Bölüm değişimleri DaVinci Resolve dışa aktarımına mor marker olarak girer (“Bölüm B ▲ +5 dB”). Sesten hesaplanır, müzikal bir analiz değildir – güvenmeden önce dinle.",
       "count": "{n} bölüm",
       "none": "Şarkı yapısı için ölçü sayısı az",
       "hover": "Ölçü {bar} · {time} · {db} dB",
@@ -601,7 +600,9 @@
       "kind_down": "daha sakin {db} dB",
       "kind_change": "değişim",
       "bar": "Ölçü {bar}",
-      "chip_tip": "{bars} ölçü – tıklayınca “1”e atlar"
+      "chip_tip": "{bars} ölçü – tıklayınca “1”e atlar",
+      "label_tip": "Aynı harf = şarkının aynı kısmı (örn. nakarat)",
+      "help_3": "Sarı çizgi: çalma konumu. Sarı bayraklar: cue işaretlerin."
     },
     "live": {
       "title": "Canlı (çalarken)",

@@ -432,6 +432,11 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(self.M.marker_name(up), "Section ▲ +6 dB – Bar 33")
         self.assertEqual(self.M.marker_name(down), "Section ▼ −5 dB – Bar 49")
         self.assertEqual(self.M.marker_name(plain), "12.3")
+        lettered = self.lua.table_from({"type": "downbeat", "bar": 33, "beat": 1, "section": "up", "sectionDelta": 6.4,
+                                        "sectionLabel": "B"})
+        self.assertEqual(self.M.marker_name(lettered), "Section B ▲ +6 dB – Bar 33")
+        change = self.lua.table_from({"type": "downbeat", "bar": 9, "beat": 1, "section": "change", "sectionLabel": "C"})
+        self.assertEqual(self.M.marker_name(change), "Section C ◆ – Bar 9")
 
     def test_only_downbeats_by_colors(self):
         msg = self.run_apply(colors={"downbeat": "Red", "beat2": "none", "beat3": "none", "beat4": "none", "other": "none"})

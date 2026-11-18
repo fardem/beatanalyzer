@@ -27,9 +27,9 @@
     },
     "model_line": "Model: {name} – Nutzung im Rahmen der {license}-Lizenz",
     "marker_cue": "Cue {n}",
-    "marker_section_up": "Abschnitt ▲ {db} dB",
-    "marker_section_down": "Abschnitt ▼ {db} dB",
-    "marker_section_change": "Abschnitt ◆"
+    "marker_section_up": "Abschnitt {label} ▲ {db} dB",
+    "marker_section_down": "Abschnitt {label} ▼ {db} dB",
+    "marker_section_change": "Abschnitt {label} ◆"
   },
   "plugin": {
     "msg_not_json": "Die Datei ist keine Marker-JSON von BeatAnalyzer.",
@@ -587,11 +587,10 @@
       "subtitle": "Wo sich der Song ändert – und wo du beim Anhören gerade bist",
       "strip_title": "Songstruktur",
       "help_label": "Erklärung zur Songstruktur",
-      "help_summary": "Lautstärke je Takt über den ganzen Song. Wo sich der Klang deutlich ändert (Intro → Strophe, Aufbau → Drop, Refrain → Break), setzt BeatAnalyzer einen Abschnittswechsel – immer auf eine „1“, denn dort gehört ein Schnitt auf den Wechsel hin.",
-      "help_1": "Grün ▲: Der Song wird lauter oder voller (Refrain, Drop) – eine starke Stelle für einen harten Schnitt oder eine neue Szene.",
-      "help_2": "Blau ▼: Der Song wird leiser (Break, Bridge, Outro) – gut für ruhige Bilder, Zeitlupe oder eine Blende. Violett ◆: Der Klang ändert sich bei etwa gleicher Lautstärke.",
-      "help_3": "Gelbe Linie: Abspielposition. Gelbe Fähnchen: deine Cue-Marken.",
-      "help_tip": "Klick in den Streifen oder auf einen Abschnitt springt zur „1“ dort. Die Abschnittswechsel gehen als lila Marker in den DaVinci-Resolve-Export. Sie sind ein Hinweis aus den Pegeln, keine musikalische Analyse – vorher anhören.",
+      "help_summary": "Wo sich der Song ändert und welche Teile wiederkommen. BeatAnalyzer vergleicht jeden Takt mit jedem anderen – nach Tönen (Akkorden), Klangfarbe (Instrumenten) und Lautstärke – und setzt einen Abschnittswechsel, wo sich die Takte davor deutlich von denen danach unterscheiden: immer auf eine „1“, denn dort gehört ein Schnitt auf den Wechsel hin.",
+      "help_1": "Buchstaben: gleicher Buchstabe heißt gleiches Material – B und später wieder B = der Refrain kommt wieder. Gut, um ein Schnittmuster oder einen Look zu wiederholen.",
+      "help_2": "▲ lauter (Refrain, Drop) – starke Stelle für einen harten Schnitt. ▼ leiser (Break, Bridge) – ruhige Bilder, Zeitlupe, Blende. ◆ anders bei etwa gleicher Lautstärke (neue Akkorde oder Instrumente).",
+      "help_tip": "Klick in den Streifen oder auf einen Abschnitt springt zur „1“ dort. Abschnittswechsel gehen als lila Marker in den DaVinci-Resolve-Export („Abschnitt B ▲ +5 dB“). Berechnet aus dem Klang, keine musikalische Analyse – vorher anhören.",
       "count": "{n} Abschnitte",
       "none": "Zu wenige Takte für eine Songstruktur",
       "hover": "Takt {bar} · {time} · {db} dB",
@@ -600,7 +599,9 @@
       "kind_down": "leiser {db} dB",
       "kind_change": "Wechsel",
       "bar": "Takt {bar}",
-      "chip_tip": "{bars} Takte – Klick springt zur „1“"
+      "chip_tip": "{bars} Takte – Klick springt zur „1“",
+      "label_tip": "Gleicher Buchstabe = gleicher Teil des Songs (z. B. der Refrain)",
+      "help_3": "Gelbe Linie: Abspielposition. Gelbe Fähnchen: deine Cue-Marken."
     },
     "live": {
       "title": "Live (beim Abspielen)",
