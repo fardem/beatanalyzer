@@ -26,7 +26,7 @@ colours). Before: get the new version, `start.bat` (the updater also installs th
 | 8 | Press play | big bar number, the beats light up in turn (the "1" in rose), "Next section: bar …, in … bars"; **no** countdown to the next "1" any more; spectrum moves, flash on every beat |
 | 8a | Button **Bar counter** next to "Live (while playing)", while playing and while paused | the counter disappears, the spectrum takes the full width (not stretched); again: back; kept after reload |
 | 8b | A song with many sections, or a narrow window: hold the mouse on the section buttons and swipe left / right | no scrollbar; the row moves with the mouse, the edges fade where more buttons are; letting go after a swipe does **not** jump; a plain click jumps; while playing the row follows the playing section |
-| 9 | While playing press **M** twice at different places, then **Shift+M** | yellow flags in the strip, buttons "Cue 1 · 12.3 · 0:23.4"; Shift+M lands on a "1" (x.1); click jumps there, × removes |
+| 9 | While playing press **M** twice at different places, then **Shift+M** (or click *Set cue* on the right of the "Song structure" title) | yellow flags in the strip; yellow buttons "Cue 1 · 12.3 · 0:23.4" in the row **between the sections**, by time; Shift+M lands on a "1" (x.1); click jumps there, × removes, the bin next to *Set cue* removes all |
 | 10 | Set a cue, then **+1 beat** in the fix panel | the cue stays on a beat of the new grid |
 
 ## Beat evidence (0.4.0, layout 0.5.0)

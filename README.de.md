@@ -231,9 +231,11 @@ brauchen keinen Ausgleich – das Fenster sagt es dann.
   Geschwindigkeit 0,5× bis 1,5×, Tap-Tempo.
 - **Songstruktur & Live:** Pegel je Takt über den Song; Abschnittswechsel (▲ lauter, ▼ leiser, ◆ anders) sitzen auf
   ihrer „1“ – Klick springt hin, die Abschnitts-Knöpfe lassen sich mit gedrückter Maus wischen. Beim Abspielen: ein
-  Taktzähler (aktueller Takt und Beat, nächster Abschnitt; ausblendbar) und das Live-Spektrum (Blitz auf jedem Beat, stärker auf der „1“). **M** setzt eine Cue-Marke auf den nächsten
-  Beat (Umschalt+M: auf die nächste „1“). Cue-Marken und Abschnittswechsel gehen als gelbe und lila Marker in den
-  Resolve-Export und in die Audacity-Labels.
+  Taktzähler (aktueller Takt und Beat, nächster Abschnitt; ausblendbar) und das Live-Spektrum (Blitz auf jedem Beat,
+  stärker auf der „1“). **M** – oder *Cue setzen* rechts neben dem Titel „Songstruktur“ – setzt eine
+  Cue-Marke auf den nächsten Beat (Umschalt+M: auf die nächste „1“); Cues stehen als gelbe Knöpfe zwischen den
+  Abschnitten. Cue-Marken und Abschnittswechsel gehen als gelbe und lila Marker in den Resolve-Export und in die
+  Audacity-Labels.
 
 ![Songstruktur und Live-Ansicht](docs/images/web-structure-live.png)
 

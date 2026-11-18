@@ -623,14 +623,12 @@
       "help_label": "Cue işaretleri açıklaması",
       "help_summary": "Kesme noktalarını dinlerken, durmadan işaretle: kesmek istediğin yerde M'ye bas. İşaret en yakın beat'e oturur, böylece Resolve'da da beat üzerindedir.",
       "help_1": "M = en yakın beat, Shift+M = en yakın “1” (ölçü başı).",
-      "help_2": "Cue'lar DaVinci Resolve dışa aktarımına “Cue 1”, “Cue 2” … adlı sarı marker olarak ve Audacity etiketlerine girer.",
+      "help_2": "Cue'lar şeritte sarı bayrak, altındaki sırada bölümlerin arasında sarı düğme olarak görünür. DaVinci Resolve dışa aktarımına “Cue 1”, “Cue 2” … adlı sarı marker olarak ve Audacity etiketlerine girer.",
       "help_tip": "İpucu: geç basmaktansa biraz erken bas – işaret en yakın beat'e oturur. Bir cue'ya tıklamak oraya atlar, × siler. Cue'lar ölçü ayarlarını takip eder.",
-      "empty": "Henüz cue yok – dinlerken M'ye bas",
       "name": "Cue {n}",
       "jump": "Buraya atla",
       "remove": "Cue'yu sil",
-      "clear": "Tümünü sil",
-      "export_note": "→ Resolve dışa aktarımında sarı marker"
+      "clear": "Tümünü sil"
     },
     "layout": {
       "grip": "{panel} panelini taşı",

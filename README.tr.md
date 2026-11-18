@@ -224,9 +224,10 @@ atlamaz). BeatAnalyzer kesin gecikmeyi dosyadan okur ve marker'larla subtitle'la
   tap tempo.
 - **Şarkı yapısı ve canlı:** şarkı boyunca ölçü başına seviye; bölüm değişimleri (▲ daha yüksek, ▼ daha sakin,
   ◆ farklı) kendi “1”lerinde durur – tıklayınca oraya atlar, bölüm düğmeleri fare basılıyken kaydırılabilir.
-  Çalarken: bir ölçü sayacı (geçerli ölçü ve beat, sonraki bölüm; gizlenebilir) ve canlı spektrum (her beat'te parlama, “1”de daha güçlü). **M** en yakın beat'e bir cue işareti
-  koyar (Shift+M: en yakın “1”e). Cue işaretleri ve bölüm değişimleri Resolve dışa aktarımına sarı ve mor marker
-  olarak, Audacity etiketlerine de girer.
+  Çalarken: bir ölçü sayacı (geçerli ölçü ve beat, sonraki bölüm; gizlenebilir) ve canlı spektrum (her beat'te
+  parlama, “1”de daha güçlü). **M** – ya da “Şarkı yapısı” başlığının sağındaki *Cue koy* – en yakın beat'e bir
+  cue işareti koyar (Shift+M: en yakın “1”e); cue'lar bölümlerin arasında sarı düğme olarak durur. Cue işaretleri ve
+  bölüm değişimleri Resolve dışa aktarımına sarı ve mor marker olarak, Audacity etiketlerine de girer.
 
 ![Şarkı yapısı ve canlı görünüm](docs/images/web-structure-live.png)
 

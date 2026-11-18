@@ -222,9 +222,10 @@ window shows it before and after. MP3 files without that delay need no correctio
   tap tempo.
 - **Song structure & live:** level per bar over the song; section changes (▲ louder, ▼ quieter, ◆ different) sit on
   their "1" – click or swipe the section buttons (mouse held down) to move along. While playing: a bar counter
-  (current bar and beat, the next section; can be hidden) and the live spectrum (flash on every beat, stronger on the "1"). **M** sets a cue mark on the nearest beat
-  (Shift+M: on the nearest "1"). Cue marks and section changes go into the Resolve export as yellow and purple
-  markers, and into the Audacity labels.
+  (current bar and beat, the next section; can be hidden) and the live spectrum (flash on every beat, stronger on
+  the "1"). **M** – or *Set cue* on the right of the "Song structure" title – sets a cue mark on
+  the nearest beat (Shift+M: on the nearest "1"); cues stand as yellow buttons between the sections. Cue marks and
+  section changes go into the Resolve export as yellow and purple markers, and into the Audacity labels.
 
 ![Song structure and live view](docs/images/web-structure-live.png)
 

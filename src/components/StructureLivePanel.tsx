@@ -240,6 +240,13 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
     };
   }, [beats, currentTime, result.timeSignature.numerator, structure]);
 
+  // sections and cue marks in one row, sorted by time (cues numbered in time order, as in the export)
+  type ChipItem = { kind: 'section'; time: number; s: SongSection } | { kind: 'cue'; time: number; n: number; index: number };
+  const chipItems: ChipItem[] = [
+    ...(structure && structure.sections.length > 1 ? structure.sections.map((s) => ({ kind: 'section' as const, time: s.time, s })) : []),
+    ...cues.map((c, index) => ({ kind: 'cue' as const, time: c.time, n: index + 1, index })),
+  ].sort((x, y) => x.time - y.time || (x.kind === 'section' ? -1 : 1));
+
   const cueLabel = (c: CueMark) => {
     const i = nearestBeatIndex(beats, c.time);
     const b = i >= 0 ? beats[i] : null;
@@ -250,8 +257,8 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
     <div className="space-y-4">
       {/* song structure */}
       <div className="space-y-1.5">
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span className="font-medium text-slate-300">{t('web.structure.strip_title')}</span>
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <span className="font-medium text-slate-300 whitespace-nowrap">{t('web.structure.strip_title')}</span>
           <DiagramInfoTooltip
             buttonLabel={t('web.structure.help_label')}
             help={{
@@ -266,9 +273,45 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
             }}
           />
           {structure && structure.sections.length > 1 && (
-            <span className="text-slate-500">{t('web.structure.count', { n: structure.sections.length })}</span>
+            <span className="text-slate-500 whitespace-nowrap">{t('web.structure.count', { n: structure.sections.length })}</span>
           )}
-          {hover && <span className="ml-auto font-mono tabular-nums text-slate-300">{hover.text}</span>}
+          <span className="flex-1 min-w-0 truncate font-mono tabular-nums text-slate-300">{hover?.text}</span>
+          {/* cue marks: set here, shown as flags in the strip and as buttons between the sections */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={(e) => onAddCue(e.shiftKey)}
+              title={t('web.cue.add_tip')}
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-yellow-600/70 bg-yellow-950/50 text-[11px] font-semibold text-yellow-200 hover:bg-yellow-900/60 cursor-pointer"
+            >
+              <Flag className="w-3 h-3" />
+              {t('web.cue.add')}
+              <kbd className="px-1 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-300">M</kbd>
+            </button>
+            {cues.length > 0 && (
+              <button
+                type="button"
+                onClick={onClearCues}
+                aria-label={t('web.cue.clear')}
+                title={t('web.cue.clear')}
+                className="p-1 rounded-md text-slate-500 hover:text-rose-300 hover:bg-slate-800 cursor-pointer"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+            <DiagramInfoTooltip
+              buttonLabel={t('web.cue.help_label')}
+              help={{
+                title: t('web.cue.title'),
+                summary: t('web.cue.help_summary'),
+                items: [
+                  { color: 'amber', text: t('web.cue.help_1') },
+                  { color: 'rose', text: t('web.cue.help_2') },
+                ],
+                actionTip: t('web.cue.help_tip'),
+              }}
+            />
+          </div>
         </div>
         <div ref={wrapRef} className="relative h-20 w-full rounded-xl bg-slate-950/90 border border-slate-800/80 overflow-hidden">
           <canvas
@@ -285,15 +328,37 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
             </div>
           )}
         </div>
-        {structure && structure.sections.length > 1 && (
-          <SectionChips
-            activeIndex={structure.sections.findIndex((s) => currentTime >= s.time - 0.02 && currentTime < s.end)}
-          >
-            {structure.sections.map((s) => {
+        {/* sections and cue marks in one row, by time; swipe it with the mouse held down */}
+        {chipItems.length > 1 && (
+          <SectionChips activeIndex={chipItems.findIndex((c) => c.kind === 'section' && currentTime >= c.s.time - 0.02 && currentTime < c.s.end)}>
+            {chipItems.map((c) => {
+              if (c.kind === 'cue') {
+                return (
+                  <span
+                    key={`cue-${c.time}`}
+                    className="shrink-0 inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-lg border border-yellow-600/70 bg-yellow-950/40 text-[11px] font-mono tabular-nums text-yellow-100 whitespace-nowrap"
+                  >
+                    <button type="button" onClick={() => onSeek(c.time)} className="inline-flex items-center gap-1 cursor-pointer hover:text-white" title={t('web.cue.jump')}>
+                      <Flag className="w-3 h-3 text-yellow-400" />
+                      {t('web.cue.name', { n: c.n })} · {cueLabel({ time: c.time })}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveCue(c.index)}
+                      aria-label={t('web.cue.remove')}
+                      title={t('web.cue.remove')}
+                      className="p-0.5 rounded text-yellow-200/50 hover:text-rose-300 cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                );
+              }
+              const s = c.s;
               const active = currentTime >= s.time - 0.02 && currentTime < s.end;
               return (
                 <button
-                  key={s.bar}
+                  key={`sec-${s.bar}`}
                   type="button"
                   onClick={() => onSeek(s.time)}
                   title={t('web.structure.chip_tip', { bars: s.bars })}
@@ -383,66 +448,6 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
       </div>
       </div>
 
-      {/* cue marks */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <button
-          type="button"
-          onClick={(e) => onAddCue(e.shiftKey)}
-          title={t('web.cue.add_tip')}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-yellow-600/70 bg-yellow-950/40 text-[11px] font-semibold text-yellow-200 hover:bg-yellow-900/50 cursor-pointer"
-        >
-          <Flag className="w-3 h-3" />
-          {t('web.cue.add')}
-          <kbd className="ml-1 px-1 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-300">M</kbd>
-        </button>
-        <DiagramInfoTooltip
-          buttonLabel={t('web.cue.help_label')}
-          help={{
-            title: t('web.cue.title'),
-            summary: t('web.cue.help_summary'),
-            items: [
-              { color: 'amber', text: t('web.cue.help_1') },
-              { color: 'rose', text: t('web.cue.help_2') },
-            ],
-            actionTip: t('web.cue.help_tip'),
-          }}
-        />
-        {cues.length === 0 ? (
-          <span className="text-[11px] text-slate-500">{t('web.cue.empty')}</span>
-        ) : (
-          <>
-            {cues.map((c, i) => (
-              <span
-                key={`${c.time}-${i}`}
-                className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md border border-yellow-700/60 bg-slate-900 text-[11px] font-mono tabular-nums text-yellow-100"
-              >
-                <button type="button" onClick={() => onSeek(c.time)} className="cursor-pointer hover:text-white" title={t('web.cue.jump')}>
-                  {t('web.cue.name', { n: i + 1 })} · {cueLabel(c)}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onRemoveCue(i)}
-                  aria-label={t('web.cue.remove')}
-                  title={t('web.cue.remove')}
-                  className="p-0.5 rounded text-slate-500 hover:text-rose-300 cursor-pointer"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-            <button
-              type="button"
-              onClick={onClearCues}
-              title={t('web.cue.clear')}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] text-slate-500 hover:text-rose-300 cursor-pointer"
-            >
-              <Trash2 className="w-3 h-3" />
-              {t('web.cue.clear')}
-            </button>
-            <span className="text-[10px] text-slate-500">{t('web.cue.export_note')}</span>
-          </>
-        )}
-      </div>
     </div>
   );
 };

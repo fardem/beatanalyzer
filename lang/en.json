@@ -622,14 +622,12 @@
       "help_label": "Cue marks explanation",
       "help_summary": "Mark cut points while listening, without stopping: press M where you want a cut. The mark snaps to the nearest beat, so it is on the beat in Resolve too.",
       "help_1": "M = nearest beat, Shift+M = nearest “1” (start of the bar).",
-      "help_2": "Cues go into the DaVinci Resolve export as yellow markers named “Cue 1”, “Cue 2” … and into the Audacity labels.",
+      "help_2": "Cues appear as yellow flags in the strip and as yellow buttons in the row below, between the sections. They go into the DaVinci Resolve export as yellow markers named “Cue 1”, “Cue 2” … and into the Audacity labels.",
       "help_tip": "Tip: rather press a little early than late – the mark snaps to the nearest beat. Click a cue to jump there, × removes it. Cues follow grid fixes.",
-      "empty": "No cues yet – press M while listening",
       "name": "Cue {n}",
       "jump": "Jump here",
       "remove": "Remove cue",
-      "clear": "Remove all",
-      "export_note": "→ yellow markers in the Resolve export"
+      "clear": "Remove all"
     },
     "layout": {
       "grip": "Move panel {panel}",

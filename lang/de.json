@@ -622,14 +622,12 @@
       "help_label": "Erklärung zu Cue-Marken",
       "help_summary": "Schnittpunkte beim Anhören markieren, ohne anzuhalten: an der Stelle M drücken, an der geschnitten werden soll. Die Marke rastet auf den nächsten Beat, sitzt also auch in Resolve im Takt.",
       "help_1": "M = nächster Beat, Umschalt+M = nächste „1“ (Taktanfang).",
-      "help_2": "Cue-Marken gehen als gelbe Marker „Cue 1“, „Cue 2“ … in den DaVinci-Resolve-Export und in die Audacity-Labels.",
+      "help_2": "Cue-Marken erscheinen als gelbe Fähnchen im Streifen und als gelbe Knöpfe in der Reihe darunter, zwischen den Abschnitten. Sie gehen als gelbe Marker „Cue 1“, „Cue 2“ … in den DaVinci-Resolve-Export und in die Audacity-Labels.",
       "help_tip": "Tipp: Lieber etwas zu früh als zu spät drücken – die Marke rastet auf den nächsten Beat. Klick auf eine Marke springt hin, × entfernt sie. Cue-Marken folgen Takt-Korrekturen.",
-      "empty": "Noch keine Cue-Marken – beim Anhören M drücken",
       "name": "Cue {n}",
       "jump": "Hierhin springen",
       "remove": "Cue-Marke entfernen",
-      "clear": "Alle entfernen",
-      "export_note": "→ gelbe Marker im Resolve-Export"
+      "clear": "Alle entfernen"
     },
     "layout": {
       "grip": "Bereich {panel} verschieben",

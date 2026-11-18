@@ -9,6 +9,8 @@
 - **Bar counter** of the live view: the countdown to the next "1" is gone (it confused more than it helped – the
   beat row shows it anyway). The counter can be hidden with the button "Bar counter"; the live spectrum then takes
   the full width (kept in the browser).
+- **Cue marks** belong to the song structure now: *Set cue* (with "remove all" and help) sits on the right of the
+  "Song structure" title; the cue buttons stand in the swipeable row between the sections (yellow, by time). The separate cue row below the live view is gone.
 
 ### Fixed
 - The live spectrum is drawn again when its size changes while paused (before, the last frame was stretched).
