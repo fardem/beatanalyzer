@@ -8,12 +8,18 @@ import { AnalysisResult } from '../types/analyzer';
  * - Standard MIDI Click Track (.mid)
  */
 
-export function generateAudacityLabels(result: AnalysisResult): string {
+export function generateAudacityLabels(result: AnalysisResult, options: ResolveMarkerOptions = {}): string {
   const lines: string[] = [];
   result.beats.forEach((b) => {
     const label = b.isDownbeat ? `[Bar ${b.barIndex}] ${b.beatInBar}` : `${b.barIndex}.${b.beatInBar}`;
     lines.push(`${b.time.toFixed(6)}\t${b.time.toFixed(6)}\t${label}`);
   });
+  // cue marks and section changes as own labels at the same time
+  (options.cues ?? []).forEach((time, k) => lines.push(`${time.toFixed(6)}\t${time.toFixed(6)}\tCue ${k + 1}`));
+  for (const s of options.sections ?? []) {
+    const arrow = s.kind === 'up' ? '▲' : s.kind === 'down' ? '▼' : '◆';
+    lines.push(`${s.time.toFixed(6)}\t${s.time.toFixed(6)}\tSection ${arrow} ${s.delta > 0 ? '+' : ''}${s.delta.toFixed(0)} dB`);
+  }
   return lines.join('\n');
 }
 
@@ -166,6 +172,24 @@ export const RESOLVE_MARKER_FORMAT = 'beatthis-resolve-markers/1';
 
 export interface ResolveMarkerOptions {
   onlyDownbeats?: boolean;
+  /** cue marks set while listening (times of the beats they sit on) */
+  cues?: number[];
+  /** section changes of the song structure (on their "1"), without the start of the song */
+  sections?: { time: number; kind: 'up' | 'down' | 'change'; delta: number }[];
+}
+
+/** index of the beat at `time` (within 1 ms), or -1 */
+function beatIndexAt(beats: { time: number }[], time: number): number {
+  let best = -1;
+  let bestD = 0.001;
+  beats.forEach((b, i) => {
+    const d = Math.abs(b.time - time);
+    if (d <= bestD) {
+      bestD = d;
+      best = i;
+    }
+  });
+  return best;
 }
 
 /**
@@ -177,20 +201,38 @@ export function generateResolveMarkerJson(
   options: ResolveMarkerOptions = {}
 ): string {
   const isMdBeatThis = result.engineInfo?.id === 'md_beat_this';
-  const beats = options.onlyDownbeats ? result.beats.filter((b) => b.isDownbeat) : result.beats;
+  // cue marks and section changes go onto the marker of their beat (Resolve keeps one marker per frame)
+  const cueAt = new Map<number, number>();
+  (options.cues ?? []).forEach((time, k) => {
+    const i = beatIndexAt(result.beats, time);
+    if (i >= 0 && !cueAt.has(i)) cueAt.set(i, k + 1);
+  });
+  const sectionAt = new Map<number, { kind: string; delta: number }>();
+  for (const s of options.sections ?? []) {
+    const i = beatIndexAt(result.beats, s.time);
+    if (i >= 0) sectionAt.set(i, s);
+  }
+  const indexed = result.beats.map((b, i) => ({ b, i }));
+  const beats = options.onlyDownbeats
+    ? indexed.filter(({ b, i }) => b.isDownbeat || cueAt.has(i) || sectionAt.has(i))
+    : indexed;
   const data = {
     format: RESOLVE_MARKER_FORMAT,
     fileName: result.metadata.fileName,
     duration: result.metadata.duration,
     globalBpm: result.globalBpm,
     timeSignature: result.timeSignature.name,
-    markers: beats.map((b) => ({
+    markers: beats.map(({ b, i }) => ({
       time: b.time,
       type: b.isDownbeat ? 'downbeat' : 'beat',
       bar: b.barIndex,
       beat: b.beatInBar,
       bpm: b.instantBpm,
       confidence: b.confidence,
+      ...(cueAt.has(i) ? { cue: cueAt.get(i) } : {}),
+      ...(sectionAt.has(i)
+        ? { section: sectionAt.get(i)!.kind, sectionDelta: Math.round(sectionAt.get(i)!.delta * 10) / 10 }
+        : {}),
     })),
     ...(result.engineInfo ? { engine: result.engineInfo } : {}),
     // seconds Resolve plays this MP3 later (Xing frame + encoder delay); the script moves the markers

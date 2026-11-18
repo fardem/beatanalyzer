@@ -21,7 +21,7 @@ const F_MAX = 16000;
 const KICK_MAX_HZ = 150;
 const SNARE_MAX_HZ = 4000;
 const BARS = 56;
-const PEAK_FALL_PER_S = 0.55;   // peak caps sink this much of the full height per second
+const PEAK_FALL_PER_S = 0.55;   // peak caps sink this much of the full height per second (gone ~2 s after pause)
 const FLASH_MS = 260;
 
 // colours of the web app: kick rose, snare cyan, hi-hat indigo (as in the band lanes)
@@ -82,7 +82,7 @@ export const LiveSpectrum: React.FC<LiveSpectrumProps> = ({ source, isPlaying, r
     let raf = 0;
     let last = performance.now();
     let buffer: Float32Array<ArrayBuffer> | null = null;
-    let fadeUntil = isPlaying ? Infinity : performance.now() + 600;
+    let fadeUntil = isPlaying ? Infinity : performance.now() + 2000;
 
     const frame = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000);
@@ -204,7 +204,7 @@ export const LiveSpectrum: React.FC<LiveSpectrumProps> = ({ source, isPlaying, r
 
       if (isPlaying || now < fadeUntil) raf = requestAnimationFrame(frame);
     };
-    if (!isPlaying) fadeUntil = performance.now() + 600;
+    if (!isPlaying) fadeUntil = performance.now() + 2000;
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
   }, [isPlaying, source, t]);

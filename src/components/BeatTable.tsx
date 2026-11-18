@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useI18n } from '../i18n';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
-import { Search, Play, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { Search, Play, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface BeatTableProps {
   result: AnalysisResult;
@@ -87,15 +87,12 @@ export const BeatTable: React.FC<BeatTableProps> = ({
   };
 
   return (
-    <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
+    <div className="space-y-4">
       {/* Controls & Filter Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
-          <h3 className="text-sm font-bold text-white">
-            {t('web.table.title', { n: filteredBeats.length })}
-          </h3>
-        </div>
+        <span className="text-xs text-slate-400 tabular-nums">
+          {t('web.table.title', { n: filteredBeats.length })}
+        </span>
 
         <div className="flex flex-wrap items-center gap-2">
           <label

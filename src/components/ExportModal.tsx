@@ -7,6 +7,7 @@ import {
   generateCsv,
   generateMidiClickBlob,
   generateResolveMarkerJson,
+  ResolveMarkerOptions,
   downloadTextFile,
   downloadBlob,
   MD_BEAT_THIS_ATTRIBUTION,
@@ -29,12 +30,14 @@ import {
 
 interface ExportModalProps {
   result: AnalysisResult;
+  /** cue marks and section changes for the marker JSON and the Audacity labels */
+  markerExtras?: ResolveMarkerOptions;
   onClose: () => void;
 }
 
 type TabType = 'davinci' | 'audacity' | 'json' | 'midi' | 'csv';
 
-export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => {
+export const ExportModal: React.FC<ExportModalProps> = ({ result, markerExtras, onClose }) => {
   const { t, num, meter } = useI18n();
   const [activeTab, setActiveTab] = useState<TabType>('davinci');
   const [copied, setCopied] = useState(false);
@@ -45,10 +48,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
   const isMdBeatThis = result.engineInfo?.id === 'md_beat_this';
   const attributionText = result.attribution ?? MD_BEAT_THIS_ATTRIBUTION;
 
-  const resolveJsonContent = generateResolveMarkerJson(result);
+  const resolveJsonContent = generateResolveMarkerJson(result, markerExtras);
 
   const jsonContent = generateBeatThisJson(result);
-  const audacityContent = generateAudacityLabels(result);
+  const audacityContent = generateAudacityLabels(result, markerExtras);
   const csvContent = generateCsv(result);
 
   const handleCopy = (text: string) => {
@@ -201,6 +204,14 @@ export const ExportModal: React.FC<ExportModalProps> = ({ result, onClose }) => 
                 <p className="text-slate-400 text-xs leading-relaxed">
                   {t('web.export.resolve_intro')}
                 </p>
+                {((markerExtras?.cues?.length ?? 0) > 0 || (markerExtras?.sections?.length ?? 0) > 0) && (
+                  <p className="text-xs leading-relaxed text-yellow-200/90">
+                    {t('web.export.resolve_extras', {
+                      cues: markerExtras?.cues?.length ?? 0,
+                      sections: markerExtras?.sections?.length ?? 0,
+                    })}
+                  </p>
+                )}
               </div>
 
 

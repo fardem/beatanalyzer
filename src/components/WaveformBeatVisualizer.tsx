@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { AnalysisResult, BeatItem } from '../types/analyzer';
 import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
 import { useI18n } from '../i18n';
-import { DiagramInfoTooltip } from './DiagramInfoTooltip';
 
 interface WaveformBeatVisualizerProps {
   result: AnalysisResult;
@@ -1045,26 +1044,12 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       {/* Visualizer Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-semibold text-slate-300 whitespace-nowrap shrink-0">{t('web.wave.title')}</span>
-          <DiagramInfoTooltip
-            buttonLabel={t('web.wave.help_label')}
-            help={{
-              title: t('web.wave.title'),
-              summary: t('web.wave.help_summary'),
-              items: [
-                { color: 'rose', text: t('web.wave.help_item1') },
-                { color: 'amber', text: t('web.wave.help_item2') },
-                { color: 'cyan', text: t('web.wave.help_item3') },
-              ],
-              actionTip: t('web.wave.help_tip'),
-            }}
-          />
           {/* the analysed song: long names are cut, the full name is in the tooltip */}
           <span
             className="text-xs text-slate-400 truncate min-w-0 max-w-[48ch]"
             title={`${result.metadata.fileName} · ${formatSongLength(duration)}`}
           >
-            · <span className="text-slate-200 font-medium">{result.metadata.fileName}</span>
+            <span className="text-slate-200 font-medium">{result.metadata.fileName}</span>
             <span className="text-slate-500 tabular-nums"> · {formatSongLength(duration)}</span>
           </span>
           {/* same size for "Beat 2" and "Downbeat" and also without a beat (test 0.2.2: the row wrapped on and off
