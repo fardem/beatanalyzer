@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { AlertTriangle, Settings } from 'lucide-react';
+import { Activity, AlertTriangle, AudioLines, Layers, ListOrdered, PlayCircle, RotateCcw, Settings, TrendingUp } from 'lucide-react';
 import { AnalysisModel, AnalysisResult, BeatItem, PlaybackSpeed } from './types/analyzer';
 import { analyzeAudioFile, LocalizedError } from './utils/audioAnalyzer';
 import { useI18n } from './i18n';
@@ -11,9 +11,23 @@ import { MetricsCards } from './components/MetricsCards';
 import { WaveformBeatVisualizer } from './components/WaveformBeatVisualizer';
 import { PlayerControls } from './components/PlayerControls';
 import { BeatEvidenceLab } from './components/BeatEvidenceLab';
-import { TempoCurveChart } from './components/TempoCurveChart';
-import { ExpertDiagnosticsPanel } from './components/ExpertDiagnosticsPanel';
+import { TempoPanel, TempoRangeLabel, hasTempoDrift } from './components/TempoPanel';
 import { LiveSpectrumSource } from './components/LiveSpectrum';
+import { CueMark, StructureLivePanel } from './components/StructureLivePanel';
+import { PanelDrag, PanelShell } from './components/PanelShell';
+import { DiagramInfoTooltip } from './components/DiagramInfoTooltip';
+import {
+  defaultLayout,
+  isDefaultLayout,
+  loadLayout,
+  movePanel,
+  movePanelBy,
+  PanelId,
+  PanelLayout,
+  saveLayout,
+} from './utils/panelLayout';
+import { computeSongStructure, nearestBeatIndex } from './utils/songStructure';
+import { bandEvidence } from './utils/beatEvidence';
 import { BeatTable } from './components/BeatTable';
 import { applyGridOps, GridOp, opsFromBeatEdit } from './utils/beatTransforms';
 import { ExportModal } from './components/ExportModal';
@@ -61,6 +75,23 @@ export default function App() {
   const viewRef = useRef<{ start: number; end: number } | null>(null);
   const loopModeRef = useRef<'off' | 'view' | 'song'>('off');
   const loopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // panel layout (order, folded) and drag state
+  const [layout, setLayout] = useState<PanelLayout>(loadLayout);
+  const updateLayout = useCallback((fn: (l: PanelLayout) => PanelLayout) => {
+    setLayout((prev) => {
+      const next = fn(prev);
+      saveLayout(next);
+      return next;
+    });
+  }, []);
+  const [dragging, setDragging] = useState<PanelId | null>(null);
+  const [dragOver, setDragOver] = useState<{ id: PanelId; place: 'before' | 'after' } | null>(null);
+  const dragOverRef = useRef(dragOver);
+  dragOverRef.current = dragOver;
+
+  // cue marks set while listening (key M), on the nearest beat; cleared with a new song
+  const [cues, setCues] = useState<CueMark[]>([]);
 
   // Modals
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
@@ -145,6 +176,7 @@ export default function App() {
         setLoopRange(null);
         setViewRange(null);
         playerRef.current?.setLoop(null);
+        setCues([]);
       }
       // a re-analysis (smoothing) keeps the corrections; a new file starts without
       const ops = opts.reanalysis ? gridOpsRef.current : [];
@@ -287,12 +319,93 @@ export default function App() {
     []
   );
 
+  // song structure: band levels per bar, section changes on a "1"; follows grid corrections
+  const structure = useMemo(() => {
+    if (!result || !audioBuffer) return null;
+    const bands = bandEvidence(audioBuffer);
+    return computeSongStructure(result.beats, result.metadata.duration, bands.frameRate, bands.lowBand, bands.midBand, bands.highBand);
+  }, [result, audioBuffer]);
+
+  // a cue goes on the nearest beat (Shift: the nearest "1"); a second cue on the same beat is ignored
+  const handleAddCue = useCallback((downbeatOnly: boolean) => {
+    const r = resultRef.current;
+    if (!r) return;
+    const time = playerRef.current?.getCurrentTime() ?? 0;
+    const i = nearestBeatIndex(r.beats, time, downbeatOnly);
+    if (i < 0) return;
+    const at = r.beats[i].time;
+    setCues((prev) => (prev.some((c) => Math.abs(c.time - at) < 0.001) ? prev : [...prev, { time: at }].sort((a, b) => a.time - b.time)));
+  }, []);
+  // a grid correction moves the beats: cues follow to the nearest beat of the new grid
+  useEffect(() => {
+    if (!result) return;
+    setCues((prev) => {
+      if (prev.length === 0) return prev;
+      const moved = prev.map((c) => {
+        const i = nearestBeatIndex(result.beats, c.time);
+        return i >= 0 ? { time: result.beats[i].time } : c;
+      });
+      const unique = moved.filter((c, k) => moved.findIndex((d) => Math.abs(d.time - c.time) < 0.001) === k);
+      return unique.length === prev.length && unique.every((c, k) => c.time === prev[k].time) ? prev : unique;
+    });
+  }, [result]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.code === 'KeyM') {
+        e.preventDefault();
+        handleAddCue(e.shiftKey);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleAddCue]);
+
+  const markerExtras = useMemo(
+    () => ({
+      cues: cues.map((c) => c.time),
+      sections: (structure?.sections ?? [])
+        .filter((x) => x.kind !== 'start')
+        .map((x) => ({ time: x.time, kind: x.kind as 'up' | 'down' | 'change', delta: x.delta })),
+    }),
+    [cues, structure]
+  );
+
+  const panelDrag: PanelDrag = useMemo(
+    () => ({
+      dragging,
+      over: dragOver,
+      start: (id) => setDragging(id),
+      hover: (id, place) =>
+        setDragOver((prev) => (prev && prev.id === id && prev.place === place ? prev : { id, place })),
+      drop: () => {
+        const over = dragOverRef.current;
+        if (dragging && over) updateLayout((l) => ({ ...l, order: movePanel(l.order, dragging, over.id, over.place) }));
+        setDragging(null);
+        setDragOver(null);
+      },
+      end: () => {
+        setDragging(null);
+        setDragOver(null);
+      },
+      moveBy: (id, delta) => updateLayout((l) => ({ ...l, order: movePanelBy(l.order, id, delta) })),
+    }),
+    [dragging, dragOver, updateLayout]
+  );
+
+  const tempoDrift = useMemo(() => (result ? hasTempoDrift(result) : false), [result]);
+  const isCollapsed = (id: PanelId) => layout.collapsed[id] ?? (id === 'tempo' ? !tempoDrift : false);
+  const toggleCollapsed = (id: PanelId) =>
+    updateLayout((l) => ({ ...l, collapsed: { ...l.collapsed, [id]: !isCollapsed(id) } }));
+
   const handleReset = useCallback(() => {
     playerRef.current?.stop();
     setIsPlaying(false);
     setCurrentTime(0);
     setActiveBeat(null);
     setViewRange(null);
+    setCues([]);
     baseRef.current = null;
     gridOpsRef.current = [];
     setGridOps([]);
@@ -376,83 +489,171 @@ export default function App() {
               }}
             />
 
-            {/* 2. Interactive Waveform & Beat Grid Canvas */}
-            <div className="p-4 sm:p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
-              <WaveformBeatVisualizer
-                result={result}
-                audioBuffer={audioBuffer}
-                loopRange={loopRange}
-                onViewChange={handleViewChange}
-                followPlayhead={loopMode !== 'view'}
-                currentTime={currentTime}
-                onSeek={handleSeek}
-                activeBeat={activeBeat}
-              />
-            </div>
+            {/* panels below the number tiles: foldable, order by drag (grip) – own view per user */}
+            {layout.order.map((id) => {
+              const common = {
+                id,
+                collapsed: isCollapsed(id),
+                onToggle: () => toggleCollapsed(id),
+                drag: panelDrag,
+              };
+              switch (id) {
+                case 'waveform':
+                  return (
+                    <PanelShell
+                      key={id}
+                      {...common}
+                      title={t('web.wave.title')}
+                      icon={<AudioLines className="text-cyan-400" />}
+                      help={
+                        <DiagramInfoTooltip
+                          buttonLabel={t('web.wave.help_label')}
+                          help={{
+                            title: t('web.wave.title'),
+                            summary: t('web.wave.help_summary'),
+                            items: [
+                              { color: 'rose', text: t('web.wave.help_item1') },
+                              { color: 'amber', text: t('web.wave.help_item2') },
+                              { color: 'cyan', text: t('web.wave.help_item3') },
+                            ],
+                            actionTip: t('web.wave.help_tip'),
+                          }}
+                        />
+                      }
+                    >
+                      <WaveformBeatVisualizer
+                        result={result}
+                        audioBuffer={audioBuffer}
+                        loopRange={loopRange}
+                        onViewChange={handleViewChange}
+                        followPlayhead={loopMode !== 'view'}
+                        currentTime={currentTime}
+                        onSeek={handleSeek}
+                        activeBeat={activeBeat}
+                      />
+                    </PanelShell>
+                  );
+                case 'player':
+                  return (
+                    <PanelShell key={id} {...common} title={t('web.layout.player')} icon={<PlayCircle className="text-indigo-400" />}>
+                      <PlayerControls
+                        isPlaying={isPlaying}
+                        currentTime={currentTime}
+                        duration={result.metadata.duration}
+                        activeBeat={activeBeat}
+                        playbackSpeed={playbackSpeed}
+                        metronomeEnabled={metronomeEnabled}
+                        metronomeVolume={metronomeVolume}
+                        globalBpm={result.globalBpm}
+                        onPlay={handlePlay}
+                        onPause={handlePause}
+                        onSeek={handleSeek}
+                        onSetPlaybackSpeed={handleSetSpeed}
+                        onToggleMetronome={handleToggleMetronome}
+                        onSetMetronomeVolume={handleSetMetronomeVolume}
+                        musicVolume={musicVolume}
+                        onSetMusicVolume={handleSetMusicVolume}
+                        loopMode={loopMode}
+                        onCycleLoop={handleCycleLoop}
+                      />
+                    </PanelShell>
+                  );
+                case 'structure':
+                  return (
+                    <PanelShell
+                      key={id}
+                      {...common}
+                      title={t('web.structure.title')}
+                      icon={<Activity className="text-emerald-400" />}
+                      extra={
+                        <span className="text-[11px] text-slate-500 truncate hidden sm:inline">
+                          {t('web.structure.subtitle')}
+                        </span>
+                      }
+                    >
+                      <StructureLivePanel
+                        result={result}
+                        structure={structure}
+                        currentTime={currentTime}
+                        isPlaying={isPlaying}
+                        onSeek={handleSeek}
+                        liveSource={liveSource}
+                        cues={cues}
+                        onAddCue={handleAddCue}
+                        onRemoveCue={(i) => setCues((prev) => prev.filter((_, k) => k !== i))}
+                        onClearCues={() => setCues([])}
+                      />
+                    </PanelShell>
+                  );
+                case 'evidence':
+                  return (
+                    <PanelShell
+                      key={id}
+                      {...common}
+                      title={t('web.evidence.title')}
+                      icon={<Layers className="text-emerald-400" />}
+                      extra={
+                        <span className="text-[11px] text-slate-500 truncate hidden sm:inline">
+                          {t('web.evidence.subtitle')}
+                        </span>
+                      }
+                    >
+                      <BeatEvidenceLab
+                        result={result}
+                        audioBuffer={audioBuffer}
+                        currentTime={currentTime}
+                        viewRange={viewRange}
+                        onSeek={handleSeek}
+                        onApplyOps={handleApplyOps}
+                        onUndoGrid={handleUndoGrid}
+                        onResetGrid={handleResetGrid}
+                        canUndoGrid={gridOps.length > 0}
+                        canResetGrid={gridOps.length > 0}
+                        correctionCount={gridOps.length}
+                      />
+                    </PanelShell>
+                  );
+                case 'tempo':
+                  return (
+                    <PanelShell
+                      key={id}
+                      {...common}
+                      title={t('web.tempo.title')}
+                      icon={<TrendingUp className="text-indigo-400" />}
+                      extra={<TempoRangeLabel result={result} />}
+                    >
+                      <TempoPanel result={result} currentTime={currentTime} onSeek={handleSeek} />
+                    </PanelShell>
+                  );
+                case 'table':
+                  return (
+                    <PanelShell key={id} {...common} title={t('web.layout.table')} icon={<ListOrdered className="text-cyan-400" />}>
+                      <BeatTable
+                        result={result}
+                        currentTime={currentTime}
+                        onSeek={handleSeek}
+                        onUpdateBeats={handleUpdateBeats}
+                      />
+                    </PanelShell>
+                  );
+                default:
+                  return null;
+              }
+            })}
 
-            {/* 3. Audio Player Controls & Metronome */}
-            <PlayerControls
-              isPlaying={isPlaying}
-              currentTime={currentTime}
-              duration={result.metadata.duration}
-              activeBeat={activeBeat}
-              playbackSpeed={playbackSpeed}
-              metronomeEnabled={metronomeEnabled}
-              metronomeVolume={metronomeVolume}
-              globalBpm={result.globalBpm}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onSeek={handleSeek}
-              onSetPlaybackSpeed={handleSetSpeed}
-              onToggleMetronome={handleToggleMetronome}
-              onSetMetronomeVolume={handleSetMetronomeVolume}
-              musicVolume={musicVolume}
-              onSetMusicVolume={handleSetMusicVolume}
-              loopMode={loopMode}
-              onCycleLoop={handleCycleLoop}
-            />
-
-            {/* 3b. Editor-Focused Beat Diagnostics (Compact Band-Onset-Lanes + Folded Bar + 1-Click Fixes) */}
-            <BeatEvidenceLab
-              result={result}
-              audioBuffer={audioBuffer}
-              currentTime={currentTime}
-              viewRange={viewRange}
-              onSeek={handleSeek}
-              onApplyOps={handleApplyOps}
-              onUndoGrid={handleUndoGrid}
-              onResetGrid={handleResetGrid}
-              canUndoGrid={gridOps.length > 0}
-              canResetGrid={gridOps.length > 0}
-              correctionCount={gridOps.length}
-            />
-
-            {/* 4. Collapsed-by-default Expert Diagnostics (Spectrogram, Energy Spectrum, Live, Tempo Histogram);
-                above the tempo curve (wish of the user) */}
-            <ExpertDiagnosticsPanel
-              result={result}
-              audioBuffer={audioBuffer}
-              viewRange={viewRange}
-              currentTime={currentTime}
-              onSeek={handleSeek}
-              liveSource={liveSource}
-              isPlaying={isPlaying}
-            />
-
-            {/* 4b. Tempo Curve Over Time (auto-collapsed on stable tempo) */}
-            <TempoCurveChart
-              result={result}
-              currentTime={currentTime}
-              onSeek={handleSeek}
-            />
-
-            {/* 5. Beat Table with Fine Nudging & Search */}
-            <BeatTable
-              result={result}
-              currentTime={currentTime}
-              onSeek={handleSeek}
-              onUpdateBeats={handleUpdateBeats}
-            />
+            {!isDefaultLayout(layout) && (
+              <div className="flex justify-end -mt-2">
+                <button
+                  type="button"
+                  onClick={() => updateLayout(() => defaultLayout())}
+                  title={t('web.layout.reset_tip')}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  {t('web.layout.reset')}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -475,7 +676,7 @@ export default function App() {
 
       {/* Modals */}
       {showExportModal && result && (
-        <ExportModal result={result} onClose={() => setShowExportModal(false)} />
+        <ExportModal result={result} markerExtras={markerExtras} onClose={() => setShowExportModal(false)} />
       )}
 
       {showModelInfoModal && (

@@ -229,3 +229,12 @@ Beat-Raster ±½ Beat, Tempo ½×/2×, Rückgängig). Danach in README „Why Be
 - Version: `VERSION`, `package.json`, `package-lock.json` (2×), `resolve/BeatAnalyzer_Markers.lua`,
   `resolve/BeatThis_Markers.lua`, README-Zeile; Changelog und Test-Liste (Release Notes nur auf Wunsch).
 - Release (Tag = `VERSION`) hängt `BeatAnalyzer.zip` an, das der Updater der Web-App lädt.
+
+**0.5.0 (2026-11-18), Wunsch des Nutzers vor dem Test von 0.4.0/0.4.1:** gefalteter Takt in voller Höhe; Tempo-Verlauf
+und Histogramm in einer Kachel nebeneinander; alle Bereiche unter den 6 Zahlenkacheln zuklapp- und verschiebbar
+(Layout im Browser gespeichert, „Ansicht zurücksetzen“). Energie-Spektrum und Spektrogramm entfernt (für Cutter ohne
+Nutzen); stattdessen Songstruktur (Abschnittswechsel auf Downbeats) zusammen mit Live in einer Kachel direkt unter dem
+Player; Live mit Taktzähler, Countdown zur „1“, nächstem Abschnitt; Cue-Marken per Taste M (Umschalt+M: auf die „1“).
+Cue/Abschnitt in der Marker-JSON (`cue`, `section`, `sectionDelta`) → Resolve-Skript setzt gelbe/lila Marker (nur
+Skriptlogik, Fenster unverändert). Hilfetexte aus Cutter-Sicht. Gemeinsame Testliste: `docs/resolve-test-0.5.0.md`.
+Offen: Abschnittserkennung an echten Songs vom Nutzer prüfen lassen (Test 7).

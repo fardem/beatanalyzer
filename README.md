@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.4.1** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
+**Version 0.5.0** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
 
 BeatAnalyzer finds the **beats, downbeats, tempo and time signature** of a song and puts them into
 **DaVinci Resolve** as **coloured markers on your audio clip** and as a **subtitle track** under the song. The
@@ -25,6 +25,10 @@ You can start it straight from a window inside Resolve, or use the web app in yo
 - **Fix the grid in one click:** the folded bar shows where kick and snare really sit in the bar; BeatAnalyzer
   suggests the fix (bar start, half beat, tempo, time signature) with a preview – for the whole song or a section,
   undoable, and kept when you change Smoothing.
+- **See where the song changes:** the song structure marks section changes (louder, quieter, different) on their
+  "1"; while listening, a bar counter counts down to the next "1" and the next section, and the key **M** sets cue
+  marks on the beat – both go to Resolve as markers in their own colour.
+- **Your own view:** fold the panels you do not need and drag them into the order you work in.
 - **Local and private:** everything runs on your PC; no upload, no account.
 
 ---
@@ -64,7 +68,9 @@ You can start it straight from a window inside Resolve, or use the web app in yo
   of 2 or 3 beats. Smoothing lays an even grid over them and restarts it only where the model clearly hears a new
   "1". The beats themselves never change.
 - **Web app:** tempo, time signature, number of bars, tempo stability; detailed waveform with beat grid and beat /
-  downbeat curves, zoom, loop, player with metronome and tap tempo, tempo curve, beat table for corrections.
+  downbeat curves, zoom, loop, player with metronome and tap tempo, song structure, live bar counter, cue marks
+  (key M), grid fixes with suggestion, tempo curve and histogram, beat table for corrections. Panels can be folded
+  and moved.
 - **Exports:** marker JSON for Resolve, Audacity labels, JSON, MIDI click track, CSV.
 - **Formats:** MP3, WAV, FLAC, OGG, AAC/M4A, ALAC, Opus, WMA and more. MP3 files are shifted by the delay with which
   Resolve plays them (about 50 ms), so the markers sit on the beat.
@@ -205,6 +211,8 @@ window shows it before and after. MP3 files without that delay need no correctio
 
 ![Result in the web app](docs/images/web-result.png)
 
+- **Your view:** every panel below the tiles folds with a click on its title and moves by dragging its grip
+  (⋮⋮, or arrow keys on it); the web app keeps the layout. *Reset view* brings back the default order.
 - **Tiles:** tempo, time signature (with the share of bars that have it), number of bars, tempo stability, beat
   interval, audio file. The **Smoothing** slider in the time signature tile recomputes the bars at once.
 - **Waveform & beat grid:** bars and beats as lines, the beat (BAF) and downbeat (DAF) curves of the model.
@@ -212,6 +220,14 @@ window shows it before and after. MP3 files without that delay need no correctio
 - **Player:** play from any point, **loop** (grey = off, yellow A-B = the section in the blue frame, green = the
   whole song), song volume, **metronome** on the detected beats (higher click on the downbeat), speed 0.5× to 1.5×,
   tap tempo.
+- **Song structure & live:** level per bar over the song; section changes (▲ louder, ▼ quieter, ◆ different) sit on
+  their "1" – click to jump there. While playing: the current bar, the beats until the next "1", the next section,
+  and the live spectrum (flash on every beat, stronger on the "1"). **M** sets a cue mark on the nearest beat
+  (Shift+M: on the nearest "1"). Cue marks and section changes go into the Resolve export as yellow and purple
+  markers, and into the Audacity labels.
+
+![Song structure and live view](docs/images/web-structure-live.png)
+
 - **Beat evidence & grid fixes:** band lanes for kick (< 150 Hz), snare/body and hi-hats, in step with the zoom
   of the waveform (drag the grip below them up to twice the height); the **folded bar** lays all bars – of the
   section or the whole song – on top of each other and says whether the kick sits on the "1". **1-click fixes:**
@@ -219,9 +235,8 @@ window shows it before and after. MP3 files without that delay need no correctio
   these fixes on the folded bar and offers the best one with a dashed preview – *Apply* takes it over. Fixes work on
   the **whole song or only the section** in the blue frame (e.g. ½× only where the model counted double). They stay
   when you move Smoothing and go into every export – also the marker JSON for Resolve.
-- **Expert diagnostics** (click the title to open): spectrogram, energy spectrum of the "1", the other beats and
-  the off-beats, **Live** spectrum while playing (flash on every beat, stronger on the "1"), tempo histogram.
-- **Tempo curve** over the whole song (folded while the tempo is steady).
+- **Tempo:** tempo curve over the whole song and, next to it, how often each tempo occurs (½× / 2× marks) – a
+  steady grid shows as a flat line and one tall bar. Folded while the tempo is steady.
 - **Beat table:** move a beat by ±10 ms or make it a downbeat (`1/X`); the corrections go into every export.
 
 4. **Export** – button at the top right.
@@ -317,7 +332,9 @@ On Windows the Python path is `venv\Scripts\python.exe`.
 | `lang/*.json` | texts in English, German and Turkish (web app and Resolve window) |
 | `resolve/BeatAnalyzer_Markers.lua` | script and window for DaVinci Resolve |
 | `src/` | web app (React, TypeScript) |
-| `src/utils/beatEvidence.ts` | band curves, folded bar, tempo histogram, spectra (web app) |
+| `src/utils/beatEvidence.ts` | band curves, folded bar, tempo histogram (web app) |
+| `src/utils/songStructure.ts` | song structure: level per bar, section changes on a "1" (web app) |
+| `src/utils/panelLayout.ts` | order and folding of the panels (web app) |
 | `src/utils/beatTransforms.ts` | 1-click grid fixes as replayable steps, also for a section (web app) |
 | `src/utils/fixSuggestion.ts` | suggestion: tries the fixes on the folded bar (web app) |
 | `dist/` | built web app; checked in |

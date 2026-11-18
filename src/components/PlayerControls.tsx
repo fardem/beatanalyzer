@@ -125,7 +125,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   const speeds: PlaybackSpeed[] = [0.5, 0.75, 1.0, 1.25, 1.5];
 
   return (
-    <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/* Playback Transport Buttons */}
         <div className="flex items-center gap-2">

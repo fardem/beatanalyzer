@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.4.1"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.5.0"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -47,8 +47,12 @@ local BA = {
       ["output.intro"] = "BeatAnalyzer\n{file}\n{bpm} BPM – {meter}",
       ["output.kind_beat"] = "Beat {beat}",
       ["output.kind_downbeat"] = "Downbeat (1)",
+      ["output.marker_cue"] = "Cue {n}",
       ["output.marker_downbeat"] = "Bar {bar}",
       ["output.marker_note"] = "{time} s | {bpm} BPM",
+      ["output.marker_section_change"] = "Section ◆",
+      ["output.marker_section_down"] = "Section ▼ {db} dB",
+      ["output.marker_section_up"] = "Section ▲ {db} dB",
       ["output.meter"] = "{num}/{den}{suffix}",
       ["output.meter_suffix.16"] = "",
       ["output.meter_suffix.2"] = "",
@@ -928,9 +932,18 @@ for _, c in ipairs(M.MARKER_COLORS) do
   COLOR_OK[c] = true
 end
 
+M.CUE_COLOR = "Yellow"       -- cue marks set in the web app while listening (key M)
+M.SECTION_COLOR = "Purple"   -- section changes of the song structure (web app)
+
 -- Colour of a marker by its beat in the bar: downbeat, beat 2-4, all others; nil = no marker.
--- An unknown colour falls back to the default of that slot.
+-- An unknown colour falls back to the default of that slot. Cue marks and section changes from the web app have
+-- their own colours and are always set (also when their beat slot is "no marker").
 function M.marker_color(m, colors)
+  if tonumber(m.cue) then
+    return M.CUE_COLOR
+  elseif m.section == "up" or m.section == "down" or m.section == "change" then
+    return M.SECTION_COLOR
+  end
   local slot = m.type == "downbeat" and "downbeat"
     or ((tonumber(m.beat) or 0) >= 2 and (tonumber(m.beat) or 0) <= 4 and ("beat" .. tonumber(m.beat)))
     or "other"
@@ -1050,6 +1063,21 @@ local function build_srt(data, opts)
   return table.concat(out, "\n"), #cues, cues[1][1]
 end
 M.build_srt = build_srt
+
+-- Name of a marker: "Bar 24" on a downbeat, "24.2" on other beats; cue marks and section changes from the web
+-- app put their own label in front, e.g. "Cue 2 – Bar 33" or "Section ▲ +6 dB – Bar 33".
+function M.marker_name(m)
+  local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
+    or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
+  if tonumber(m.cue) then
+    return T("output.marker_cue", { n = math.floor(tonumber(m.cue)) }) .. " – " .. name
+  elseif m.section == "up" or m.section == "down" or m.section == "change" then
+    local d = tonumber(m.sectionDelta) or 0
+    local db = (d > 0 and "+" or (d < 0 and "−" or "")) .. string.format("%d", math.floor(math.abs(d) + 0.5))
+    return T("output.marker_section_" .. m.section, { db = db }) .. " – " .. name
+  end
+  return name
+end
 
 -- Note of a marker: the same parts as its subtitle, e.g. "Takt 24 – Beat 2 | 106,860 s | 120,0 BPM | Confidence 75 %".
 function M.marker_note(m)
@@ -1736,8 +1764,7 @@ function Job:mark_some()
         if frame < 0 or (c.frames and frame >= c.frames) then
           c.skipped = c.skipped + 1
         else
-          local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
-            or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
+          local name = M.marker_name(m)
           local note = M.marker_note(m)
           if api(clip, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
             c.added = c.added + 1
@@ -1803,8 +1830,7 @@ function Job:mark_timeline()
         -- the left offset shifted them on a trimmed clip); only the visible part gets markers
         local frame = round((tonumber(m.time) or -1) * self.tl_fps)
         if frame >= c.left and (not c.duration or frame < c.left + c.duration) then
-          local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
-            or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
+          local name = M.marker_name(m)
           local note = M.marker_note(m)
           if api(item, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
             self.tl_added = self.tl_added + 1

@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.5.0] – 2026-11-18
+
+Web app reworked from a cutter's point of view; the Resolve window stays as it is (it only reads two new marker kinds
+from the JSON).
+
+### Added
+- **Song structure** (web app): level per bar over the whole song; where the sound changes clearly, a section change
+  is marked on its "1" (▲ louder, ▼ quieter, ◆ different, with the step in dB). The bands before and after every bar
+  start are compared (up to 4 bars each side); changes on the 4-bar phrase grid of the song are preferred, sections
+  are at least 4 bars long. Click the strip or a section button to jump to the "1" there. The display uses the
+  song's own level range, so compressed masters still show their steps.
+- **Live view with bar counter:** current bar, beats until the next "1" (rose when the next beat is the "1"), the
+  beats of the bar lit in turn, and the next section ("bar 37, in 28 bars"); the live spectrum next to it.
+- **Cue marks** while listening: key **M** sets a cue on the nearest beat, **Shift+M** on the nearest "1"; jump with a
+  click, remove with ×. Cues follow grid fixes.
+- **Cue marks and section changes in the exports:** the marker JSON carries `cue` and `section` / `sectionDelta` on
+  the marker of their beat (also with "only downbeats"); the Resolve script sets them as **yellow** ("Cue 2 – 12.3")
+  and **purple** markers ("Section ▲ +6 dB – Bar 33"), also on beats whose colour is set to "no marker". The
+  Audacity labels get them as extra labels.
+- **Own layout:** every panel below the six tiles folds with a click on its title and moves by dragging its grip
+  (or with the arrow keys on it); the layout is kept in the browser, *Reset view* brings back the default
+  (waveform, player, song structure & live, beat evidence, tempo, beat table).
+
+### Changed
+- **Tempo** in one panel: tempo curve and tempo histogram side by side, more compact; folded while the tempo is
+  steady (as before).
+- The **folded bar** uses the full height next to the fix panel.
+- Help texts of all diagrams rewritten for cutters ("what does this mean for my cut?"), in English, German and
+  Turkish.
+
+### Removed
+- **Expert diagnostics** with spectrogram and energy spectrum: they showed what the folded bar shows more clearly and
+  did not help in finding cut points. The spectrogram's useful part – where the song changes – is now the song
+  structure; the live spectrum moved to the song structure panel.
+
 ## [0.4.1] – 2026-11-17
 
 ### Added

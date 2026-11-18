@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.4.1** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
+**Version 0.5.0** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
 
 BeatAnalyzer erkennt in einem Song **Beats, Downbeats, Tempo und Taktart** und bringt sie nach
 **DaVinci Resolve** – als **farbige Marker auf deinem Audio-Clip** und als **Subtitle Track** unter dem Song. Die
@@ -26,6 +26,11 @@ Du startest sie direkt aus einem Fenster in Resolve oder nutzt die Web-App im Br
 - **Raster mit einem Klick richten:** Der gefaltete Takt zeigt, wo Kick und Snare wirklich im Takt liegen;
   BeatAnalyzer schlägt die Korrektur vor (Takt-Start, Halb-Beat, Tempo, Taktart) – mit Vorschau, für den ganzen Song
   oder einen Ausschnitt, rückgängig zu machen und beim Verstellen von „Glätten“ erhalten.
+- **Sehen, wo sich der Song ändert:** Die Songstruktur markiert Abschnittswechsel (lauter, leiser, anders) auf
+  ihrer „1“; beim Anhören zählt ein Taktzähler zur nächsten „1“ und zum nächsten Abschnitt herunter, und die Taste
+  **M** setzt Cue-Marken auf den Beat – beides kommt als Marker in eigener Farbe nach Resolve.
+- **Deine eigene Ansicht:** Bereiche, die du nicht brauchst, zuklappen und in die Reihenfolge ziehen, in der du
+  arbeitest.
 - **Lokal und privat:** Alles läuft auf deinem PC – kein Upload, kein Konto.
 
 ---
@@ -67,7 +72,9 @@ Du startest sie direkt aus einem Fenster in Resolve oder nutzt die Web-App im Br
   bekommen so Takte mit 2 oder 3 Beats. Glätten legt ein gleichmäßiges Raster darüber und setzt nur dort neu an, wo
   das Modell klar eine neue „1“ hört. Die Beats selbst ändern sich nie.
 - **Web-App:** Tempo, Taktart, Taktanzahl, Tempo-Stabilität; detaillierte Wellenform mit Beat-Raster und den Kurven
-  für Beats und Downbeats, Zoom, Loop, Player mit Metronom und Tap-Tempo, Tempo-Kurve, Beat-Tabelle zum Korrigieren.
+  für Beats und Downbeats, Zoom, Loop, Player mit Metronom und Tap-Tempo, Songstruktur, Live-Taktzähler, Cue-Marken
+  (Taste M), Takt-Korrektur mit Vorschlag, Tempo-Verlauf und -Histogramm, Beat-Tabelle zum Korrigieren. Bereiche
+  lassen sich zuklappen und verschieben.
 - **Exporte:** Marker-JSON für Resolve, Audacity-Textmarken, JSON, MIDI-Klickspur, CSV.
 - **Formate:** MP3, WAV, FLAC, OGG, AAC/M4A, ALAC, Opus, WMA und mehr. MP3-Dateien werden um die Verzögerung
   verschoben, mit der Resolve sie abspielt (etwa 50 ms), damit die Marker auf dem Beat liegen.
@@ -212,6 +219,9 @@ brauchen keinen Ausgleich – das Fenster sagt es dann.
 
 ![Ergebnis in der Web-App](docs/images/web-result.png)
 
+- **Deine Ansicht:** Jeder Bereich unter den Kacheln klappt per Klick auf seinen Titel zu und lässt sich am Griff
+  (⋮⋮, oder mit den Pfeiltasten darauf) verschieben; die Web-App merkt sich das. *Ansicht zurücksetzen* stellt die
+  Standard-Reihenfolge wieder her.
 - **Kacheln:** Tempo, Taktart (mit dem Anteil der Takte, die sie haben), Taktanzahl, Tempo-Stabilität,
   Beat-Abstand, Audiodatei. Der Regler **Glätten** in der Kachel Taktart rechnet die Takte sofort neu.
 - **Wellenform & Beat-Raster:** Takte und Beats als Linien, die Kurven des Modells für Beats (BAF) und Downbeats
@@ -219,6 +229,14 @@ brauchen keinen Ausgleich – das Fenster sagt es dann.
 - **Player:** Wiedergabe ab jeder Stelle, **Loop** (grau = aus, gelb A-B = Ausschnitt im blauen Rahmen, grün =
   ganzer Song), Lautstärke des Songs, **Metronom** auf den erkannten Beats (höherer Klick auf dem Downbeat),
   Geschwindigkeit 0,5× bis 1,5×, Tap-Tempo.
+- **Songstruktur & Live:** Pegel je Takt über den Song; Abschnittswechsel (▲ lauter, ▼ leiser, ◆ anders) sitzen auf
+  ihrer „1“ – Klick springt hin. Beim Abspielen: aktueller Takt, Beats bis zur nächsten „1“, der nächste Abschnitt
+  und das Live-Spektrum (Blitz auf jedem Beat, stärker auf der „1“). **M** setzt eine Cue-Marke auf den nächsten
+  Beat (Umschalt+M: auf die nächste „1“). Cue-Marken und Abschnittswechsel gehen als gelbe und lila Marker in den
+  Resolve-Export und in die Audacity-Labels.
+
+![Songstruktur und Live-Ansicht](docs/images/web-structure-live.png)
+
 - **Beat-Evidenz & Takt-Korrektur:** Spuren für Kick (< 150 Hz), Snare/Körper und Hi-Hats, im Gleichschritt mit
   dem Zoom der Wellenform (über den Griff darunter bis auf doppelte Höhe ziehbar); der **gefaltete Takt** legt alle
   Takte – des Ausschnitts oder des ganzen Songs – übereinander und sagt, ob die Kick auf der „1“ sitzt.
@@ -227,10 +245,9 @@ brauchen keinen Ausgleich – das Fenster sagt es dann.
   beste mit gestrichelter Vorschau an – *Anwenden* übernimmt sie. Korrekturen gelten für den **ganzen Song oder nur
   den Ausschnitt** im blauen Rahmen (z. B. ½× nur dort, wo das Modell doppelt gezählt hat). Sie bleiben beim
   Verstellen von „Glätten“ erhalten und gehen in alle Exporte – auch in die Marker-JSON für Resolve.
-- **Experten-Diagnose** (Überschrift anklicken zum Aufklappen): Spektrogramm, Energiespektrum der „1“, der übrigen
-  Beats und der Off-Beats, **Live**-Spektrum beim Abspielen (Blitz auf jedem Beat, stärker auf der „1“),
-  Tempo-Histogramm.
-- **Tempo-Kurve** über den ganzen Song (bei gleichmäßigem Tempo eingeklappt).
+- **Tempo:** Tempo-Verlauf über den ganzen Song und daneben, wie oft jedes Tempo vorkommt (Marken für ½× / 2×) –
+  ein gleichmäßiges Raster zeigt sich als flache Linie und ein hoher Balken. Zugeklappt, solange das Tempo
+  gleichmäßig ist.
 - **Beat-Tabelle:** einen Beat um ±10 ms verschieben oder zum Downbeat machen (`1/X`); die Korrekturen gehen in
   alle Exporte.
 
@@ -329,7 +346,9 @@ Unter Windows heißt der Python-Pfad `venv\Scripts\python.exe`.
 | `lang/*.json` | Texte auf Englisch, Deutsch und Türkisch (Web-App und Resolve-Fenster) |
 | `resolve/BeatAnalyzer_Markers.lua` | Skript und Fenster für DaVinci Resolve |
 | `src/` | Web-App (React, TypeScript) |
-| `src/utils/beatEvidence.ts` | Bandkurven, gefalteter Takt, Tempo-Histogramm, Spektren (Web-App) |
+| `src/utils/beatEvidence.ts` | Bandkurven, gefalteter Takt, Tempo-Histogramm (Web-App) |
+| `src/utils/songStructure.ts` | Songstruktur: Pegel je Takt, Abschnittswechsel auf einer „1“ (Web-App) |
+| `src/utils/panelLayout.ts` | Reihenfolge und Klappzustand der Bereiche (Web-App) |
 | `src/utils/beatTransforms.ts` | 1-Klick-Korrekturen als wiederholbare Schritte, auch für einen Ausschnitt (Web-App) |
 | `src/utils/fixSuggestion.ts` | Vorschlag: probiert die Korrekturen am gefalteten Takt aus (Web-App) |
 | `dist/` | gebaute Web-App; wird mit eingecheckt |

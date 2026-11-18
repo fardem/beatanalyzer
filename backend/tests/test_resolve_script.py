@@ -418,6 +418,21 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(self.M.marker_color(self.lua.table_from({"type": "downbeat", "beat": 1}), tc), "Red")
         self.assertEqual(self.M.marker_color(self.lua.table_from({"type": "beat", "beat": 2}), None), "Cyan")
 
+    def test_cue_and_section_markers(self):
+        # cue marks (web app, key M) and section changes have own colours and names, also on a "no marker" beat
+        tc = self.lua.table_from({"downbeat": "Red", "beat2": "none", "beat3": "none", "beat4": "none", "other": "none"})
+        cue = self.lua.table_from({"type": "beat", "bar": 12, "beat": 3, "cue": 2})
+        up = self.lua.table_from({"type": "downbeat", "bar": 33, "beat": 1, "section": "up", "sectionDelta": 6.4})
+        down = self.lua.table_from({"type": "downbeat", "bar": 49, "beat": 1, "section": "down", "sectionDelta": -4.6})
+        plain = self.lua.table_from({"type": "beat", "bar": 12, "beat": 3})
+        self.assertEqual(self.M.marker_color(cue, tc), "Yellow")
+        self.assertEqual(self.M.marker_color(up, tc), "Purple")
+        self.assertIsNone(self.M.marker_color(plain, tc))
+        self.assertEqual(self.M.marker_name(cue), "Cue 2 – 12.3")
+        self.assertEqual(self.M.marker_name(up), "Section ▲ +6 dB – Bar 33")
+        self.assertEqual(self.M.marker_name(down), "Section ▼ −5 dB – Bar 49")
+        self.assertEqual(self.M.marker_name(plain), "12.3")
+
     def test_only_downbeats_by_colors(self):
         msg = self.run_apply(colors={"downbeat": "Red", "beat2": "none", "beat3": "none", "beat4": "none", "other": "none"})
         self.assertEqual(sorted(self.markers(self.mock.song)), [13, 63])

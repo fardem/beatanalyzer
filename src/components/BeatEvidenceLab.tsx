@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Eye, EyeOff, Layers, RotateCcw, Undo2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw, Undo2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { AnalysisResult } from '../types/analyzer';
 import { BeatEvidenceData, computeBeatEvidence, computeFoldedBar, FoldedBarData } from '../utils/beatEvidence';
 import { GridOp, TimeRange } from '../utils/beatTransforms';
@@ -25,7 +25,6 @@ interface BeatEvidenceLabProps {
 
 const METER_CHOICES = [2, 3, 4, 5, 6, 7];
 
-const STORAGE_EXPANDED_KEY = 'beatanalyzer.evidenceExpanded';
 const STORAGE_LANES_VISIBLE_KEY = 'beatanalyzer.lanesVisible';
 const STORAGE_FOLDED_SCOPE_KEY = 'beatanalyzer.foldedScope';
 const STORAGE_LANES_HEIGHT_KEY = 'beatanalyzer.lanesHeight';
@@ -39,15 +38,6 @@ function readLanesHeight(): number {
     return Number.isFinite(v) && v >= LANES_MIN_H && v <= LANES_MAX_H ? v : LANES_MIN_H;
   } catch {
     return LANES_MIN_H;
-  }
-}
-
-function readExpanded(): boolean {
-  try {
-    const v = localStorage.getItem(STORAGE_EXPANDED_KEY);
-    return v === null ? true : v === '1';
-  } catch {
-    return true;
   }
 }
 
@@ -103,7 +93,6 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
   correctionCount,
 }) => {
   const { t, meter } = useI18n();
-  const [isExpanded, setIsExpanded] = useState<boolean>(readExpanded);
   const [lanesVisible, setLanesVisible] = useState<boolean>(readLanesVisible);
   const [foldedScope, setFoldedScope] = useState<'window' | 'all'>(readFoldedScope);
   const [lanesHeight, setLanesHeight] = useState<number>(readLanesHeight);
@@ -173,10 +162,10 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
   // can be dragged)
   const [suggestion, setSuggestion] = useState<FixSuggestion | null | undefined>(undefined);
   useEffect(() => {
-    if (!evidence || !isExpanded) return;
+    if (!evidence) return;
     const timer = setTimeout(() => setSuggestion(suggestFix(result, evidence, fixRange)), 120);
     return () => clearTimeout(timer);
-  }, [evidence, result, fixRange, isExpanded]);
+  }, [evidence, result, fixRange]);
   const preview = suggestion && suggestion.ops.length > 0 ? suggestion.preview : null;
 
   const activeFoldedBar: FoldedBarData | null = useMemo(() => {
@@ -195,18 +184,6 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
     }
     return evidence.foldedBar;
   }, [evidence, foldedScope, sectionActive, isZoomed, result.beats, result.timeSignature.numerator, winStart, winEnd]);
-
-  const toggleExpanded = useCallback(() => {
-    setIsExpanded((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(STORAGE_EXPANDED_KEY, next ? '1' : '0');
-      } catch {
-        // Ignore storage errors
-      }
-      return next;
-    });
-  }, []);
 
   const toggleLanesVisible = useCallback(() => {
     setLanesVisible((prev) => {
@@ -596,17 +573,14 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
   drawFoldedRef.current = drawFolded;
 
   useEffect(() => {
-    if (!isExpanded) return;
     if (lanesVisible) drawLanesRef.current();
-  }, [isExpanded, lanesVisible, evidence, winStart, winEnd, currentTime, result.beats]);
+  }, [lanesVisible, evidence, winStart, winEnd, currentTime, result.beats]);
 
   useEffect(() => {
-    if (!isExpanded) return;
     drawFoldedRef.current();
-  }, [isExpanded, activeFoldedBar, preview]);
+  }, [activeFoldedBar, preview]);
 
   useEffect(() => {
-    if (!isExpanded) return;
     const ro = new ResizeObserver(() => {
       if (lanesVisible) drawLanesRef.current();
       drawFoldedRef.current();
@@ -614,7 +588,7 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
     if (lanesVisible && lanesWrapRef.current) ro.observe(lanesWrapRef.current);
     if (foldedWrapRef.current) ro.observe(foldedWrapRef.current);
     return () => ro.disconnect();
-  }, [isExpanded, lanesVisible]);
+  }, [lanesVisible]);
 
   const handleLanesClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -646,40 +620,8 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
   const isWarning = fb.verdict === 'shifted_backbeat' || fb.verdict === 'shifted_offbeat';
 
   return (
-    <section
-      aria-label={t('web.evidence.title')}
-      className="rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl overflow-hidden"
-    >
-      <div className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={toggleExpanded}
-            aria-expanded={isExpanded}
-            title={isExpanded ? t('web.evidence.toggle_hide') : t('web.evidence.toggle_show')}
-            className="flex items-center gap-2 text-xs font-semibold text-slate-200 hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded-lg py-1 pr-2 whitespace-nowrap shrink-0"
-          >
-            <Layers className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>{t('web.evidence.title')}</span>
-            {isExpanded ? (
-              <ChevronUp className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            ) : (
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            )}
-          </button>
+    <div className="space-y-4">
 
-          <span className="text-[11px] text-slate-500 hidden md:inline whitespace-nowrap">
-            {t('web.evidence.subtitle')}
-          </span>
-        </div>
-
-        <span className="text-[11px] font-mono tabular-nums text-slate-500">
-          {formatClock(winStart)} – {formatClock(winEnd)}
-        </span>
-      </div>
-
-      {isExpanded && (
-        <div className="px-4 pb-4 pt-1 space-y-4">
           {/* 1: Compact Toggleable Band-Onset-Lanes */}
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
@@ -789,9 +731,9 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
               </div>
               <div
                 ref={foldedWrapRef}
-                className="relative h-36 w-full rounded-xl bg-slate-950/90 border border-slate-800/80 overflow-hidden"
+                className="relative flex-1 min-h-36 w-full rounded-xl bg-slate-950/90 border border-slate-800/80 overflow-hidden"
               >
-                <canvas ref={foldedCanvasRef} className="w-full h-full block" />
+                <canvas ref={foldedCanvasRef} className="absolute inset-0 w-full h-full block" />
               </div>
             </div>
 
@@ -1032,8 +974,6 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </section>
+    </div>
   );
 };

@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Sürüm 0.4.1** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
+**Sürüm 0.5.0** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
 
 BeatAnalyzer bir şarkıdaki **beat'leri, downbeat'leri, tempoyu ve ölçüyü** bulur ve bunları **DaVinci Resolve**'a
 aktarır: **ses klibinizde renkli marker'lar** ve şarkının altında bir **Subtitle Track** olarak. Analiz,
@@ -25,6 +25,10 @@ Analizi doğrudan Resolve içindeki bir pencereden başlatabilir ya da tarayıc�
 - **Izgarayı tek tıkla ayarlayın:** katlanmış ölçü kick ve snare'in ölçüde gerçekten nerede olduğunu gösterir;
   BeatAnalyzer ayarı önerir (ölçü başı, yarım beat, tempo, ölçü) – önizlemeyle, tüm şarkı veya bir bölüm için, geri
   alınabilir ve “Düzeltme” kaydırıcısı değişince korunur.
+- **Şarkının nerede değiştiğini görün:** şarkı yapısı bölüm değişimlerini (daha yüksek, daha sakin, farklı) kendi
+  “1”lerinde işaretler; dinlerken bir ölçü sayacı sonraki “1”e ve sonraki bölüme geri sayar, **M** tuşu beat
+  üzerine cue işareti koyar – ikisi de Resolve'a kendi renginde marker olarak gider.
+- **Kendi görünümünüz:** ihtiyacınız olmayan panelleri daraltın ve çalıştığınız sıraya sürükleyin.
 - **Yerel ve gizli:** her şey bilgisayarınızda çalışır – yükleme yok, hesap yok.
 
 ---
@@ -66,8 +70,9 @@ Analizi doğrudan Resolve içindeki bir pencereden başlatabilir ya da tarayıc�
   break'ler 2 ya da 3 beat'lik ölçüler alabilir. Düzeltme bunların üzerine düzenli bir ızgara koyar ve yalnızca
   modelin açıkça yeni bir „1“ duyduğu yerde yeniden başlar. Beat'lerin kendisi asla değişmez.
 - **Web uygulaması:** tempo, ölçü, toplam ölçü sayısı, tempo kararlılığı; beat ızgaralı ayrıntılı dalga formu ve beat
-  ile downbeat eğrileri, yakınlaştırma, döngü, metronomlu oynatıcı ve tap tempo, tempo eğrisi, düzeltmeler için beat
-  tablosu.
+  ile downbeat eğrileri, yakınlaştırma, döngü, metronomlu oynatıcı ve tap tempo, şarkı yapısı, canlı ölçü sayacı,
+  cue işaretleri (M tuşu), öneriyle ölçü ayarı, tempo eğrisi ve histogramı, düzeltmeler için beat tablosu. Paneller
+  daraltılabilir ve taşınabilir.
 - **Dışa aktarma:** Resolve için marker JSON, Audacity etiketleri, JSON, MIDI klik izi, CSV.
 - **Biçimler:** MP3, WAV, FLAC, OGG, AAC/M4A, ALAC, Opus, WMA ve daha fazlası. MP3 dosyaları, Resolve'un onları çaldığı
   gecikme kadar (yaklaşık 50 ms) kaydırılır; böylece marker'lar beat'in üzerinde durur.
@@ -208,6 +213,8 @@ atlamaz). BeatAnalyzer kesin gecikmeyi dosyadan okur ve marker'larla subtitle'la
 
 ![Web uygulamasında sonuç](docs/images/web-result.png)
 
+- **Görünümünüz:** kutucukların altındaki her panel başlığına tıklayınca daralır ve tutamağından (⋮⋮ ya da üzerinde
+  ok tuşları) sürüklenerek taşınır; web uygulaması düzeni hatırlar. *Görünümü sıfırla* varsayılan sırayı geri getirir.
 - **Kutucuklar:** tempo, ölçü (bu ölçüdeki ölçülerin payıyla), toplam ölçü, tempo kararlılığı, beat aralığı, ses
   dosyası. Ölçü kutucuğundaki **Düzeltme** kaydırıcısı ölçüleri hemen yeniden hesaplar.
 - **Dalga formu ve beat ızgarası:** çizgi olarak ölçüler ve beat'ler, modelin beat (BAF) ve downbeat (DAF) eğrileri.
@@ -215,6 +222,14 @@ atlamaz). BeatAnalyzer kesin gecikmeyi dosyadan okur ve marker'larla subtitle'la
 - **Oynatıcı:** istenen yerden çalma, **döngü** (gri = kapalı, sarı A-B = mavi çerçevedeki bölüm, yeşil = tüm
   şarkı), şarkının ses düzeyi, algılanan beat'lerde **metronom** (downbeat'te daha yüksek tık), hız 0,5× – 1,5×,
   tap tempo.
+- **Şarkı yapısı ve canlı:** şarkı boyunca ölçü başına seviye; bölüm değişimleri (▲ daha yüksek, ▼ daha sakin,
+  ◆ farklı) kendi “1”lerinde durur – tıklayınca oraya atlar. Çalarken: geçerli ölçü, sonraki “1”e kalan beat'ler,
+  sonraki bölüm ve canlı spektrum (her beat'te parlama, “1”de daha güçlü). **M** en yakın beat'e bir cue işareti
+  koyar (Shift+M: en yakın “1”e). Cue işaretleri ve bölüm değişimleri Resolve dışa aktarımına sarı ve mor marker
+  olarak, Audacity etiketlerine de girer.
+
+![Şarkı yapısı ve canlı görünüm](docs/images/web-structure-live.png)
+
 - **Beat kanıtları ve ölçü ayarı:** kick (< 150 Hz), snare/gövde ve hi-hat için şeritler, dalga formunun
   yakınlaştırmasıyla birlikte (altındaki tutamaçla iki kat yüksekliğe kadar sürüklenebilir); **katlanmış ölçü** tüm
   ölçüleri – bölümün veya tüm şarkının – üst üste koyar ve kick'in “1”de olup olmadığını söyler. **Tek tıkla
@@ -222,9 +237,8 @@ atlamaz). BeatAnalyzer kesin gecikmeyi dosyadan okur ve marker'larla subtitle'la
   Bir **öneri** bu ayarları katlanmış ölçüde dener ve en iyisini kesikli bir önizlemeyle sunar – *Uygula* onu alır.
   Ayarlar **tüm şarkıya veya yalnızca mavi çerçevedeki bölüme** uygulanır (örn. ½× yalnızca modelin çift saydığı
   yerde). “Düzeltme” kaydırıcısı değişince korunur ve tüm dışa aktarımlara – Resolve için marker JSON'a da – gider.
-- **Uzman tanılama** (açmak için başlığa tıklayın): spektrogram, “1”in, diğer beat'lerin ve off-beat'lerin enerji
-  spektrumu, çalarken **Canlı** spektrum (her beat'te parlama, “1”de daha güçlü), tempo histogramı.
-- Tüm şarkı boyunca **tempo eğrisi** (tempo sabitken katlanmış).
+- **Tempo:** tüm şarkı boyunca tempo eğrisi ve yanında her temponun ne sıklıkla geçtiği (½× / 2× işaretleri) –
+  sabit bir ızgara düz bir çizgi ve tek yüksek bir çubuk olarak görünür. Tempo sabitken daraltılmış.
 - **Beat tablosu:** bir beat'i ±10 ms kaydırın ya da downbeat yapın (`1/X`); düzeltmeler tüm dışa aktarımlara gider.
 
 4. **Dışa aktar** – sağ üstteki düğme.
@@ -322,7 +336,9 @@ Windows'ta Python yolu `venv\Scripts\python.exe`'dir.
 | `lang/*.json` | İngilizce, Almanca ve Türkçe metinler (web uygulaması ve Resolve penceresi) |
 | `resolve/BeatAnalyzer_Markers.lua` | DaVinci Resolve betiği ve penceresi |
 | `src/` | web uygulaması (React, TypeScript) |
-| `src/utils/beatEvidence.ts` | bant eğrileri, katlanmış ölçü, tempo histogramı, spektrumlar (web uygulaması) |
+| `src/utils/beatEvidence.ts` | bant eğrileri, katlanmış ölçü, tempo histogramı (web uygulaması) |
+| `src/utils/songStructure.ts` | şarkı yapısı: ölçü başına seviye, bir “1” üzerinde bölüm değişimleri (web uygulaması) |
+| `src/utils/panelLayout.ts` | panellerin sırası ve açık/kapalı durumu (web uygulaması) |
 | `src/utils/beatTransforms.ts` | tekrar uygulanabilir adımlar olarak tek tıkla ayarlar, bir bölüm için de (web uygulaması) |
 | `src/utils/fixSuggestion.ts` | öneri: ayarları katlanmış ölçüde dener (web uygulaması) |
 | `dist/` | derlenmiş web uygulaması; depoya eklenir |
