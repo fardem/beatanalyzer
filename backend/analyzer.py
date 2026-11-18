@@ -6,6 +6,7 @@ Beat and downbeat tracking with PyTorch / beat_this, md_beat_this or the librosa
 import math
 import hashlib
 import os
+import threading
 import shutil
 import tempfile
 import numpy as np
@@ -364,6 +365,7 @@ def smooth_bars(downbeat_conf: List[float], meter: int, protect: float = PROTECT
 # does not decode the file and run the model again. A failed model run is not kept. One tuple
 # (key, y, sr, model), replaced as a whole and read once per run: requests run in parallel threads.
 _LAST: Tuple = ()
+_LAST_LOCK = threading.Lock()   # the server analyses in threads; one consistent tuple at a time
 
 
 def _file_key(file_path: str) -> str:
@@ -397,7 +399,8 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
     protect = clamp_protect(protect)
     global _LAST
     key = _file_key(file_path)
-    last = _LAST
+    with _LAST_LOCK:
+        last = _LAST
     cached_model = last[4] if last and last[0] == key and last[1] == model_id else None
     # load the audio with soundfile / PyAV / librosa (works with Python 3.9 to 3.13)
     if last and last[0] == key:
@@ -431,7 +434,8 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
         info = engine_info("librosa", "not_installed" if not available else "model_load_failed")
         beats_sec, downbeats_sec = fallback_mir_track(y, sr)
 
-    _LAST = (key, model_id, y, sr, model_cache)
+    with _LAST_LOCK:
+        _LAST = (key, model_id, y, sr, model_cache)
 
     # curves for the web app: probabilities of the model, otherwise the onset strength of librosa
     if beat_prob is not None:

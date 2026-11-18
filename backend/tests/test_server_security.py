@@ -115,3 +115,44 @@ class TestAnalyzeEndpoint(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestStaticAndFallback(unittest.TestCase):
+    """GET side: files only from dist/, a foreign Host is refused, a short note when the web app is not built."""
+
+    def setUp(self):
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.BeatThisRequestHandler)
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+        self.port = self.httpd.server_address[1]
+
+    def tearDown(self):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+
+    def raw_get(self, path, host=None):
+        import http.client
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        conn.putrequest("GET", path, skip_host=True)
+        conn.putheader("Host", host or f"127.0.0.1:{self.port}")
+        conn.endheaders()
+        resp = conn.getresponse()
+        body = resp.read()
+        conn.close()
+        return resp.status, body
+
+    def test_no_file_outside_dist(self):
+        status, body = self.raw_get("/../backend/server.py")
+        self.assertNotIn(b"BeatThisRequestHandler", body)
+        status, body = self.raw_get("/%2e%2e/VERSION")
+        self.assertNotEqual(body.strip(), (Path(server.PROJECT_ROOT) / "VERSION").read_bytes().strip())
+
+    def test_foreign_host_refused_on_get(self):
+        status, _ = self.raw_get("/api/settings", host="evil.example:8000")
+        self.assertEqual(status, 403)
+
+    def test_short_note_without_built_web_app(self):
+        with mock.patch.object(server, "DIST_DIR", "/nonexistent-dist"):
+            status, body = self.raw_get("/")
+        self.assertEqual(status, 200)
+        self.assertIn(b"npm run build", body)
+        self.assertLess(len(body), 3000)
