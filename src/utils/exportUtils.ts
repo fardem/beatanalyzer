@@ -99,72 +99,80 @@ export function generateCsv(result: AnalysisResult): string {
  * Creates a standard Type 0 MIDI file with high/low woodblock clicks for beats
  */
 export function generateMidiClickBlob(result: AnalysisResult): Blob {
-  const ticksPerQuarter = 480;
-  const bpm = Math.round(result.globalBpm);
-  const microsecondsPerQuarter = Math.round(60000000 / bpm);
+  const bytes = generateMidiBytes(result);
+  return new Blob([bytes.buffer as ArrayBuffer], { type: 'audio/midi' });
+}
 
-  const trackEvents: number[] = [];
+const PPQ = 480;
 
-  // Set Tempo Meta Event (delta 0, FF 51 03 tt tt tt)
-  trackEvents.push(0x00, 0xff, 0x51, 0x03);
-  trackEvents.push((microsecondsPerQuarter >> 16) & 0xff);
-  trackEvents.push((microsecondsPerQuarter >> 8) & 0xff);
-  trackEvents.push(microsecondsPerQuarter & 0xff);
+function tempoEvent(events: number[], usPerQuarter: number) {
+  const us = Math.max(1, Math.min(0xffffff, Math.round(usPerQuarter)));
+  events.push(0xff, 0x51, 0x03, (us >> 16) & 0xff, (us >> 8) & 0xff, us & 0xff);
+}
 
-  // Time Signature Meta Event (delta 0, FF 58 04 nn dd cc bb)
-  const num = result.timeSignature.numerator;
-  const denPow = Math.log2(result.timeSignature.denominator);
-  trackEvents.push(0x00, 0xff, 0x58, 0x04, num, denPow, 24, 8);
+/**
+ * MIDI click track (format 0, 480 ticks per quarter) with a tempo map: every beat sits on a whole quarter, and a
+ * tempo event before each beat gives the length of the gap to the next one – so in a DAW the clicks lie exactly on
+ * the song's beats (< 1 ms) and its bars follow the song, also when the tempo wobbles or changes. The stretch from 0
+ * to the first beat becomes a lead-in of whole quarters, as many that the first "1" falls on a bar line and the
+ * lead-in tempo is as close as possible to the song's tempo.
+ */
+export function generateMidiBytes(result: AnalysisResult): Uint8Array {
+  const beats = [...result.beats].sort((a, b) => a.time - b.time);
+  const meter = Math.max(1, result.timeSignature.numerator || 4);
+  const events: number[] = [];
+  let tick = 0;
+  const at = (target: number) => {
+    writeVarLength(events, Math.max(0, target - tick));
+    tick = Math.max(tick, target);
+  };
 
-  let lastTick = 0;
+  // lead-in: n quarters with n ≡ meter − pickup (mod meter), tempo nearest to the song's
+  const t0 = beats.length ? Math.max(0, beats[0].time) : 0;
+  const pickup = Math.max(0, beats.findIndex((b) => b.isDownbeat));
+  const base = (meter - (pickup % meter)) % meter;
+  let lead = base;
+  if (t0 > 0.001) {
+    const target = result.globalBpm > 0 ? result.globalBpm : 120;
+    let best = Infinity;
+    for (let j = 0; j < 64; j++) {
+      const n = base + j * meter;
+      if (n < 1) continue;
+      const diff = Math.abs((60 * n) / t0 - target);
+      if (diff < best) {
+        best = diff;
+        lead = n;
+      }
+    }
+  }
+  at(0);
+  if (lead > 0) tempoEvent(events, (t0 * 1e6) / lead);
+  else tempoEvent(events, 60e6 / (result.globalBpm > 0 ? result.globalBpm : 120));
+  const denPow = Math.round(Math.log2(result.timeSignature.denominator || 4));
+  at(0);
+  events.push(0xff, 0x58, 0x04, meter, denPow, 24, 8);
 
-  result.beats.forEach((b) => {
-    // Calculate tick from timestamp
-    const currentTick = Math.round(b.time * (bpm / 60) * ticksPerQuarter);
-    const deltaTicks = Math.max(0, currentTick - lastTick);
-    lastTick = currentTick;
-
-    // Woodblock pitch: 76 for Downbeat, 77 for other beats (General MIDI Percussion channel 10 or standard note)
-    const pitch = b.isDownbeat ? 76 : 77;
-    const velocity = b.isDownbeat ? 120 : 90;
-
-    // Delta time encoded as variable length quantity
-    writeVarLength(trackEvents, deltaTicks);
-    // Note On channel 9 (percussion 0x99) or channel 0 (0x90)
-    trackEvents.push(0x99, pitch, velocity);
-
-    // Note Off 30 ticks later
-    writeVarLength(trackEvents, 30);
-    trackEvents.push(0x89, pitch, 0);
-
-    lastTick += 30;
+  beats.forEach((b, k) => {
+    const beatTick = (lead + k) * PPQ;
+    const next = beats[k + 1] ?? null;
+    const prev = beats[k - 1] ?? null;
+    const gap = next ? next.time - b.time : prev ? b.time - prev.time : 60 / (result.globalBpm || 120);
+    at(beatTick);
+    tempoEvent(events, gap * 1e6);
+    const pitch = b.isDownbeat ? 76 : 77;   // woodblock high / low (GM percussion, channel 10)
+    at(beatTick);
+    events.push(0x99, pitch, b.isDownbeat ? 120 : 90);
+    at(beatTick + 30);
+    events.push(0x89, pitch, 0);
   });
 
-  // End of Track Meta Event (delta 0, FF 2F 00)
-  trackEvents.push(0x00, 0xff, 0x2f, 0x00);
+  at(tick);
+  events.push(0xff, 0x2f, 0x00);
 
-  // Header chunk (MThd, 6 bytes, format 0, 1 track, ticksPerQuarter)
-  const header = [
-    0x4d, 0x54, 0x68, 0x64, // 'MThd'
-    0x00, 0x00, 0x00, 0x06, // length 6
-    0x00, 0x00,             // format 0
-    0x00, 0x01,             // 1 track
-    (ticksPerQuarter >> 8) & 0xff,
-    ticksPerQuarter & 0xff,
-  ];
-
-  // Track chunk (MTrk, length, data)
-  const trackLength = trackEvents.length;
-  const trackHeader = [
-    0x4d, 0x54, 0x72, 0x6b, // 'MTrk'
-    (trackLength >> 24) & 0xff,
-    (trackLength >> 16) & 0xff,
-    (trackLength >> 8) & 0xff,
-    trackLength & 0xff,
-  ];
-
-  const fullMidi = new Uint8Array([...header, ...trackHeader, ...trackEvents]);
-  return new Blob([fullMidi], { type: 'audio/midi' });
+  const header = [0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, (PPQ >> 8) & 0xff, PPQ & 0xff];
+  const len = events.length;
+  const trackHeader = [0x4d, 0x54, 0x72, 0x6b, (len >> 24) & 0xff, (len >> 16) & 0xff, (len >> 8) & 0xff, len & 0xff];
+  return new Uint8Array([...header, ...trackHeader, ...events]);
 }
 
 export const RESOLVE_MARKER_FORMAT = 'beatthis-resolve-markers/1';
