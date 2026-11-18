@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.5.1** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
+**Version 0.6.0** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
 
 BeatAnalyzer finds the **beats, downbeats, tempo and time signature** of a song and puts them into
 **DaVinci Resolve** as **coloured markers on your audio clip** and as a **subtitle track** under the song. The
@@ -26,7 +26,7 @@ You can start it straight from a window inside Resolve, or use the web app in yo
   suggests the fix (bar start, half beat, tempo, time signature) with a preview – for the whole song or a section,
   undoable, and kept when you change Smoothing.
 - **See where the song changes:** the song structure marks section changes (louder, quieter, different) on their
-  "1"; while listening, a bar counter shows the bar and how far the next section is, and the key **M** sets cue
+  "1" and gives returning parts the same letter; while listening, a bar counter shows the bar and how far the next section is, and the key **M** sets cue
   marks on the beat – both go to Resolve as markers in their own colour.
 - **Your own view:** fold the panels you do not need and drag them into the order you work in.
 - **Local and private:** everything runs on your PC; no upload, no account.
@@ -214,14 +214,16 @@ window shows it before and after. MP3 files without that delay need no correctio
 - **Your view:** every panel below the tiles folds with a click on its title and moves by dragging its grip
   (⋮⋮, or arrow keys on it); the web app keeps the layout. *Reset view* brings back the default order.
 - **Tiles:** tempo, time signature (with the share of bars that have it), number of bars, tempo stability, beat
-  interval, audio file. The **Smoothing** slider in the time signature tile recomputes the bars at once.
+  interval with the grid jitter (± ms: below ~10 ms the markers sit frame-exact), audio file. The **Smoothing** slider in the time signature tile recomputes the bars at once.
 - **Waveform & beat grid:** bars and beats as lines, the beat (BAF) and downbeat (DAF) curves of the model.
   Quick zoom 5 s / 15 s / 30 s / 60 s, magnifier, overview with a frame you can drag.
 - **Player:** play from any point, **loop** (grey = off, yellow A-B = the section in the blue frame, green = the
-  whole song), song volume, **metronome** on the detected beats (higher click on the downbeat), speed 0.5× to 1.5×,
+  whole song), song volume, sample-exact **metronome** on the detected beats (higher click on the downbeat), speed
+  0.5× to 1.5×,
   tap tempo.
-- **Song structure & live:** level per bar over the song; section changes (▲ louder, ▼ quieter, ◆ different) sit on
-  their "1" – click or swipe the section buttons (mouse held down) to move along. While playing: a bar counter
+- **Song structure & live:** every bar is compared with every other by its notes (chords), its sound colour
+  (instruments) and its loudness; section changes (▲ louder, ▼ quieter, ◆ different) sit on their "1", and parts
+  that come back get the same letter (A, B, A, B, C …) – click or swipe the section buttons (mouse held down) to move along. While playing: a bar counter
   (current bar and beat, the next section; can be hidden) and the live spectrum (flash on every beat, stronger on
   the "1"). **M** – or *Set cue* on the right of the "Song structure" title – sets a cue mark on
   the nearest beat (Shift+M: on the nearest "1"); cues stand as yellow buttons between the sections. Cue marks and
@@ -238,7 +240,9 @@ window shows it before and after. MP3 files without that delay need no correctio
   when you move Smoothing and go into every export – also the marker JSON for Resolve.
 - **Tempo:** tempo curve over the whole song and, next to it, how often each tempo occurs (½× / 2× marks) – a
   steady grid shows as a flat line and one tall bar. Folded while the tempo is steady.
-- **Beat table:** move a beat by ±10 ms or make it a downbeat (`1/X`); the corrections go into every export.
+- **Beat table:** move a beat by ±10 ms, make it a downbeat (`1/X`), **add** a beat the model missed (+) or
+  **remove** one (bin); in the waveform zoomed to 30 s or less: **Shift+click** adds, **Alt+click** removes. All
+  corrections can be undone, stay with Smoothing and go into every export.
 
 4. **Export** – button at the top right.
 
@@ -252,7 +256,7 @@ result is much less accurate than with beat_this.
 | DaVinci Resolve | `<name>_resolve_markers.json` | the way *Load JSON* in the Resolve window |
 | Audacity | `<name>_audacity_labels.txt` | *File → Import → Labels* |
 | beat_this JSON | `<name>_beat_this.json` | all values, e.g. for your own scripts |
-| MIDI | `<name>_click_track.mid` | click track for a DAW |
+| MIDI | `<name>_click_track.mid` | click track for a DAW, with a tempo map: every click on its beat, bars follow the song |
 | CSV | `<name>_beats.csv` | table with time, bar, beat, tempo |
 
 ## Languages
