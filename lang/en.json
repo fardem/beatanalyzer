@@ -14,7 +14,7 @@
     "time_bpm": "{clock} – {bpm} BPM",
     "confidence": "Confidence {value}",
     "intro": [
-      "BeatAnalyzer",
+      "{made_by}",
       "{file}",
       "{bpm} BPM – {meter}"
     ],
@@ -145,7 +145,9 @@
     "note_mp3": "MP3: Resolve plays MP3 files about 50 ms later; BeatAnalyzer moves the markers to match.",
     "msg_mp3_shift": "MP3: markers moved by {ms} ms (Resolve plays MP3 that much later).",
     "note_mp3_json": "MP3: the markers are set {ms} ms later (Resolve plays MP3 files that much later).",
-    "note_mp3_json_zero": "MP3: no correction needed (the file has no encoder delay; Resolve plays it on time)."
+    "note_mp3_json_zero": "MP3: no correction needed (the file has no encoder delay; Resolve plays it on time).",
+    "color_cue": "Cue (web app)",
+    "color_section": "Section change"
   },
   "web": {
     "app": {
@@ -342,7 +344,9 @@
       "loop_song": "Whole song",
       "loop_song_tip": "Loop: whole song – click: loop off",
       "loop_off": "Loop",
-      "speed": "Speed"
+      "speed": "Speed",
+      "song_mute": "Mute the song – hear only the metronome",
+      "song_unmute": "Song on again"
     },
     "progress": {
       "browser_activation": "Browser analysis: BAF and DAF …",
@@ -425,11 +429,14 @@
       "title": "Tempo",
       "help_label": "Tempo curve explanation",
       "help_summary": "Shows whether the beat grid runs steady through the whole song. Steady means: the markers stay on the beat even far from the start.",
-      "help_item1": "Flat line on the dashed average (Ø): steady tempo (studio, click track) – you can cut by counting bars.",
-      "help_item2": "Waves or steps: a live band or a real tempo change. Rose dots = the “1” of each bar; check the markers by ear in these parts.",
+      "help_item1": "Violet line: the tempo from beat to beat. Flat = steady tempo (studio, click track) – you can cut by counting bars.",
+      "help_item2": "Light blue dashed line: the main tempo – the same value as in the tempo tile and the histogram.",
       "help_tip": "Tip: a sudden jump to exactly half or double the tempo means the analysis counted wrong there – fix it with Tempo ½× / 2× for that section in “Beat evidence & grid fixes”.",
-      "tip_range": "Lowest and highest tempo, and the average (Ø). Only 1–3 BPM apart: the song keeps its tempo – ideal for cutting on the grid.",
-      "curve_title": "Tempo over the song"
+      "tip_range": "Lowest and highest tempo, and the main tempo (from the middle beat gap – parts counted at half or double speed do not move it). Only 1–3 BPM between lowest and highest: the song keeps its tempo – ideal for cutting on the grid.",
+      "curve_title": "Tempo over the song",
+      "help_item3": "Red dots: the “1” of each bar. Waves or steps around them: a live band or a real tempo change – check the markers there by ear.",
+      "help_item4": "Yellow line: playhead.",
+      "main": "main"
     },
     "update": {
       "button": "Update {version}",
@@ -477,7 +484,7 @@
       "loupe_tip": "Turn on the magnifier (~{zoom}× / {span} s) on hover",
       "overview": "Overview",
       "overview_click": "Click to jump there",
-      "overview_drag": "Drag the blue frame to move · click outside to jump",
+      "overview_drag": "Drag the blue frame to move · double-click it to play the section · click outside to jump",
       "quick_back": "Back to the whole file",
       "quick_tip": "{sec} seconds around the playhead",
       "quick_too_short": "The track is shorter than {sec} seconds",
@@ -547,18 +554,18 @@
       "tempo_doubletime": "2× {bpm}",
       "help_lanes_label": "Band Onset Lanes explanation",
       "help_lanes_summary": "The part of the song shown in the waveform, split into three bands: shows where the hits are, so you can see whether the lines sit on them.",
-      "help_lanes_1": "Spikes = hits: Low (kick, bass), Mid (snare, claps, vocals), High (hi-hats). A cut on a spike feels “on the beat”.",
-      "help_lanes_2": "Soft shade behind = sustained sound (bass notes, pads, vocals) – not a cut point.",
+      "help_lanes_1": "Low (rose): kick and bass – the hits a cut on the “1” should sit on.",
+      "help_lanes_2": "Mid (cyan): snare, claps, voice.",
       "help_lanes_tip": "Tip: the rose lines should sit on the Low spikes (kick on the “1”). If they sit between the spikes, the grid is shifted.",
       "help_folded_label": "Folded Bar explanation",
       "help_folded_summary": "All bars stacked onto one: shows at a glance whether the “1” is where the kick is – that is, whether your bar markers are right.",
-      "help_folded_1": "Rose (Low): kick and bass. In most pop, rock and hip-hop the tallest rose peak is on 1. In house and techno (kick on every beat) it is even – then the folded bar cannot decide, trust your ear.",
-      "help_folded_2": "Cyan / indigo: snare and hi-hats – in 4/4 usually on 2 and 4. Amber ticks mark the “and” between the beats.",
+      "help_folded_1": "Red (Low): kick and bass. In most pop, rock and hip-hop the tallest red peak is on 1. In house and techno (kick on every beat) it is even – then the folded bar cannot decide, trust your ear.",
+      "help_folded_2": "Cyan (Mid): snare and claps – in 4/4 usually on 2 and 4.",
       "help_folded_tip": "Tip: tallest rose peak on 2 or 4 → “−1 / +1 beat”; on an amber tick → “−½ / +½ beat”. Or simply take the suggestion on the right.",
       "help_tempo_label": "Tempo Histogram explanation",
       "help_tempo_summary": "How often each tempo occurs: one tall bar means one steady tempo for the whole song.",
-      "help_tempo_1": "Cyan: the main tempo. One narrow, tall bar = steady grid, you can trust the markers everywhere.",
-      "help_tempo_2": "Rose bar, or bars near the amber lines (½× / 2×): part of the song was counted at half or double speed, or the tempo really changes.",
+      "help_tempo_1": "Cyan bar: the main tempo. One narrow, tall bar = steady grid, you can trust the markers everywhere.",
+      "help_tempo_2": "Red bar: a second tempo – a real tempo change or a part counted at half or double speed.",
       "help_tempo_tip": "Tip: find that part in the tempo curve on the left (click to jump there) and fix it there.",
       "tip_tempo_primary": "The most common tempo. Above about 85 %: the grid is steady across the song.",
       "tip_tempo_bimodal": "A second tempo – a real tempo change or a part counted at half or double speed. Look for it in the tempo curve.",
@@ -566,7 +573,6 @@
       "fix_meter_tip": "{n} beats per bar: every {n}th beat from the first “1” becomes a “1”",
       "fix_count": "{n} step(s) active",
       "fix_count_tip": "Corrections stay when you move Smoothing; Undo removes the last step, Reset all of them.",
-      "lanes_resize": "Drag to change the height (up to 2×); double-click: normal height",
       "scope_fix_label": "Apply to",
       "scope_fix_song": "Whole song",
       "scope_fix_section": "Section {range}",
@@ -580,7 +586,17 @@
       "suggest_meter": "{n} beats per bar",
       "suggest_shift": "{n} beat",
       "suggest_preview": "dashed line = after the suggestion",
-      "suggest_tip": "BeatAnalyzer tried the combinations of bar start, half beat, beats per bar and tempo on the folded bar. This one puts the kick most clearly on the “1” (and in 4/4 the snare on 2 and 4). Listen before you export – Undo takes it back."
+      "suggest_tip": "BeatAnalyzer tried the combinations of bar start, half beat, beats per bar and tempo on the folded bar. This one puts the kick most clearly on the “1” (and in 4/4 the snare on 2 and 4). Listen before you export – Undo takes it back.",
+      "help_lanes_3": "High (violet): hi-hats and cymbals.",
+      "help_lanes_4": "Spikes = hits, the soft shade behind = sustained sound (bass notes, pads, voice) – not a cut point.",
+      "help_lanes_5": "Lines: red with T-number = the “1” of a bar, light blue = the other beats, yellow = playhead.",
+      "help_folded_3": "Violet (High): hi-hats – often on every beat or between the beats.",
+      "help_folded_4": "Yellow dashed ticks: the “and” between the beats.",
+      "help_folded_5": "White dashed line: preview of the suggestion on the right.",
+      "help_tempo_3": "Violet bars: all other beat gaps – the wider they spread, the more the tempo moves.",
+      "help_tempo_4": "Yellow dashed lines: half and double the main tempo. A bar there means a part was counted at half or double speed.",
+      "lanes_taller": "Make the lanes twice as high",
+      "lanes_lower": "Lanes back to normal height"
     },
     "structure": {
       "title": "Song structure & live",
@@ -588,9 +604,9 @@
       "strip_title": "Song structure",
       "help_label": "Song structure explanation",
       "help_summary": "Where the song changes and which parts come back. BeatAnalyzer compares every bar with every other – by its notes (chords), its sound colour (instruments) and its loudness – and marks a section change where the bars before differ clearly from the bars after: always on a “1”, because that is where a cut on the change belongs.",
-      "help_1": "Letters: the same letter means the same material – B, then later B again = the chorus comes back. Good for repeating a cut pattern or a look.",
-      "help_2": "▲ louder (chorus, drop) – strong place for a hard cut. ▼ quieter (break, bridge) – calm shots, slow motion, a fade. ◆ different at about the same loudness (new chords or instruments).",
-      "help_tip": "Click the strip or a section button to jump to the “1” there. Section changes go into the DaVinci Resolve export as purple markers (“Section B ▲ +5 dB”). It is computed from the sound, not a musical analysis – listen before you rely on it.",
+      "help_1": "Letters (white): the same letter means the same material – B, then later B again = the chorus comes back. Good for repeating a cut pattern or a look.",
+      "help_2": "Green ▲ louder (chorus, drop) – a strong place for a hard cut or a new scene.",
+      "help_tip": "Click the strip or a section button to jump to the “1” there. Section changes go into the DaVinci Resolve export as purple markers (“Section B ▲ +5 dB”, colour adjustable in the Resolve window). It is computed from the sound, not a musical analysis – listen before you rely on it.",
       "count": "{n} sections",
       "none": "Too few bars for a song structure",
       "hover": "Bar {bar} · {time} · {db} dB",
@@ -601,14 +617,16 @@
       "bar": "Bar {bar}",
       "chip_tip": "{bars} bars – click to jump to the “1”",
       "label_tip": "Same letter = same part of the song (e.g. the chorus)",
-      "help_3": "Amber line: playhead. Yellow flags: your cue marks."
+      "help_3": "Blue ▼ quieter (break, bridge, outro) – calm shots, slow motion, a fade.",
+      "help_4": "Violet ◆ different at about the same loudness – new chords or new instruments.",
+      "help_5": "Yellow: the playhead (line) and your cue marks (flags)."
     },
     "live": {
       "title": "Live (while playing)",
       "help_label": "Live view explanation",
-      "help_summary": "Follows the playback: bar counter and the next section – so you can count along while listening and catch cut points without stopping.",
-      "help_1": "Bar counter (can be hidden): the current bar and its beats lit in turn, the “1” in rose; below, the next section and how many bars until it starts.",
-      "help_2": "Spectrum: kick (rose), snare (cyan), hi-hats (indigo); the glow flashes on every beat, stronger on the “1”. If kick and flash do not land together, the grid is off.",
+      "help_summary": "Follows the playback: the bar counter (current bar, its beats lit in turn, the next section) and the spectrum of what is playing – bass left, hi-hats right.",
+      "help_1": "Red: kick (bars left), the “1” in the bar counter, the strong flash on the “1”.",
+      "help_2": "Cyan: snare (middle bars), the current beat in the counter, the flash on the other beats. If kick and flash do not land together, the grid is off.",
       "help_tip": "Tip: press M at a cut point while listening – the cue lands on the nearest beat.",
       "bar": "Bar",
       "beats_aria": "Beat {beat} of {n}",
@@ -617,7 +635,8 @@
       "counter_show": "Bar counter",
       "counter_hide": "Bar counter",
       "counter_show_tip": "Show the bar counter left of the spectrum",
-      "counter_hide_tip": "Hide the bar counter – the spectrum takes the full width"
+      "counter_hide_tip": "Hide the bar counter – the spectrum takes the full width",
+      "help_3": "Violet: hi-hats (bars right)."
     },
     "cue": {
       "title": "Cue marks",
@@ -625,8 +644,8 @@
       "add_tip": "Sets a cue on the beat nearest to the playhead (key M; Shift+M: on the nearest “1”)",
       "help_label": "Cue marks explanation",
       "help_summary": "Mark cut points while listening, without stopping: press M where you want a cut. The mark snaps to the nearest beat, so it is on the beat in Resolve too.",
-      "help_1": "M = nearest beat, Shift+M = nearest “1” (start of the bar).",
-      "help_2": "Cues appear as yellow flags in the strip and as yellow buttons in the row below, between the sections. They go into the DaVinci Resolve export as yellow markers named “Cue 1”, “Cue 2” … and into the Audacity labels.",
+      "help_1": "M = cue on the nearest beat, Shift+M = on the nearest “1” (start of the bar).",
+      "help_2": "Cues are yellow everywhere: flags in the strip, buttons between the sections, markers “Cue 1”, “Cue 2” … in the DaVinci Resolve export (colour adjustable in the Resolve window) and Audacity labels.",
       "help_tip": "Tip: rather press a little early than late – the mark snaps to the nearest beat. Click a cue to jump there, × removes it. Cues follow grid fixes.",
       "name": "Cue {n}",
       "jump": "Jump here",

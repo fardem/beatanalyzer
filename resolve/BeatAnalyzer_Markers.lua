@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.6.0"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.6.1"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -44,7 +44,7 @@ local BA = {
       ["_meta.percent"] = "{v}%",
       ["output.bar_beat"] = "Bar {bar} – Beat {beat}",
       ["output.confidence"] = "Confidence {value}",
-      ["output.intro"] = "BeatAnalyzer\n{file}\n{bpm} BPM – {meter}",
+      ["output.intro"] = "{made_by}\n{file}\n{bpm} BPM – {meter}",
       ["output.kind_beat"] = "Beat {beat}",
       ["output.kind_downbeat"] = "Downbeat (1)",
       ["output.marker_cue"] = "Cue {n}",
@@ -77,9 +77,11 @@ local BA = {
       ["plugin.choose_title"] = "BeatAnalyzer – choose marker JSON",
       ["plugin.clip_found"] = "{names} in the Media Pool · {length}",
       ["plugin.color_beat"] = "Beat {n}",
+      ["plugin.color_cue"] = "Cue (web app)",
       ["plugin.color_downbeat"] = "Downbeat",
       ["plugin.color_none"] = "no marker",
       ["plugin.color_other"] = "other",
+      ["plugin.color_section"] = "Section change",
       ["plugin.engine"] = "Analysed with {engine}",
       ["plugin.engine_unknown"] = "Analysis program: not given in the JSON (older JSON or analysed in the browser)",
       ["plugin.explain_absent"] = "The song is not in the Timeline '{timeline}'. Only the Subtitle in the Media Pool is created.",
@@ -925,24 +927,26 @@ M.NO_MARKER = "none"
 -- md_beat_this (Masked Diffusion, CC BY-NC 4.0): non-commercial use only; shown in the window with its address
 M.MD_URL = "https://github.com/fosfrancesco/md_beat_this"
 
+-- cue: cue marks set in the web app while listening (key M); section: section changes of the song structure
 M.DEFAULT_COLORS = { downbeat = DOWNBEAT_COLOR, beat2 = BEAT_COLOR, beat3 = BEAT_COLOR, beat4 = BEAT_COLOR,
-                     other = BEAT_COLOR }
+                     other = BEAT_COLOR, cue = "Yellow", section = "Purple" }
 local COLOR_OK = {}
 for _, c in ipairs(M.MARKER_COLORS) do
   COLOR_OK[c] = true
 end
 
-M.CUE_COLOR = "Yellow"       -- cue marks set in the web app while listening (key M)
-M.SECTION_COLOR = "Purple"   -- section changes of the song structure (web app)
-
 -- Colour of a marker by its beat in the bar: downbeat, beat 2-4, all others; nil = no marker.
 -- An unknown colour falls back to the default of that slot. Cue marks and section changes from the web app have
--- their own colours and are always set (also when their beat slot is "no marker").
+-- their own colours (adjustable in the window, test 0.6.0) and are set also when their beat slot is "no marker";
+-- with "no marker" for cue / section they keep the colour of their beat.
 function M.marker_color(m, colors)
-  if tonumber(m.cue) then
-    return M.CUE_COLOR
-  elseif m.section == "up" or m.section == "down" or m.section == "change" then
-    return M.SECTION_COLOR
+  local own = tonumber(m.cue) and "cue"
+    or ((m.section == "up" or m.section == "down" or m.section == "change") and "section") or nil
+  if own then
+    local c = colors and colors[own]
+    if c ~= M.NO_MARKER then
+      return COLOR_OK[c] and c or M.DEFAULT_COLORS[own]
+    end
   end
   local slot = m.type == "downbeat" and "downbeat"
     or ((tonumber(m.beat) or 0) >= 2 and (tonumber(m.beat) or 0) <= 4 and ("beat" .. tonumber(m.beat)))
@@ -971,8 +975,15 @@ end
 M.INFO_GAP = 0.5   -- seconds before the first beat needed for an own info subtitle; else it goes under that beat
 
 -- Info block of every subtitle: BeatAnalyzer, file, tempo and meter, model with licence (if the JSON has one).
+-- "BeatAnalyzer 0.6.1": the program and version that made the JSON (older JSON without it: this script's version)
+function M.made_by(data)
+  local gen = type(data) == "table" and type(data.generator) == "table" and data.generator or nil
+  local version = gen and gen.version and tostring(gen.version) or VERSION
+  return "BeatAnalyzer " .. version
+end
+
 function M.info_lines(data)
-  local text = T("output.intro", { file = tostring(data.fileName or ""),
+  local text = T("output.intro", { made_by = M.made_by(data), file = tostring(data.fileName or ""),
                                    bpm = tonumber(data.globalBpm) and fmt_num(data.globalBpm, 1) or "?",
                                    meter = fmt_meter(data.timeSignature or "?") })
   local model = type(data.engine) == "table" and type(data.engine.model) == "table" and data.engine.model or nil
@@ -1083,13 +1094,17 @@ function M.marker_name(m)
 end
 
 -- Note of a marker: the same parts as its subtitle, e.g. "Takt 24 – Beat 2 | 106,860 s | 120,0 BPM | Confidence 75 %".
-function M.marker_note(m)
+-- With `data` (the first marker of a clip): "BeatAnalyzer 0.6.1" in front (test 0.6.0 b2).
+function M.marker_note(m, data)
   local parts = {
     T("output.bar_beat", { bar = tonumber(m.bar) or 0, beat = tonumber(m.beat) or 0 }),
     T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) }),
   }
   if tonumber(m.confidence) then
     parts[#parts + 1] = T("output.confidence", { value = fmt_pct(m.confidence) })
+  end
+  if data then
+    table.insert(parts, 1, M.made_by(data))
   end
   return table.concat(parts, " | ")
 end
@@ -1768,7 +1783,7 @@ function Job:mark_some()
           c.skipped = c.skipped + 1
         else
           local name = M.marker_name(m)
-          local note = M.marker_note(m)
+          local note = M.marker_note(m, c.added == 0 and self.data or nil)   -- first marker: "BeatAnalyzer x.y.z"
           if api(clip, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
             c.added = c.added + 1
           else
@@ -1834,8 +1849,9 @@ function Job:mark_timeline()
         local frame = round((tonumber(m.time) or -1) * self.tl_fps)
         if frame >= c.left and (not c.duration or frame < c.left + c.duration) then
           local name = M.marker_name(m)
-          local note = M.marker_note(m)
+          local note = M.marker_note(m, not c.noted and self.data or nil)   -- first marker: "BeatAnalyzer x.y.z"
           if api(item, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
+            c.noted = true
             self.tl_added = self.tl_added + 1
           end
         end
@@ -1925,7 +1941,7 @@ end
 -- ─── Settings of the window ──────────────────────────────────────────────────
 -- <BeatAnalyzer>/resolve_temp/plugin.txt, lines key=value. Without a known BeatAnalyzer folder nothing is kept.
 
-local COLOR_SLOTS = { "downbeat", "beat2", "beat3", "beat4", "other" }
+local COLOR_SLOTS = { "downbeat", "beat2", "beat3", "beat4", "other", "cue", "section" }
 
 function M.settings_path()
   return BA.home and (BA.home .. SEP .. "resolve_temp" .. SEP .. "plugin.txt") or nil
@@ -2004,7 +2020,8 @@ local LINE_PX, CHAR_PX = 19, 8
 local REFRESH_TICKS = 20
 local LABEL_WIDTH = 86
 
-local COLOR_IDS = { downbeat = "ColorDownbeat", beat2 = "ColorBeat2", beat3 = "ColorBeat3", beat4 = "ColorBeat4",
+local COLOR_IDS = { cue = "ColorCue", section = "ColorSection",
+                    downbeat = "ColorDownbeat", beat2 = "ColorBeat2", beat3 = "ColorBeat3", beat4 = "ColorBeat4",
                     other = "ColorOther" }
 
 local SWATCH_HEX = {
@@ -2240,13 +2257,20 @@ function M.main()
         mini_swatch("beat2"),
         mini_swatch("beat3"),
         mini_swatch("beat4"),
-        mini_swatch("other") }),
+        mini_swatch("other"),
+        mini_swatch("cue"),
+        mini_swatch("section") }),
       ui:HGroup({ Weight = 0, Spacing = 8,
         color_col("downbeat", T("plugin.color_downbeat")),
         color_col("beat2", T("plugin.color_beat", { n = 2 })),
         color_col("beat3", T("plugin.color_beat", { n = 3 })),
         color_col("beat4", T("plugin.color_beat", { n = 4 })),
         color_col("other", T("plugin.color_other")) }),
+      -- markers from the web app: cue marks and section changes (test 0.6.0: own, adjustable colours)
+      ui:HGroup({ Weight = 0, Spacing = 8,
+        color_col("cue", T("plugin.color_cue")),
+        color_col("section", T("plugin.color_section")),
+        ui:Label({ Text = "", Weight = 3 }) }),
 
       -- 3. Dynamic Status / Progress Label (hidden when idle so there is zero dead space)
       ui:Label({ ID = "Status", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 44 }, Hidden = true,

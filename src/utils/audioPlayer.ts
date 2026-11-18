@@ -2,7 +2,7 @@ import { BeatItem } from '../types/analyzer';
 import { planClicks } from './clickSchedule';
 
 const SCHEDULE_EVERY_MS = 25;   // how often the next clicks are planned
-const SCHEDULE_AHEAD_S = 0.12;   // how far ahead (playback seconds)
+const SCHEDULE_AHEAD_S = 0.3;   // how far ahead (playback seconds); bridges a busy main thread (song analysis)
 
 /**
  * Web Audio Playback Engine with Synchronized Metronome Click
@@ -25,6 +25,7 @@ export class BeatPlayer {
   private metronomeEnabled: boolean = true;
   private metronomeVolume: number = 0.6;
   private musicVolume: number = 1.0;
+  private songMuted = false;
   // loop range in seconds (section of the waveform or the whole song); the source loops sample-exact
   private loop: { start: number; end: number } | null = null;
   private lastTickTime: number = 0;
@@ -53,12 +54,22 @@ export class BeatPlayer {
       this.ctx.resume();
     }
     if (!this.analyserNode) {
+      // the graph is built once per AudioContext: source → analyser → song gain → out, metronome gain → out.
+      // (Before, every play added a new song gain behind the same analyser; the old ones kept sounding at the old
+      // volume, so the song volume seemed to do nothing after a few plays – test 0.6.0 b1.)
       this.analyserNode = this.ctx.createAnalyser();
       this.analyserNode.fftSize = 4096;
       this.analyserNode.smoothingTimeConstant = 0.72;
       this.analyserNode.minDecibels = -85;
       this.analyserNode.maxDecibels = -10;
+      this.gainNode = this.ctx.createGain();
+      this.metronomeGain = this.ctx.createGain();
+      this.analyserNode.connect(this.gainNode);
+      this.gainNode.connect(this.ctx.destination);
+      this.metronomeGain.connect(this.ctx.destination);
     }
+    if (this.gainNode) this.gainNode.gain.value = this.songMuted ? 0 : this.musicVolume;
+    if (this.metronomeGain) this.metronomeGain.gain.value = this.metronomeEnabled ? this.metronomeVolume : 0;
     return this.ctx;
   }
 
@@ -101,20 +112,7 @@ export class BeatPlayer {
       this.sourceNode.loopEnd = this.loop.end;
     }
 
-    this.gainNode = ctx.createGain();
-    this.gainNode.gain.value = this.musicVolume;
-
-    this.metronomeGain = ctx.createGain();
-    this.metronomeGain.gain.value = this.metronomeEnabled ? this.metronomeVolume : 0;
-
-    if (this.analyserNode) {
-      this.sourceNode.connect(this.analyserNode);
-      this.analyserNode.connect(this.gainNode);
-    } else {
-      this.sourceNode.connect(this.gainNode);
-    }
-    this.gainNode.connect(ctx.destination);
-    this.metronomeGain.connect(ctx.destination);
+    this.sourceNode.connect(this.analyserNode!);
 
     this.startTime = ctx.currentTime - this.pauseOffset / this.playbackRate;
     this.sourceNode.start(0, this.pauseOffset);
@@ -198,7 +196,13 @@ export class BeatPlayer {
 
   public setMusicVolume(vol: number) {
     this.musicVolume = Math.max(0, Math.min(1, vol));
-    if (this.gainNode) this.gainNode.gain.value = this.musicVolume;
+    if (this.gainNode) this.gainNode.gain.value = this.songMuted ? 0 : this.musicVolume;
+  }
+
+  /** song silent (only the metronome is heard); the volume slider keeps its value */
+  public setSongMuted(muted: boolean) {
+    this.songMuted = muted;
+    if (this.gainNode) this.gainNode.gain.value = muted ? 0 : this.musicVolume;
   }
 
   /** Loop a range (seconds) or stop looping (null). Outside the range playback jumps to its start. */

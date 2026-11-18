@@ -338,7 +338,7 @@ class ResolveScriptTests(unittest.TestCase):
 
     def test_english_intro(self):
         self.run_apply()
-        self.assertEqual(self.intro_cue(), ["BeatAnalyzer", "Müller Song.wav", "120.0 BPM – 4/4"])
+        self.assertEqual(self.intro_cue(), ["BeatAnalyzer " + self.M.VERSION, "Müller Song.wav", "120.0 BPM – 4/4"])
 
     def test_mp3_markers_and_subtitles_move_by_the_resolve_offset(self):
         # test 0.2.2: Resolve plays an MP3 about 51 ms later than it was analysed
@@ -361,7 +361,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.run_apply()
         marks = self.markers(self.mock.song)
         self.assertEqual(marks[13]["name"], "Takt 1")
-        self.assertEqual(marks[13]["note"], "Takt 1 – Beat 1 | 0,500 s | 120,0 BPM | Confidence 90 %")
+        self.assertEqual(marks[13]["note"], f"BeatAnalyzer {self.M.VERSION} | Takt 1 – Beat 1 | 0,500 s | 120,0 BPM | Confidence 90 %")   # first marker names the program
         self.assertEqual(marks[25]["name"], "1.2")
         self.assertEqual(self.first_beat_cue(), ["Downbeat (1)", "Takt 1 – Beat 1", "00:00.500 – 120,0 BPM",
                                                  "Confidence 90 %"])
@@ -370,7 +370,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.load_lang("tr")
         self.run_apply(json_overrides={"timeSignature": "4/4 (Standard)"})   # format of 0.0.5
         self.assertEqual(self.markers(self.mock.song)[13]["name"], "Ölçü 1")
-        self.assertEqual(self.intro_cue(), ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4'lük"])
+        self.assertEqual(self.intro_cue(), ["BeatAnalyzer " + self.M.VERSION, "Müller Song.wav", "120,0 BPM – 4/4'lük"])
         self.assertEqual(self.first_beat_cue()[3], "Confidence %90")
 
     def test_german_messages(self):
@@ -417,6 +417,30 @@ class ResolveScriptTests(unittest.TestCase):
         tc = self.lua.table_from({"downbeat": "Purpur", "beat2": "Cyan", "beat3": "Cyan", "beat4": "Cyan", "other": "Cyan"})
         self.assertEqual(self.M.marker_color(self.lua.table_from({"type": "downbeat", "beat": 1}), tc), "Red")
         self.assertEqual(self.M.marker_color(self.lua.table_from({"type": "beat", "beat": 2}), None), "Cyan")
+
+    def test_cue_and_section_colours_adjustable(self):
+        # test 0.6.0 N7/25: own colours in the window ("Adjust marker colours"); "no marker" = normal beat colour
+        cue = self.lua.table_from({"type": "beat", "bar": 12, "beat": 3, "cue": 1})
+        sec = self.lua.table_from({"type": "downbeat", "bar": 33, "beat": 1, "section": "up", "sectionDelta": 5})
+        tc = self.lua.table_from({"downbeat": "Red", "beat3": "Cyan", "cue": "Lemon", "section": "Sky"})
+        self.assertEqual(self.M.marker_color(cue, tc), "Lemon")
+        self.assertEqual(self.M.marker_color(sec, tc), "Sky")
+        off = self.lua.table_from({"downbeat": "Red", "beat3": "Cyan", "cue": "none", "section": "none"})
+        self.assertEqual(self.M.marker_color(cue, off), "Cyan")
+        self.assertEqual(self.M.marker_color(sec, off), "Red")
+        self.assertEqual(self.M.DEFAULT_COLORS.cue, "Yellow")
+        self.assertEqual(self.M.DEFAULT_COLORS.section, "Purple")
+
+    def test_generator_in_first_marker_note_and_subtitle_info(self):
+        # test 0.6.0 b2: the JSON and Resolve name BeatAnalyzer and its version
+        data = self.lua.table_from({"fileName": "a.wav", "globalBpm": 120, "timeSignature": "4/4",
+                                    "generator": self.lua.table_from({"name": "BeatAnalyzer", "version": "9.8.7"})})
+        m = self.lua.table_from({"type": "downbeat", "bar": 1, "beat": 1, "time": 0.5, "bpm": 120})
+        self.assertTrue(self.M.marker_note(m, data).startswith("BeatAnalyzer 9.8.7 | "))
+        self.assertFalse(self.M.marker_note(m).startswith("BeatAnalyzer"))
+        self.assertTrue(self.M.info_lines(data).startswith("BeatAnalyzer 9.8.7\n"))
+        old = self.lua.table_from({"fileName": "a.wav", "globalBpm": 120, "timeSignature": "4/4"})
+        self.assertTrue(self.M.info_lines(old).startswith("BeatAnalyzer " + self.M.VERSION))   # older JSON
 
     def test_cue_and_section_markers(self):
         # cue marks (web app, key M) and section changes have own colours and names, also on a "no marker" beat
@@ -580,7 +604,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.load_lang("de")
         self.run_apply()
         notes = {f: m["note"] for f, m in self.markers(self.mock.song).items()}
-        self.assertEqual(notes[13], "Takt 1 – Beat 1 | 0,500 s | 120,0 BPM | Confidence 90 %")
+        self.assertEqual(notes[13], f"BeatAnalyzer {self.M.VERSION} | Takt 1 – Beat 1 | 0,500 s | 120,0 BPM | Confidence 90 %")
         self.assertEqual(notes[25], "Takt 1 – Beat 2 | 1,000 s | 120,0 BPM | Confidence 90 %")
 
     def test_engine_text(self):
@@ -611,7 +635,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertTrue(ok, msg)
         self.assertEqual(self.first_beat_cue(), ["Downbeat (1)", "Takt 1 – Beat 1", "00:00.500 – 120,0 BPM"])
         self.assertIn("Model: md_beat_this – Nutzung im Rahmen der CC BY-NC 4.0-Lizenz", self.intro_cue())
-        self.assertEqual(self.markers(self.mock.song)[13]["note"], "Takt 1 – Beat 1 | 0,500 s | 120,0 BPM")
+        self.assertEqual(self.markers(self.mock.song)[13]["note"], f"BeatAnalyzer {self.M.VERSION} | Takt 1 – Beat 1 | 0,500 s | 120,0 BPM")
 
     def test_prepare_shows_engine(self):
         self.load_lang("de")
@@ -930,7 +954,7 @@ class ResolveScriptTests(unittest.TestCase):
         srt = self.srt_text()
         first = srt.split("\n\n")[0]
         self.assertEqual(first.splitlines()[1], "00:00:00,000 --> 00:00:00,500")
-        self.assertEqual(first.splitlines()[2:], ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
+        self.assertEqual(first.splitlines()[2:], ["BeatAnalyzer " + self.M.VERSION, "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
 
     def test_info_block_under_the_first_beat_without_room(self):
         self.load_lang("de")
@@ -938,11 +962,11 @@ class ResolveScriptTests(unittest.TestCase):
         cues = [c.splitlines() for c in self.srt_text().split("\n\n")]
         # media-pool SRT: a cue from 0 s keeps the timing when the SRT is placed at the clip start (reviewer)
         self.assertEqual(cues[0][1], "00:00:00,000 --> 00:00:00,200")
-        self.assertEqual(cues[0][2:], ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
+        self.assertEqual(cues[0][2:], ["BeatAnalyzer " + self.M.VERSION, "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
         # only 0.2 s: the info block is also under the first beat, so it can be read
         self.assertEqual(cues[1][1], "00:00:00,200 --> 00:00:00,700")              # the first beat itself
         self.assertEqual(cues[1][2:6], ["Downbeat (1)", "Takt 1 – Beat 1", "00:00.200 – 120,0 BPM", "Confidence 90 %"])
-        self.assertEqual(cues[1][6:], ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
+        self.assertEqual(cues[1][6:], ["BeatAnalyzer " + self.M.VERSION, "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
 
     def test_media_pool_srt_starting_on_the_first_beat_needs_no_anchor(self):
         self.load_lang("de")
@@ -965,7 +989,7 @@ class ResolveScriptTests(unittest.TestCase):
         # use 2 at 40 s, untrimmed: 0.5 s before the first beat -> own info cue 40.0 ... 40.5 s
         info = [c for c in cues if c[1].startswith("00:00:40,000")]
         self.assertEqual(len(info), 1)
-        self.assertEqual(info[0][2:], ["BeatAnalyzer", "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
+        self.assertEqual(info[0][2:], ["BeatAnalyzer " + self.M.VERSION, "Müller Song.wav", "120,0 BPM – 4/4", self.MODEL_LINE])
 
     def test_model_line_for_another_licence_and_without_model(self):
         self.load_lang("de")
@@ -976,7 +1000,7 @@ class ResolveScriptTests(unittest.TestCase):
         self.M.apply(self.write_json(self.data_with_model(model=False)))
         srt = self.srt_text()
         self.assertNotIn("Model:", srt)
-        self.assertIn("BeatAnalyzer\nMüller Song.wav\n120,0 BPM – 4/4", srt)
+        self.assertIn(f"BeatAnalyzer {self.M.VERSION}\nMüller Song.wav\n120,0 BPM – 4/4", srt)
 
     def test_old_tracks_stay_when_the_new_srt_cannot_be_written(self):
         tl = self.setup_three_uses()

@@ -34,8 +34,8 @@ export const TempoRangeLabel: React.FC<{ result: AnalysisResult }> = ({ result }
       className="text-[11px] text-slate-400 font-mono tabular-nums truncate"
     >
       {t('web.tempo.range')} <span className="text-white font-semibold">{num(result.minBpm, 1)}</span> –{' '}
-      <span className="text-white font-semibold">{num(result.maxBpm, 1)} BPM</span> · Ø{' '}
-      <span className="text-cyan-400 font-bold">{num(result.averageBpm, 1)} BPM</span>
+      <span className="text-white font-semibold">{num(result.maxBpm, 1)} BPM</span> · {t('web.tempo.main')}{' '}
+      <span className="text-cyan-400 font-bold">{num(result.globalBpm, 1)} BPM</span>
     </ValueTooltip>
   );
 };
@@ -160,7 +160,7 @@ export const TempoPanel: React.FC<TempoPanelProps> = ({ result, currentTime, onS
   const getY = (bpm: number) => PAD_T + plotH - ((bpm - minBpm) / bpmRange) * plotH;
   const pathD = `M ${beats.map((b) => `${getX(b.time).toFixed(1)},${getY(b.instantBpm).toFixed(1)}`).join(' L ')}`;
   const areaD = `${pathD} L ${getX(beats[beats.length - 1].time).toFixed(1)},${SVG_H - PAD_B} L ${getX(beats[0].time).toFixed(1)},${SVG_H - PAD_B} Z`;
-  const avgY = getY(result.averageBpm);
+  const avgY = getY(result.globalBpm);   // main tempo (median interval), the same value as tile and histogram
   const playheadX = getX(currentTime);
 
   const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -191,8 +191,10 @@ export const TempoPanel: React.FC<TempoPanelProps> = ({ result, currentTime, onS
               title: t('web.tempo.curve_title'),
               summary: t('web.tempo.help_summary'),
               items: [
-                { color: 'cyan', text: t('web.tempo.help_item1') },
-                { color: 'rose', text: t('web.tempo.help_item2') },
+                { color: 'indigo', text: t('web.tempo.help_item1') },
+                { color: 'sky', text: t('web.tempo.help_item2') },
+                { color: 'rose', text: t('web.tempo.help_item3') },
+                { color: 'amber', text: t('web.tempo.help_item4') },
               ],
               actionTip: t('web.tempo.help_tip'),
             }}
@@ -244,7 +246,7 @@ export const TempoPanel: React.FC<TempoPanelProps> = ({ result, currentTime, onS
         </div>
         <div className="flex justify-between text-[10px] font-mono text-slate-500 tabular-nums px-1">
           <span>{minBpm}–{maxBpm} BPM</span>
-          <span className="text-sky-400/80">Ø {num(result.averageBpm, 1)}</span>
+          <span className="text-sky-400/80">{t('web.tempo.main')} {num(result.globalBpm, 1)}</span>
         </div>
       </div>
 
@@ -260,7 +262,9 @@ export const TempoPanel: React.FC<TempoPanelProps> = ({ result, currentTime, onS
                 summary: t('web.evidence.help_tempo_summary'),
                 items: [
                   { color: 'cyan', text: t('web.evidence.help_tempo_1') },
-                  { color: 'amber', text: t('web.evidence.help_tempo_2') },
+                  { color: 'rose', text: t('web.evidence.help_tempo_2') },
+                  { color: 'indigo', text: t('web.evidence.help_tempo_3') },
+                  { color: 'amber', text: t('web.evidence.help_tempo_4') },
                 ],
                 actionTip: t('web.evidence.help_tempo_tip'),
               }}

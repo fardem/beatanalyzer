@@ -67,6 +67,7 @@ export default function App() {
   const [metronomeEnabled, setMetronomeEnabled] = useState<boolean>(true);
   const [metronomeVolume, setMetronomeVolume] = useState<number>(0.65);
   const [musicVolume, setMusicVolume] = useState<number>(1.0);
+  const [songMuted, setSongMuted] = useState<boolean>(false);
   // loop: off, the section the waveform shows at the click, or the whole song
   const [loopMode, setLoopMode] = useState<'off' | 'view' | 'song'>('off');
   const [loopRange, setLoopRange] = useState<{ start: number; end: number } | null>(null);
@@ -205,6 +206,17 @@ export default function App() {
     setIsPlaying(true);
   }, [result]);
 
+  // double-click on the blue frame: play the section in view from its start (test 0.6.0, point 12)
+  const handlePlayFrom = useCallback(
+    (time: number) => {
+      if (!playerRef.current || !result) return;
+      playerRef.current.play(time);
+      setIsPlaying(true);
+      setCurrentTime(time);
+    },
+    [result]
+  );
+
   const handlePause = useCallback(() => {
     if (!playerRef.current) return;
     playerRef.current.pause();
@@ -254,6 +266,13 @@ export default function App() {
       if (loopModeRef.current === 'view') applyLoop('view', { start, end });
     }, 150);
   }, [applyLoop]);
+
+  const handleToggleSongMuted = useCallback(() => {
+    setSongMuted((prev) => {
+      playerRef.current?.setSongMuted(!prev);
+      return !prev;
+    });
+  }, []);
 
   const handleSetMusicVolume = useCallback((vol: number) => {
     setMusicVolume(vol);
@@ -530,6 +549,7 @@ export default function App() {
                         onSeek={handleSeek}
                         activeBeat={activeBeat}
                         onEditBeat={(op) => handleApplyOps([op])}
+                        onPlayFrom={handlePlayFrom}
                       />
                     </PanelShell>
                   );
@@ -553,6 +573,8 @@ export default function App() {
                         onSetMetronomeVolume={handleSetMetronomeVolume}
                         musicVolume={musicVolume}
                         onSetMusicVolume={handleSetMusicVolume}
+                        songMuted={songMuted}
+                        onToggleSongMuted={handleToggleSongMuted}
                         loopMode={loopMode}
                         onCycleLoop={handleCycleLoop}
                       />
@@ -634,6 +656,9 @@ export default function App() {
                         onSeek={handleSeek}
                         onUpdateBeats={handleUpdateBeats}
                         onEditBeat={(op) => handleApplyOps([op])}
+                        onUndoGrid={handleUndoGrid}
+                        onResetGrid={handleResetGrid}
+                        correctionCount={gridOps.length}
                       />
                     </PanelShell>
                   );

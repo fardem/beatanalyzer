@@ -14,7 +14,7 @@
     "time_bpm": "{clock} – {bpm} BPM",
     "confidence": "Confidence {value}",
     "intro": [
-      "BeatAnalyzer",
+      "{made_by}",
       "{file}",
       "{bpm} BPM – {meter}"
     ],
@@ -145,7 +145,9 @@
     "note_mp3": "MP3: Resolve spielt MP3-Dateien etwa 50 ms später ab; BeatAnalyzer setzt die Marker entsprechend später.",
     "msg_mp3_shift": "MP3: Marker um {ms} ms nach hinten gesetzt (so viel später spielt Resolve MP3 ab).",
     "note_mp3_json": "MP3: Die Marker werden {ms} ms später gesetzt (so viel später spielt Resolve MP3-Dateien ab).",
-    "note_mp3_json_zero": "MP3: kein Ausgleich nötig (die Datei hat keinen Encoder-Vorlauf; Resolve spielt sie ohne Verzögerung ab)."
+    "note_mp3_json_zero": "MP3: kein Ausgleich nötig (die Datei hat keinen Encoder-Vorlauf; Resolve spielt sie ohne Verzögerung ab).",
+    "color_cue": "Cue (Web-App)",
+    "color_section": "Abschnittswechsel"
   },
   "web": {
     "app": {
@@ -342,7 +344,9 @@
       "loop_song": "Ganzer Song",
       "loop_song_tip": "Loop: ganzer Song – Klick: Loop aus",
       "loop_off": "Loop",
-      "speed": "Geschwindigkeit"
+      "speed": "Geschwindigkeit",
+      "song_mute": "Song stumm – nur das Metronom hören",
+      "song_unmute": "Song wieder an"
     },
     "progress": {
       "browser_activation": "Browser-Analyse: BAF und DAF …",
@@ -425,11 +429,14 @@
       "title": "Tempo",
       "help_label": "Erklärung zum Tempo-Verlauf",
       "help_summary": "Zeigt, ob das Beat-Raster durch den ganzen Song gleichmäßig läuft. Gleichmäßig heißt: Die Marker sitzen auch weit vom Anfang entfernt noch auf dem Beat.",
-      "help_item1": "Flache Linie auf dem gestrichelten Durchschnitt (Ø): gleichmäßiges Tempo (Studio, Click-Track) – du kannst nach Taktzahl schneiden.",
-      "help_item2": "Wellen oder Stufen: Live-Band oder echter Tempowechsel. Rote Punkte = die „1“ jedes Takts; in diesen Teilen die Marker abhören.",
+      "help_item1": "Lila Linie: das Tempo von Beat zu Beat. Flach = gleichmäßiges Tempo (Studio, Click-Track) – du kannst nach Taktzahl schneiden.",
+      "help_item2": "Hellblaue gestrichelte Linie: das Haupttempo – derselbe Wert wie in der Tempo-Kachel und im Histogramm.",
       "help_tip": "Tipp: Ein plötzlicher Sprung auf genau das halbe oder doppelte Tempo heißt, dass die Analyse dort falsch gezählt hat – mit Tempo ½× / 2× für diesen Ausschnitt unter „Beat-Evidenz & Takt-Korrektur“ beheben.",
-      "tip_range": "Niedrigstes und höchstes Tempo und der Durchschnitt (Ø). Nur 1–3 BPM Unterschied: Der Song hält sein Tempo – ideal zum Schneiden am Raster.",
-      "curve_title": "Tempo über den Song"
+      "tip_range": "Niedrigstes und höchstes Tempo und das Haupttempo (aus dem mittleren Beat-Abstand – Teile, die mit halbem oder doppeltem Tempo gezählt wurden, verschieben es nicht). Nur 1–3 BPM zwischen niedrigstem und höchstem: Der Song hält sein Tempo – ideal zum Schneiden am Raster.",
+      "curve_title": "Tempo über den Song",
+      "help_item3": "Rote Punkte: die „1“ jedes Takts. Wellen oder Stufen: Live-Band oder echter Tempowechsel – dort die Marker abhören.",
+      "help_item4": "Gelbe Linie: Abspielposition.",
+      "main": "Haupttempo"
     },
     "update": {
       "button": "Update {version}",
@@ -477,7 +484,7 @@
       "loupe_tip": "Lupe (~{zoom}× / {span} s) beim Überfahren einschalten",
       "overview": "Übersicht",
       "overview_click": "Klick springt an diese Stelle",
-      "overview_drag": "Blauen Rahmen ziehen zum Verschieben · Klick außerhalb springt",
+      "overview_drag": "Blauen Rahmen ziehen zum Verschieben · Doppelklick spielt den Ausschnitt · Klick daneben springt",
       "quick_back": "Zurück zur ganzen Datei",
       "quick_tip": "{sec} Sekunden um die Abspielposition",
       "quick_too_short": "Der Track ist kürzer als {sec} Sekunden",
@@ -547,18 +554,18 @@
       "tempo_doubletime": "2× {bpm}",
       "help_lanes_label": "Erklärung zu Band-Onset-Lanes",
       "help_lanes_summary": "Der in der Wellenform gezeigte Ausschnitt, in drei Bänder aufgeteilt: zeigt, wo die Schläge sind – so siehst du, ob die Linien darauf sitzen.",
-      "help_lanes_1": "Spitzen = Schläge: Low (Kick, Bass), Mid (Snare, Claps, Gesang), High (Hi-Hats). Ein Schnitt auf einer Spitze wirkt „im Takt“.",
-      "help_lanes_2": "Weicher Schatten dahinter = gehaltener Klang (Bassnoten, Flächen, Gesang) – kein Schnittpunkt.",
+      "help_lanes_1": "Low (rot): Kick und Bass – auf diesen Schlägen sollte ein Schnitt auf der „1“ sitzen.",
+      "help_lanes_2": "Mid (cyan): Snare, Claps, Gesang.",
       "help_lanes_tip": "Tipp: Die roten Linien sollten auf den Low-Spitzen sitzen (Kick auf der „1“). Liegen sie zwischen den Spitzen, ist das Raster verschoben.",
       "help_folded_label": "Erklärung zum Gefalteten Takt",
       "help_folded_summary": "Alle Takte übereinandergelegt: zeigt auf einen Blick, ob die „1“ dort ist, wo die Kick ist – also ob deine Takt-Marker stimmen.",
       "help_folded_1": "Rot (Low): Kick und Bass. In den meisten Pop-, Rock- und Hip-Hop-Songs ist die höchste rote Spitze auf 1. Bei House und Techno (Kick auf jedem Beat) ist sie gleichmäßig – dann kann der gefaltete Takt nicht entscheiden, vertrau deinem Ohr.",
-      "help_folded_2": "Cyan / Indigo: Snare und Hi-Hats – im 4/4 meist auf 2 und 4. Gelbe Striche markieren das „und“ zwischen den Beats.",
+      "help_folded_2": "Cyan (Mid): Snare und Claps – im 4/4 meist auf 2 und 4.",
       "help_folded_tip": "Tipp: Höchste rote Spitze auf 2 oder 4 → „−1 / +1 Beat“; auf einem gelben Strich → „−½ / +½ Beat“. Oder einfach den Vorschlag rechts übernehmen.",
       "help_tempo_label": "Erklärung zum Tempo-Histogramm",
       "help_tempo_summary": "Wie oft jedes Tempo vorkommt: ein hoher Balken heißt ein gleichmäßiges Tempo für den ganzen Song.",
-      "help_tempo_1": "Cyan: das Haupttempo. Ein schmaler, hoher Balken = gleichmäßiges Raster, den Markern kannst du überall trauen.",
-      "help_tempo_2": "Roter Balken oder Balken an den gelben Linien (½× / 2×): Ein Teil des Songs wurde mit halbem oder doppeltem Tempo gezählt, oder das Tempo ändert sich wirklich.",
+      "help_tempo_1": "Cyan Balken: das Haupttempo. Ein schmaler, hoher Balken = gleichmäßiges Raster, den Markern kannst du überall trauen.",
+      "help_tempo_2": "Roter Balken: ein zweites Tempo – ein echter Tempowechsel oder ein Teil, der mit halbem oder doppeltem Tempo gezählt wurde.",
       "help_tempo_tip": "Tipp: Diesen Teil im Tempo-Verlauf links suchen (Klick springt hin) und dort korrigieren.",
       "tip_tempo_primary": "Das häufigste Tempo. Über etwa 85 %: Das Raster ist über den Song gleichmäßig.",
       "tip_tempo_bimodal": "Ein zweites Tempo – ein echter Tempowechsel oder ein Teil mit halbem oder doppeltem Tempo gezählt. Im Tempo-Verlauf nachsehen.",
@@ -566,7 +573,6 @@
       "fix_meter_tip": "{n} Beats pro Takt: ab der ersten „1“ wird jeder {n}. Beat eine „1“",
       "fix_count": "{n} Schritt(e) aktiv",
       "fix_count_tip": "Korrekturen bleiben erhalten, wenn du „Glätten“ verstellst; Rückgängig nimmt den letzten Schritt zurück, Zurücksetzen alle.",
-      "lanes_resize": "Ziehen ändert die Höhe (bis 2×); Doppelklick: normale Höhe",
       "scope_fix_label": "Gilt für",
       "scope_fix_song": "Ganzer Song",
       "scope_fix_section": "Ausschnitt {range}",
@@ -580,7 +586,17 @@
       "suggest_meter": "{n} Beats pro Takt",
       "suggest_shift": "{n} Beat",
       "suggest_preview": "gestrichelt = nach dem Vorschlag",
-      "suggest_tip": "BeatAnalyzer hat die Kombinationen aus Takt-Start, Halb-Beat, Beats pro Takt und Tempo am gefalteten Takt ausprobiert. Diese legt die Kick am deutlichsten auf die „1“ (und bei 4/4 die Snare auf 2 und 4). Vor dem Export anhören – Rückgängig nimmt es zurück."
+      "suggest_tip": "BeatAnalyzer hat die Kombinationen aus Takt-Start, Halb-Beat, Beats pro Takt und Tempo am gefalteten Takt ausprobiert. Diese legt die Kick am deutlichsten auf die „1“ (und bei 4/4 die Snare auf 2 und 4). Vor dem Export anhören – Rückgängig nimmt es zurück.",
+      "help_lanes_3": "High (lila): Hi-Hats und Becken.",
+      "help_lanes_4": "Spitzen = Schläge, der weiche Schatten dahinter = gehaltener Klang (Bassnoten, Flächen, Gesang) – kein Schnittpunkt.",
+      "help_lanes_5": "Linien: rot mit T-Nummer = die „1“ eines Takts, hellblau = die übrigen Beats, gelb = Abspielposition.",
+      "help_folded_3": "Lila (High): Hi-Hats – oft auf jedem Beat oder zwischen den Beats.",
+      "help_folded_4": "Gelbe gestrichelte Striche: das „und“ zwischen den Beats.",
+      "help_folded_5": "Weiße gestrichelte Linie: Vorschau des Vorschlags rechts.",
+      "help_tempo_3": "Lila Balken: alle übrigen Beat-Abstände – je breiter verteilt, desto mehr schwankt das Tempo.",
+      "help_tempo_4": "Gelbe gestrichelte Linien: halbes und doppeltes Haupttempo. Ein Balken dort heißt: Ein Teil wurde mit halbem oder doppeltem Tempo gezählt.",
+      "lanes_taller": "Spuren doppelt so hoch",
+      "lanes_lower": "Spuren wieder normal hoch"
     },
     "structure": {
       "title": "Songstruktur & Live",
@@ -588,9 +604,9 @@
       "strip_title": "Songstruktur",
       "help_label": "Erklärung zur Songstruktur",
       "help_summary": "Wo sich der Song ändert und welche Teile wiederkommen. BeatAnalyzer vergleicht jeden Takt mit jedem anderen – nach Tönen (Akkorden), Klangfarbe (Instrumenten) und Lautstärke – und setzt einen Abschnittswechsel, wo sich die Takte davor deutlich von denen danach unterscheiden: immer auf eine „1“, denn dort gehört ein Schnitt auf den Wechsel hin.",
-      "help_1": "Buchstaben: gleicher Buchstabe heißt gleiches Material – B und später wieder B = der Refrain kommt wieder. Gut, um ein Schnittmuster oder einen Look zu wiederholen.",
-      "help_2": "▲ lauter (Refrain, Drop) – starke Stelle für einen harten Schnitt. ▼ leiser (Break, Bridge) – ruhige Bilder, Zeitlupe, Blende. ◆ anders bei etwa gleicher Lautstärke (neue Akkorde oder Instrumente).",
-      "help_tip": "Klick in den Streifen oder auf einen Abschnitt springt zur „1“ dort. Abschnittswechsel gehen als lila Marker in den DaVinci-Resolve-Export („Abschnitt B ▲ +5 dB“). Berechnet aus dem Klang, keine musikalische Analyse – vorher anhören.",
+      "help_1": "Buchstaben (weiß): gleicher Buchstabe heißt gleiches Material – B und später wieder B = der Refrain kommt wieder. Gut, um ein Schnittmuster oder einen Look zu wiederholen.",
+      "help_2": "Grün ▲ lauter (Refrain, Drop) – starke Stelle für einen harten Schnitt oder eine neue Szene.",
+      "help_tip": "Klick in den Streifen oder auf einen Abschnitt springt zur „1“ dort. Abschnittswechsel gehen als lila Marker in den DaVinci-Resolve-Export („Abschnitt B ▲ +5 dB“, Farbe im Resolve-Fenster einstellbar). Berechnet aus dem Klang, keine musikalische Analyse – vorher anhören.",
       "count": "{n} Abschnitte",
       "none": "Zu wenige Takte für eine Songstruktur",
       "hover": "Takt {bar} · {time} · {db} dB",
@@ -601,14 +617,16 @@
       "bar": "Takt {bar}",
       "chip_tip": "{bars} Takte – Klick springt zur „1“",
       "label_tip": "Gleicher Buchstabe = gleicher Teil des Songs (z. B. der Refrain)",
-      "help_3": "Gelbe Linie: Abspielposition. Gelbe Fähnchen: deine Cue-Marken."
+      "help_3": "Blau ▼ leiser (Break, Bridge, Outro) – ruhige Bilder, Zeitlupe, Blende.",
+      "help_4": "Lila ◆ anders bei etwa gleicher Lautstärke – neue Akkorde oder neue Instrumente.",
+      "help_5": "Gelb: die Abspielposition (Linie) und deine Cue-Marken (Fähnchen)."
     },
     "live": {
       "title": "Live (beim Abspielen)",
       "help_label": "Erklärung zur Live-Ansicht",
-      "help_summary": "Läuft mit der Wiedergabe mit: Taktzähler und der nächste Abschnitt – so zählst du beim Anhören mit und triffst Schnittpunkte, ohne anzuhalten.",
-      "help_1": "Taktzähler (ausblendbar): aktueller Takt und seine Beats der Reihe nach beleuchtet, die „1“ in Rot; darunter der nächste Abschnitt und in wie vielen Takten er beginnt.",
-      "help_2": "Spektrum: Kick (Rot), Snare (Cyan), Hi-Hats (Indigo); das Leuchten blitzt auf jedem Beat, stärker auf der „1“. Kommen Kick und Blitz nicht zusammen, stimmt das Raster nicht.",
+      "help_summary": "Läuft mit der Wiedergabe mit: der Taktzähler (aktueller Takt, seine Beats der Reihe nach beleuchtet, der nächste Abschnitt) und das Spektrum dessen, was gerade spielt – Bass links, Hi-Hats rechts.",
+      "help_1": "Rot: Kick (Balken links), die „1“ im Taktzähler, der starke Blitz auf der „1“.",
+      "help_2": "Cyan: Snare (Balken in der Mitte), der aktuelle Beat im Zähler, der Blitz auf den übrigen Beats. Kommen Kick und Blitz nicht zusammen, stimmt das Raster nicht.",
       "help_tip": "Tipp: Beim Anhören an einem Schnittpunkt M drücken – die Cue-Marke landet auf dem nächsten Beat.",
       "bar": "Takt",
       "beats_aria": "Beat {beat} von {n}",
@@ -617,7 +635,8 @@
       "counter_show": "Taktzähler",
       "counter_hide": "Taktzähler",
       "counter_show_tip": "Taktzähler links vom Spektrum einblenden",
-      "counter_hide_tip": "Taktzähler ausblenden – das Spektrum bekommt die volle Breite"
+      "counter_hide_tip": "Taktzähler ausblenden – das Spektrum bekommt die volle Breite",
+      "help_3": "Lila: Hi-Hats (Balken rechts)."
     },
     "cue": {
       "title": "Cue-Marken",
@@ -625,8 +644,8 @@
       "add_tip": "Setzt eine Cue-Marke auf den Beat, der der Abspielposition am nächsten ist (Taste M; Umschalt+M: auf die nächste „1“)",
       "help_label": "Erklärung zu Cue-Marken",
       "help_summary": "Schnittpunkte beim Anhören markieren, ohne anzuhalten: an der Stelle M drücken, an der geschnitten werden soll. Die Marke rastet auf den nächsten Beat, sitzt also auch in Resolve im Takt.",
-      "help_1": "M = nächster Beat, Umschalt+M = nächste „1“ (Taktanfang).",
-      "help_2": "Cue-Marken erscheinen als gelbe Fähnchen im Streifen und als gelbe Knöpfe in der Reihe darunter, zwischen den Abschnitten. Sie gehen als gelbe Marker „Cue 1“, „Cue 2“ … in den DaVinci-Resolve-Export und in die Audacity-Labels.",
+      "help_1": "M = Cue auf dem nächsten Beat, Umschalt+M = auf der nächsten „1“ (Taktanfang).",
+      "help_2": "Cues sind überall gelb: Fähnchen im Streifen, Knöpfe zwischen den Abschnitten, Marker „Cue 1“, „Cue 2“ … im DaVinci-Resolve-Export (Farbe im Resolve-Fenster einstellbar) und Audacity-Labels.",
       "help_tip": "Tipp: Lieber etwas zu früh als zu spät drücken – die Marke rastet auf den nächsten Beat. Klick auf eine Marke springt hin, × entfernt sie. Cue-Marken folgen Takt-Korrekturen.",
       "name": "Cue {n}",
       "jump": "Hierhin springen",

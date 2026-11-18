@@ -33,6 +33,8 @@ interface PlayerControlsProps {
   /** volume of the song 0 ... 1 */
   musicVolume: number;
   onSetMusicVolume: (vol: number) => void;
+  songMuted: boolean;
+  onToggleSongMuted: () => void;
   /** off, the section shown in the waveform, or the whole song; a click goes to the next mode */
   loopMode: 'off' | 'view' | 'song';
   onCycleLoop: () => void;
@@ -55,6 +57,8 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   onSetMetronomeVolume,
   musicVolume,
   onSetMusicVolume,
+  songMuted,
+  onToggleSongMuted,
   loopMode,
   onCycleLoop,
 }) => {
@@ -238,8 +242,20 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         <div className="flex flex-wrap items-center gap-4">
           {/* volume of the song; song, metronome and speed are all h-10 (test 0.2.9: different heights) */}
           <div className="flex items-center gap-2 h-10 bg-slate-950/60 border border-slate-800 rounded-xl px-3">
-            <Music className="w-4 h-4 text-indigo-300" />
-            <span className="text-xs font-medium text-slate-300 hidden sm:inline">{t('web.player.song')}</span>
+            {/* the note mutes the song – only the metronome is heard (test 0.6.0 b1) */}
+            <button
+              type="button"
+              onClick={onToggleSongMuted}
+              aria-pressed={songMuted}
+              aria-label={songMuted ? t('web.player.song_unmute') : t('web.player.song_mute')}
+              title={songMuted ? t('web.player.song_unmute') : t('web.player.song_mute')}
+              className={`inline-flex items-center gap-2 rounded-md px-1 -mx-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+                songMuted ? 'text-rose-300' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              {songMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4 text-indigo-300" />}
+              <span className={`text-xs font-medium hidden sm:inline ${songMuted ? 'line-through' : ''}`}>{t('web.player.song')}</span>
+            </button>
             <input
               type="range"
               min="0"
@@ -247,7 +263,8 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
               step="0.05"
               value={musicVolume}
               onChange={(e) => onSetMusicVolume(parseFloat(e.target.value))}
-              className="w-16 accent-indigo-400 cursor-pointer"
+              disabled={songMuted}
+              className="w-16 accent-indigo-400 cursor-pointer disabled:opacity-40"
               title={t('web.player.song_volume')}
               aria-label={t('web.player.song_volume')}
             />

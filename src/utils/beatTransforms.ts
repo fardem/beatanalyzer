@@ -6,8 +6,7 @@ import { AnalysisResult, BeatItem } from '../types/analyzer';
  */
 export function recomputeBeatStats(
   result: AnalysisResult,
-  rawBeats: BeatItem[],
-  options: { updateGlobalBpm?: boolean } = {}
+  rawBeats: BeatItem[]
 ): AnalysisResult {
   const meter = Math.max(2, result.timeSignature.numerator || 4);
   const sorted = [...rawBeats]
@@ -71,8 +70,17 @@ export function recomputeBeatStats(
       ? Math.round((validBpms.reduce((acc, v) => acc + v, 0) / validBpms.length) * 10) / 10
       : fallbackBpm;
   const sortedBpms = [...validBpms].sort((a, b) => a - b);
+  // main tempo: 60 / median interval – parts counted at double or half speed do not move it (test 0.6.0: the
+  // tile, the tempo curve and the histogram showed 131, 152 and 115 BPM for the same song)
+  const intervals = updatedBeats
+    .slice(1)
+    .map((b, i) => b.time - updatedBeats[i].time)
+    .filter((d) => d > 0.15 && d < 2.5)
+    .sort((a, b) => a - b);
   const medianBpm =
-    sortedBpms.length > 0 ? sortedBpms[Math.floor(sortedBpms.length / 2)] : fallbackBpm;
+    intervals.length > 0
+      ? Math.round((60 / intervals[Math.floor(intervals.length / 2)]) * 10) / 10
+      : fallbackBpm;
   const minBpm = sortedBpms.length > 0 ? sortedBpms[0] : fallbackBpm;
   const maxBpm = sortedBpms.length > 0 ? sortedBpms[sortedBpms.length - 1] : fallbackBpm;
 
@@ -112,7 +120,7 @@ export function recomputeBeatStats(
     downbeats,
     totalBeats: updatedBeats.length,
     totalBars: downbeats.length,
-    globalBpm: options.updateGlobalBpm ? Math.round(medianBpm * 10) / 10 : result.globalBpm,
+    globalBpm: medianBpm,
     averageBpm,
     medianBpm,
     minBpm,
@@ -233,7 +241,7 @@ export function scaleGridTempo(result: AnalysisResult, factor: 0.5 | 2): Analysi
       ...b,
       isDownbeat: idx >= firstKeptDown && (idx - firstKeptDown) % meter === 0,
     }));
-    return recomputeBeatStats(result, remapped, { updateGlobalBpm: true });
+    return recomputeBeatStats(result, remapped);
   }
 
   // factor === 2: insert midpoints between all consecutive beats
@@ -257,7 +265,7 @@ export function scaleGridTempo(result: AnalysisResult, factor: 0.5 | 2): Analysi
     ...b,
     isDownbeat: idx >= firstNewDown && (idx - firstNewDown) % meter === 0,
   }));
-  return recomputeBeatStats(result, remapped, { updateGlobalBpm: true });
+  return recomputeBeatStats(result, remapped);
 }
 
 /**

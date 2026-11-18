@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Eye, EyeOff, RotateCcw, Undo2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { ChevronsDown, ChevronsUp, Eye, EyeOff, RotateCcw, Undo2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { AnalysisResult } from '../types/analyzer';
 import { BeatEvidenceData, computeBeatEvidence, computeFoldedBar, FoldedBarData } from '../utils/beatEvidence';
 import { GridOp, TimeRange } from '../utils/beatTransforms';
@@ -28,14 +28,14 @@ const METER_CHOICES = [2, 3, 4, 5, 6, 7];
 const STORAGE_LANES_VISIBLE_KEY = 'beatanalyzer.lanesVisible';
 const STORAGE_FOLDED_SCOPE_KEY = 'beatanalyzer.foldedScope';
 const STORAGE_LANES_HEIGHT_KEY = 'beatanalyzer.lanesHeight';
-// height of the band lanes: drag the grip below them, up to twice the normal height (wish of the user)
+// height of the band lanes: normal or twice as high (button next to the title)
 const LANES_MIN_H = 108;
 const LANES_MAX_H = LANES_MIN_H * 2;
 
 function readLanesHeight(): number {
   try {
     const v = Number(localStorage.getItem(STORAGE_LANES_HEIGHT_KEY));
-    return Number.isFinite(v) && v >= LANES_MIN_H && v <= LANES_MAX_H ? v : LANES_MIN_H;
+    return Number.isFinite(v) && v > LANES_MIN_H ? LANES_MAX_H : LANES_MIN_H;   // an old in-between height: double
   } catch {
     return LANES_MIN_H;
   }
@@ -96,7 +96,6 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
   const [lanesVisible, setLanesVisible] = useState<boolean>(readLanesVisible);
   const [foldedScope, setFoldedScope] = useState<'window' | 'all'>(readFoldedScope);
   const [lanesHeight, setLanesHeight] = useState<number>(readLanesHeight);
-  const lanesDrag = useRef<{ y: number; h: number } | null>(null);
 
   const storeLanesHeight = useCallback((h: number) => {
     try {
@@ -105,30 +104,14 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
       // Ignore storage errors
     }
   }, []);
-  const onGripDown = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      e.currentTarget.setPointerCapture(e.pointerId);
-      lanesDrag.current = { y: e.clientY, h: lanesHeight };
-    },
-    [lanesHeight]
-  );
-  const onGripMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const d = lanesDrag.current;
-    if (!d) return;
-    setLanesHeight(Math.max(LANES_MIN_H, Math.min(LANES_MAX_H, d.h + e.clientY - d.y)));
-  }, []);
-  const onGripUp = useCallback(() => {
-    if (!lanesDrag.current) return;
-    lanesDrag.current = null;
-    setLanesHeight((h) => {
-      storeLanesHeight(h);
-      return h;
-    });
-  }, [storeLanesHeight]);
-  const onGripReset = useCallback(() => {
-    setLanesHeight(LANES_MIN_H);
-    storeLanesHeight(LANES_MIN_H);
-  }, [storeLanesHeight]);
+  // height of the lanes: normal or double – one button with an arrow (test 0.6.0: a free grip between the two
+  // heights brought nothing)
+  const lanesTall = lanesHeight > LANES_MIN_H;
+  const toggleLanesTall = useCallback(() => {
+    const h = lanesTall ? LANES_MIN_H : LANES_MAX_H;
+    setLanesHeight(h);
+    storeLanesHeight(h);
+  }, [lanesTall, storeLanesHeight]);
 
   const lanesWrapRef = useRef<HTMLDivElement>(null);
   const lanesCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -639,7 +622,10 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                     summary: t('web.evidence.help_lanes_summary'),
                     items: [
                       { color: 'rose', text: t('web.evidence.help_lanes_1') },
-                      { color: 'slate', text: t('web.evidence.help_lanes_2') },
+                      { color: 'cyan', text: t('web.evidence.help_lanes_2') },
+                      { color: 'indigo', text: t('web.evidence.help_lanes_3') },
+                      { color: 'slate', text: t('web.evidence.help_lanes_4') },
+                      { color: 'sky', text: t('web.evidence.help_lanes_5') },
                     ],
                     actionTip: t('web.evidence.help_lanes_tip'),
                   }}
@@ -653,6 +639,19 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                   {lanesVisible ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                   <span>{lanesVisible ? t('web.evidence.lanes_hide') : t('web.evidence.lanes_show')}</span>
                 </button>
+                {lanesVisible && (
+                  <button
+                    type="button"
+                    onClick={toggleLanesTall}
+                    aria-pressed={lanesTall}
+                    title={lanesTall ? t('web.evidence.lanes_lower') : t('web.evidence.lanes_taller')}
+                    aria-label={lanesTall ? t('web.evidence.lanes_lower') : t('web.evidence.lanes_taller')}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-700/90 bg-slate-950/75 text-[10px] font-medium text-slate-300 hover:text-white hover:border-slate-600 cursor-pointer whitespace-nowrap shrink-0"
+                  >
+                    {lanesTall ? <ChevronsUp className="w-3 h-3" /> : <ChevronsDown className="w-3 h-3" />}
+                    <span>{lanesTall ? '1×' : '2×'}</span>
+                  </button>
+                )}
               </div>
               {lanesVisible && (
                 <span className="font-mono tabular-nums text-slate-500">
@@ -672,21 +671,6 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                     onClick={handleLanesClick}
                     className="w-full h-full block cursor-pointer"
                   />
-                </div>
-                {/* grip: drag to make the lanes up to twice as high; double-click = normal height */}
-                <div
-                  role="separator"
-                  aria-orientation="horizontal"
-                  aria-label={t('web.evidence.lanes_resize')}
-                  title={t('web.evidence.lanes_resize')}
-                  onPointerDown={onGripDown}
-                  onPointerMove={onGripMove}
-                  onPointerUp={onGripUp}
-                  onPointerCancel={onGripUp}
-                  onDoubleClick={onGripReset}
-                  className="group -mt-1 h-3 w-full flex items-center justify-center cursor-ns-resize touch-none select-none"
-                >
-                  <span className="h-1 w-12 rounded-full bg-slate-700 group-hover:bg-slate-500 transition-colors" />
                 </div>
               </>
             )}
@@ -708,6 +692,9 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                       items: [
                         { color: 'rose', text: t('web.evidence.help_folded_1') },
                         { color: 'cyan', text: t('web.evidence.help_folded_2') },
+                        { color: 'indigo', text: t('web.evidence.help_folded_3') },
+                        { color: 'amber', text: t('web.evidence.help_folded_4') },
+                        { color: 'white', text: t('web.evidence.help_folded_5') },
                       ],
                       actionTip: t('web.evidence.help_folded_tip'),
                     }}

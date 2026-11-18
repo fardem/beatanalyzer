@@ -572,3 +572,30 @@ class AnalyzerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestMainTempo(unittest.TestCase):
+    """The main tempo comes from the median beat interval – a song counted double in parts keeps its real tempo
+    (test 0.6.0, "Teoman – Ağır Kapı": tile 131, curve Ø 152, histogram 115)."""
+
+    def setUp(self):
+        self.analyzer = importlib.import_module("analyzer")
+
+    def test_double_counted_parts_do_not_move_the_main_tempo(self):
+        intervals = [0.52] * 60 + [0.26] * 40
+        stats = self.analyzer.tempo_stats(intervals)
+        self.assertAlmostEqual(stats["globalBpm"], 115.4, delta=0.2)
+        self.assertEqual(stats["globalBpm"], stats["medianBpm"])
+
+    def test_no_intervals(self):
+        self.assertEqual(self.analyzer.tempo_stats([])["globalBpm"], 120.0)
+
+
+class TestGenerator(unittest.TestCase):
+    def test_marker_json_names_beatanalyzer_and_version(self):
+        from analyzer import resolve_marker_data
+        result = {"metadata": {"fileName": "a.mp3", "duration": 1.0}, "globalBpm": 120.0,
+                  "timeSignature": {"name": "4/4"}, "beats": []}
+        gen = resolve_marker_data(result)["generator"]
+        self.assertEqual(gen["name"], "BeatAnalyzer")
+        self.assertEqual(gen["version"], open(os.path.join(os.path.dirname(BACKEND_DIR), "VERSION")).read().strip())

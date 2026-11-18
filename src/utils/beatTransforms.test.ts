@@ -197,3 +197,16 @@ test('insert and delete are replayable steps (re-analysis with other smoothing)'
   assert.ok(a.beats.some((x) => x.time === 3.25));
   assert.ok(!a.beats.some((x) => x.time === 6.0));
 });
+
+test('main tempo = median interval, also after a correction: double-counted parts do not move it', () => {
+  const s = song(101);
+  let t = 0.5;
+  const beats = s.beats.map((b, i) => {
+    const out = { ...b, time: Math.round(t * 1000) / 1000 };
+    t += i < 60 ? 0.52 : 0.26;   // 60 % of the song at 115 BPM, the rest counted double
+    return out;
+  });
+  const r = applyGridOps({ ...s, beats }, [{ kind: 'toggle', time: beats[4].time, downbeat: true }]);
+  assert.ok(Math.abs(r.globalBpm - 115.4) < 0.3, `globalBpm ${r.globalBpm}`);
+  assert.equal(r.medianBpm, r.globalBpm);
+});
