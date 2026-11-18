@@ -2,7 +2,7 @@ import { BeatItem } from '../types/analyzer';
 import { planClicks } from './clickSchedule';
 
 const SCHEDULE_EVERY_MS = 25;   // how often the next clicks are planned
-const SCHEDULE_AHEAD_S = 0.12;   // how far ahead (playback seconds)
+const SCHEDULE_AHEAD_S = 0.3;   // how far ahead (playback seconds); bridges a busy main thread (song analysis)
 
 /**
  * Web Audio Playback Engine with Synchronized Metronome Click
