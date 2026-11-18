@@ -418,6 +418,19 @@ class ResolveScriptTests(unittest.TestCase):
         self.assertEqual(self.M.marker_color(self.lua.table_from({"type": "downbeat", "beat": 1}), tc), "Red")
         self.assertEqual(self.M.marker_color(self.lua.table_from({"type": "beat", "beat": 2}), None), "Cyan")
 
+    def test_cue_and_section_colours_adjustable(self):
+        # test 0.6.0 N7/25: own colours in the window ("Adjust marker colours"); "no marker" = normal beat colour
+        cue = self.lua.table_from({"type": "beat", "bar": 12, "beat": 3, "cue": 1})
+        sec = self.lua.table_from({"type": "downbeat", "bar": 33, "beat": 1, "section": "up", "sectionDelta": 5})
+        tc = self.lua.table_from({"downbeat": "Red", "beat3": "Cyan", "cue": "Lemon", "section": "Sky"})
+        self.assertEqual(self.M.marker_color(cue, tc), "Lemon")
+        self.assertEqual(self.M.marker_color(sec, tc), "Sky")
+        off = self.lua.table_from({"downbeat": "Red", "beat3": "Cyan", "cue": "none", "section": "none"})
+        self.assertEqual(self.M.marker_color(cue, off), "Cyan")
+        self.assertEqual(self.M.marker_color(sec, off), "Red")
+        self.assertEqual(self.M.DEFAULT_COLORS.cue, "Yellow")
+        self.assertEqual(self.M.DEFAULT_COLORS.section, "Purple")
+
     def test_generator_in_first_marker_note_and_subtitle_info(self):
         # test 0.6.0 b2: the JSON and Resolve name BeatAnalyzer and its version
         data = self.lua.table_from({"fileName": "a.wav", "globalBpm": 120, "timeSignature": "4/4",

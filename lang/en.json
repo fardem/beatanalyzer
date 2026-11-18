@@ -145,7 +145,9 @@
     "note_mp3": "MP3: Resolve plays MP3 files about 50 ms later; BeatAnalyzer moves the markers to match.",
     "msg_mp3_shift": "MP3: markers moved by {ms} ms (Resolve plays MP3 that much later).",
     "note_mp3_json": "MP3: the markers are set {ms} ms later (Resolve plays MP3 files that much later).",
-    "note_mp3_json_zero": "MP3: no correction needed (the file has no encoder delay; Resolve plays it on time)."
+    "note_mp3_json_zero": "MP3: no correction needed (the file has no encoder delay; Resolve plays it on time).",
+    "color_cue": "Cue (web app)",
+    "color_section": "Section change"
   },
   "web": {
     "app": {
@@ -604,7 +606,7 @@
       "help_summary": "Where the song changes and which parts come back. BeatAnalyzer compares every bar with every other – by its notes (chords), its sound colour (instruments) and its loudness – and marks a section change where the bars before differ clearly from the bars after: always on a “1”, because that is where a cut on the change belongs.",
       "help_1": "Letters (white): the same letter means the same material – B, then later B again = the chorus comes back. Good for repeating a cut pattern or a look.",
       "help_2": "Green ▲ louder (chorus, drop) – a strong place for a hard cut or a new scene.",
-      "help_tip": "Click the strip or a section button to jump to the “1” there. Section changes go into the DaVinci Resolve export as purple markers (“Section B ▲ +5 dB”). It is computed from the sound, not a musical analysis – listen before you rely on it.",
+      "help_tip": "Click the strip or a section button to jump to the “1” there. Section changes go into the DaVinci Resolve export as purple markers (“Section B ▲ +5 dB”, colour adjustable in the Resolve window). It is computed from the sound, not a musical analysis – listen before you rely on it.",
       "count": "{n} sections",
       "none": "Too few bars for a song structure",
       "hover": "Bar {bar} · {time} · {db} dB",

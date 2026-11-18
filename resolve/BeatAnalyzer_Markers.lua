@@ -77,9 +77,11 @@ local BA = {
       ["plugin.choose_title"] = "BeatAnalyzer – choose marker JSON",
       ["plugin.clip_found"] = "{names} in the Media Pool · {length}",
       ["plugin.color_beat"] = "Beat {n}",
+      ["plugin.color_cue"] = "Cue (web app)",
       ["plugin.color_downbeat"] = "Downbeat",
       ["plugin.color_none"] = "no marker",
       ["plugin.color_other"] = "other",
+      ["plugin.color_section"] = "Section change",
       ["plugin.engine"] = "Analysed with {engine}",
       ["plugin.engine_unknown"] = "Analysis program: not given in the JSON (older JSON or analysed in the browser)",
       ["plugin.explain_absent"] = "The song is not in the Timeline '{timeline}'. Only the Subtitle in the Media Pool is created.",
@@ -925,24 +927,26 @@ M.NO_MARKER = "none"
 -- md_beat_this (Masked Diffusion, CC BY-NC 4.0): non-commercial use only; shown in the window with its address
 M.MD_URL = "https://github.com/fosfrancesco/md_beat_this"
 
+-- cue: cue marks set in the web app while listening (key M); section: section changes of the song structure
 M.DEFAULT_COLORS = { downbeat = DOWNBEAT_COLOR, beat2 = BEAT_COLOR, beat3 = BEAT_COLOR, beat4 = BEAT_COLOR,
-                     other = BEAT_COLOR }
+                     other = BEAT_COLOR, cue = "Yellow", section = "Purple" }
 local COLOR_OK = {}
 for _, c in ipairs(M.MARKER_COLORS) do
   COLOR_OK[c] = true
 end
 
-M.CUE_COLOR = "Yellow"       -- cue marks set in the web app while listening (key M)
-M.SECTION_COLOR = "Purple"   -- section changes of the song structure (web app)
-
 -- Colour of a marker by its beat in the bar: downbeat, beat 2-4, all others; nil = no marker.
 -- An unknown colour falls back to the default of that slot. Cue marks and section changes from the web app have
--- their own colours and are always set (also when their beat slot is "no marker").
+-- their own colours (adjustable in the window, test 0.6.0) and are set also when their beat slot is "no marker";
+-- with "no marker" for cue / section they keep the colour of their beat.
 function M.marker_color(m, colors)
-  if tonumber(m.cue) then
-    return M.CUE_COLOR
-  elseif m.section == "up" or m.section == "down" or m.section == "change" then
-    return M.SECTION_COLOR
+  local own = tonumber(m.cue) and "cue"
+    or ((m.section == "up" or m.section == "down" or m.section == "change") and "section") or nil
+  if own then
+    local c = colors and colors[own]
+    if c ~= M.NO_MARKER then
+      return COLOR_OK[c] and c or M.DEFAULT_COLORS[own]
+    end
   end
   local slot = m.type == "downbeat" and "downbeat"
     or ((tonumber(m.beat) or 0) >= 2 and (tonumber(m.beat) or 0) <= 4 and ("beat" .. tonumber(m.beat)))
@@ -1937,7 +1941,7 @@ end
 -- ─── Settings of the window ──────────────────────────────────────────────────
 -- <BeatAnalyzer>/resolve_temp/plugin.txt, lines key=value. Without a known BeatAnalyzer folder nothing is kept.
 
-local COLOR_SLOTS = { "downbeat", "beat2", "beat3", "beat4", "other" }
+local COLOR_SLOTS = { "downbeat", "beat2", "beat3", "beat4", "other", "cue", "section" }
 
 function M.settings_path()
   return BA.home and (BA.home .. SEP .. "resolve_temp" .. SEP .. "plugin.txt") or nil
@@ -2016,7 +2020,8 @@ local LINE_PX, CHAR_PX = 19, 8
 local REFRESH_TICKS = 20
 local LABEL_WIDTH = 86
 
-local COLOR_IDS = { downbeat = "ColorDownbeat", beat2 = "ColorBeat2", beat3 = "ColorBeat3", beat4 = "ColorBeat4",
+local COLOR_IDS = { cue = "ColorCue", section = "ColorSection",
+                    downbeat = "ColorDownbeat", beat2 = "ColorBeat2", beat3 = "ColorBeat3", beat4 = "ColorBeat4",
                     other = "ColorOther" }
 
 local SWATCH_HEX = {
@@ -2252,13 +2257,20 @@ function M.main()
         mini_swatch("beat2"),
         mini_swatch("beat3"),
         mini_swatch("beat4"),
-        mini_swatch("other") }),
+        mini_swatch("other"),
+        mini_swatch("cue"),
+        mini_swatch("section") }),
       ui:HGroup({ Weight = 0, Spacing = 8,
         color_col("downbeat", T("plugin.color_downbeat")),
         color_col("beat2", T("plugin.color_beat", { n = 2 })),
         color_col("beat3", T("plugin.color_beat", { n = 3 })),
         color_col("beat4", T("plugin.color_beat", { n = 4 })),
         color_col("other", T("plugin.color_other")) }),
+      -- markers from the web app: cue marks and section changes (test 0.6.0: own, adjustable colours)
+      ui:HGroup({ Weight = 0, Spacing = 8,
+        color_col("cue", T("plugin.color_cue")),
+        color_col("section", T("plugin.color_section")),
+        ui:Label({ Text = "", Weight = 3 }) }),
 
       -- 3. Dynamic Status / Progress Label (hidden when idle so there is zero dead space)
       ui:Label({ ID = "Status", Text = "", WordWrap = true, Weight = 0, MinimumSize = { 0, 44 }, Hidden = true,

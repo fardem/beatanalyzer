@@ -146,7 +146,9 @@
     "note_mp3": "MP3: Resolve MP3 dosyalarını yaklaşık 50 ms geç çalar; BeatAnalyzer marker'ları buna göre kaydırır.",
     "msg_mp3_shift": "MP3: marker'lar {ms} ms ileri kaydırıldı (Resolve MP3'ü bu kadar geç çalar).",
     "note_mp3_json": "MP3: marker'lar {ms} ms sonra konur (Resolve MP3 dosyalarını bu kadar geç çalar).",
-    "note_mp3_json_zero": "MP3: düzeltme gerekmiyor (dosyada kodlayıcı gecikmesi yok; Resolve gecikmesiz çalar)."
+    "note_mp3_json_zero": "MP3: düzeltme gerekmiyor (dosyada kodlayıcı gecikmesi yok; Resolve gecikmesiz çalar).",
+    "color_cue": "Cue (web uygulaması)",
+    "color_section": "Bölüm değişimi"
   },
   "web": {
     "app": {
@@ -605,7 +607,7 @@
       "help_summary": "Şarkının nerede değiştiği ve hangi kısımların geri geldiği. BeatAnalyzer her ölçüyü diğer tüm ölçülerle karşılaştırır – notalarına (akorlar), ses rengine (enstrümanlar) ve ses seviyesine göre – ve önceki ölçüler sonrakilerden belirgin şekilde farklı olduğunda bir bölüm değişimi işaretler: her zaman bir “1” üzerinde, çünkü değişimdeki kesme oraya aittir.",
       "help_1": "Harfler (beyaz): aynı harf aynı malzeme demektir – B, sonra yine B = nakarat geri geliyor. Bir kesme düzenini veya görünümü tekrarlamak için iyi.",
       "help_2": "Yeşil ▲ daha yüksek (nakarat, drop) – sert bir kesme ya da yeni sahne için güçlü bir yer.",
-      "help_tip": "Şeride veya bir bölüm düğmesine tıklamak oradaki “1”e atlar. Bölüm değişimleri DaVinci Resolve dışa aktarımına mor marker olarak girer (“Bölüm B ▲ +5 dB”). Sesten hesaplanır, müzikal bir analiz değildir – güvenmeden önce dinle.",
+      "help_tip": "Şeride veya bir bölüm düğmesine tıklamak oradaki “1”e atlar. Bölüm değişimleri DaVinci Resolve dışa aktarımına mor marker olarak girer (“Bölüm B ▲ +5 dB”, renk Resolve penceresinde ayarlanabilir). Sesten hesaplanır, müzikal bir analiz değildir – güvenmeden önce dinle.",
       "count": "{n} bölüm",
       "none": "Şarkı yapısı için ölçü sayısı az",
       "hover": "Ölçü {bar} · {time} · {db} dB",
