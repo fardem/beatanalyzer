@@ -1,8 +1,13 @@
 import { BeatItem } from '../types/analyzer';
+import { planClicks } from './clickSchedule';
+
+const SCHEDULE_EVERY_MS = 25;   // how often the next clicks are planned
+const SCHEDULE_AHEAD_S = 0.12;   // how far ahead (playback seconds)
 
 /**
  * Web Audio Playback Engine with Synchronized Metronome Click
- * Triggers distinct synthesized woodblock clicks on downbeats vs regular beats.
+ * Clicks (higher on the downbeat) are planned ahead and started on the exact AudioContext time of their beat,
+ * sample-exact with the music; the drawing loop only updates the position and the active beat.
  */
 
 export class BeatPlayer {
@@ -27,6 +32,9 @@ export class BeatPlayer {
   private beats: BeatItem[] = [];
   private nextBeatIndex: number = 0;
   private animFrameId: number | null = null;
+  private scheduleTimer: ReturnType<typeof setInterval> | null = null;
+  private plannedUntil = 0;   // playback position up to which clicks are planned
+  private scheduled: OscillatorNode[] = [];
 
   public onTimeUpdate?: (currentTime: number, progress: number) => void;
   public onBeatTrigger?: (beat: BeatItem) => void;
@@ -65,6 +73,7 @@ export class BeatPlayer {
   public updateBeats(beats: BeatItem[]) {
     this.beats = [...beats].sort((a, b) => a.time - b.time);
     this.updateNextBeatIndex(this.getCurrentTime());
+    if (this.isPlaying) this.replanClicks();
   }
 
   public play(fromTime?: number) {
@@ -119,11 +128,14 @@ export class BeatPlayer {
         this.isPlaying = false;
         this.pauseOffset = 0;
         this.cancelLoop();
+        this.stopScheduler();
         this.onEnded?.();
       }
     };
 
     this.startLoop();
+    this.replanClicks();
+    this.startScheduler();
   }
 
   public pause() {
@@ -159,11 +171,14 @@ export class BeatPlayer {
   }
 
   public setPlaybackRate(rate: number) {
-    this.playbackRate = rate;
     if (this.sourceNode && this.ctx) {
+      const current = this.getCurrentTime();   // with the old rate
+      this.playbackRate = rate;
       this.sourceNode.playbackRate.value = rate;
-      const current = this.getCurrentTime();
       this.startTime = this.ctx.currentTime - current / rate;
+      this.replanClicks();
+    } else {
+      this.playbackRate = rate;
     }
   }
 
@@ -238,6 +253,8 @@ export class BeatPlayer {
   }
 
   private stopSource() {
+    this.stopScheduler();
+    this.cancelClicks();
     if (this.sourceNode) {
       try {
         this.sourceNode.stop();
@@ -275,12 +292,7 @@ export class BeatPlayer {
       ) {
         const beat = this.beats[this.nextBeatIndex];
         // Trigger beat if within 100ms
-        if (curTime - beat.time < 0.12) {
-          if (this.metronomeEnabled) {
-            this.playClickSound(beat.isDownbeat);
-          }
-          this.onBeatTrigger?.(beat);
-        }
+        if (curTime - beat.time < 0.12) this.onBeatTrigger?.(beat);   // display only; clicks are planned
         this.nextBeatIndex++;
       }
 
@@ -297,12 +309,61 @@ export class BeatPlayer {
     }
   }
 
+  /** playback position counting on past a loop end (see planClicks): (ctx time − start) × rate */
+  private position(): number {
+    if (!this.ctx) return this.pauseOffset;
+    return Math.max(0, (this.ctx.currentTime - this.startTime) * this.playbackRate);
+  }
+
+  private startScheduler() {
+    this.stopScheduler();
+    this.scheduleTimer = setInterval(() => this.scheduleClicks(), SCHEDULE_EVERY_MS);
+  }
+
+  private stopScheduler() {
+    if (this.scheduleTimer !== null) {
+      clearInterval(this.scheduleTimer);
+      this.scheduleTimer = null;
+    }
+  }
+
+  /** drops the planned clicks and plans again from the current position (seek, tempo, new beats) */
+  private replanClicks() {
+    this.cancelClicks();
+    this.plannedUntil = this.position();
+    this.scheduleClicks();
+  }
+
+  private cancelClicks() {
+    for (const osc of this.scheduled) {
+      try {
+        osc.stop(0);
+        osc.disconnect();
+      } catch {
+        // already ended
+      }
+    }
+    this.scheduled = [];
+  }
+
+  private scheduleClicks() {
+    if (!this.isPlaying || !this.ctx) return;
+    const until = this.position() + SCHEDULE_AHEAD_S * this.playbackRate;
+    if (until <= this.plannedUntil) return;
+    const now = this.ctx.currentTime;
+    for (const c of planClicks(this.beats, this.plannedUntil, until, this.loop)) {
+      const when = this.startTime + c.at / this.playbackRate;
+      if (when < now - 0.01) continue;   // missed (tab was in the background): no late click
+      this.playClickSound(c.downbeat, Math.max(when, now));
+    }
+    this.plannedUntil = until;
+  }
+
   /**
-   * Synthesize high-quality woodblock metronome click:
-   * Downbeat: 1200 Hz resonant click with punch
-   * Other beats: 850 Hz lighter click
+   * Synthesized woodblock click at the AudioContext time `when`:
+   * downbeat 1280 Hz triangle with more punch, other beats 850 Hz sine.
    */
-  private playClickSound(isDownbeat: boolean) {
+  private playClickSound(isDownbeat: boolean, when: number) {
     if (!this.ctx || !this.metronomeGain) return;
 
     try {
@@ -313,17 +374,22 @@ export class BeatPlayer {
       const duration = isDownbeat ? 0.045 : 0.03;
 
       osc.type = isDownbeat ? 'triangle' : 'sine';
-      osc.frequency.setValueAtTime(baseFreq, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.4, this.ctx.currentTime + duration);
+      osc.frequency.setValueAtTime(baseFreq, when);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.4, when + duration);
 
-      env.gain.setValueAtTime(isDownbeat ? 1.0 : 0.65, this.ctx.currentTime);
-      env.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+      env.gain.setValueAtTime(isDownbeat ? 1.0 : 0.65, when);
+      env.gain.exponentialRampToValueAtTime(0.001, when + duration);
 
       osc.connect(env);
       env.connect(this.metronomeGain);
 
-      osc.start(this.ctx.currentTime);
-      osc.stop(this.ctx.currentTime + duration);
+      osc.start(when);
+      osc.stop(when + duration);
+      this.scheduled.push(osc);
+      osc.onended = () => {
+        const i = this.scheduled.indexOf(osc);
+        if (i >= 0) this.scheduled.splice(i, 1);
+      };
     } catch {
       // AudioContext state error safety
     }
