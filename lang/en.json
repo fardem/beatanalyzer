@@ -342,7 +342,9 @@
       "loop_song": "Whole song",
       "loop_song_tip": "Loop: whole song – click: loop off",
       "loop_off": "Loop",
-      "speed": "Speed"
+      "speed": "Speed",
+      "song_mute": "Mute the song – hear only the metronome",
+      "song_unmute": "Song on again"
     },
     "progress": {
       "browser_activation": "Browser analysis: BAF and DAF …",

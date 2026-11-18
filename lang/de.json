@@ -342,7 +342,9 @@
       "loop_song": "Ganzer Song",
       "loop_song_tip": "Loop: ganzer Song – Klick: Loop aus",
       "loop_off": "Loop",
-      "speed": "Geschwindigkeit"
+      "speed": "Geschwindigkeit",
+      "song_mute": "Song stumm – nur das Metronom hören",
+      "song_unmute": "Song wieder an"
     },
     "progress": {
       "browser_activation": "Browser-Analyse: BAF und DAF …",

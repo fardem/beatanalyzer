@@ -67,6 +67,7 @@ export default function App() {
   const [metronomeEnabled, setMetronomeEnabled] = useState<boolean>(true);
   const [metronomeVolume, setMetronomeVolume] = useState<number>(0.65);
   const [musicVolume, setMusicVolume] = useState<number>(1.0);
+  const [songMuted, setSongMuted] = useState<boolean>(false);
   // loop: off, the section the waveform shows at the click, or the whole song
   const [loopMode, setLoopMode] = useState<'off' | 'view' | 'song'>('off');
   const [loopRange, setLoopRange] = useState<{ start: number; end: number } | null>(null);
@@ -254,6 +255,13 @@ export default function App() {
       if (loopModeRef.current === 'view') applyLoop('view', { start, end });
     }, 150);
   }, [applyLoop]);
+
+  const handleToggleSongMuted = useCallback(() => {
+    setSongMuted((prev) => {
+      playerRef.current?.setSongMuted(!prev);
+      return !prev;
+    });
+  }, []);
 
   const handleSetMusicVolume = useCallback((vol: number) => {
     setMusicVolume(vol);
@@ -553,6 +561,8 @@ export default function App() {
                         onSetMetronomeVolume={handleSetMetronomeVolume}
                         musicVolume={musicVolume}
                         onSetMusicVolume={handleSetMusicVolume}
+                        songMuted={songMuted}
+                        onToggleSongMuted={handleToggleSongMuted}
                         loopMode={loopMode}
                         onCycleLoop={handleCycleLoop}
                       />

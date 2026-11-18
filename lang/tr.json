@@ -343,7 +343,9 @@
       "loop_song": "Tüm şarkı",
       "loop_song_tip": "Döngü: tüm şarkı – tıklayın: döngü kapalı",
       "loop_off": "Döngü",
-      "speed": "Hız"
+      "speed": "Hız",
+      "song_mute": "Şarkıyı sessize al – yalnızca metronomu dinle",
+      "song_unmute": "Şarkıyı yeniden aç"
     },
     "progress": {
       "browser_activation": "Tarayıcı analizi: BAF ve DAF …",
