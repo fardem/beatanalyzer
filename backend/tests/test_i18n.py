@@ -27,7 +27,7 @@ class I18nTests(unittest.TestCase):
                                      (code, key))
 
     def test_values_from_spec(self):
-        self.assertEqual(i18n.load("en")["output.intro"], "BeatAnalyzer\n{file}\n{bpm} BPM – {meter}")
+        self.assertEqual(i18n.load("en")["output.intro"], "{made_by}\n{file}\n{bpm} BPM – {meter}")   # made_by = "BeatAnalyzer 0.6.1"
         self.assertEqual(i18n.load("de")["output.bar_beat"], "Takt {bar} – Beat {beat}")
         self.assertEqual(i18n.load("tr")["output.meter_suffix.4"], "'lük")
         self.assertEqual(i18n.load("tr")["output.meter_suffix.16"], "'lık")
