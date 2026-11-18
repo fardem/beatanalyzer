@@ -270,9 +270,11 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
               title: t('web.structure.strip_title'),
               summary: t('web.structure.help_summary'),
               items: [
-                { color: 'emerald', text: t('web.structure.help_1') },
-                { color: 'cyan', text: t('web.structure.help_2') },
-                { color: 'amber', text: t('web.structure.help_3') },
+                { color: 'white', text: t('web.structure.help_1') },
+                { color: 'emerald', text: t('web.structure.help_2') },
+                { color: 'sky', text: t('web.structure.help_3') },
+                { color: 'violet', text: t('web.structure.help_4') },
+                { color: 'yellow', text: t('web.structure.help_5') },
               ],
               actionTip: t('web.structure.help_tip'),
             }}
@@ -310,8 +312,8 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
                 title: t('web.cue.title'),
                 summary: t('web.cue.help_summary'),
                 items: [
-                  { color: 'amber', text: t('web.cue.help_1') },
-                  { color: 'rose', text: t('web.cue.help_2') },
+                  { color: 'yellow', text: t('web.cue.help_1') },
+                  { color: 'yellow', text: t('web.cue.help_2') },
                 ],
                 actionTip: t('web.cue.help_tip'),
               }}
@@ -395,8 +397,9 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
             title: t('web.live.title'),
             summary: t('web.live.help_summary'),
             items: [
-              { color: 'cyan', text: t('web.live.help_1') },
-              { color: 'rose', text: t('web.live.help_2') },
+              { color: 'rose', text: t('web.live.help_1') },
+              { color: 'cyan', text: t('web.live.help_2') },
+              { color: 'indigo', text: t('web.live.help_3') },
             ],
             actionTip: t('web.live.help_tip'),
           }}

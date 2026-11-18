@@ -639,7 +639,10 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                     summary: t('web.evidence.help_lanes_summary'),
                     items: [
                       { color: 'rose', text: t('web.evidence.help_lanes_1') },
-                      { color: 'slate', text: t('web.evidence.help_lanes_2') },
+                      { color: 'cyan', text: t('web.evidence.help_lanes_2') },
+                      { color: 'indigo', text: t('web.evidence.help_lanes_3') },
+                      { color: 'slate', text: t('web.evidence.help_lanes_4') },
+                      { color: 'sky', text: t('web.evidence.help_lanes_5') },
                     ],
                     actionTip: t('web.evidence.help_lanes_tip'),
                   }}
@@ -708,6 +711,9 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                       items: [
                         { color: 'rose', text: t('web.evidence.help_folded_1') },
                         { color: 'cyan', text: t('web.evidence.help_folded_2') },
+                        { color: 'indigo', text: t('web.evidence.help_folded_3') },
+                        { color: 'amber', text: t('web.evidence.help_folded_4') },
+                        { color: 'white', text: t('web.evidence.help_folded_5') },
                       ],
                       actionTip: t('web.evidence.help_folded_tip'),
                     }}

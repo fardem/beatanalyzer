@@ -5,7 +5,8 @@ import { HelpCircle } from 'lucide-react';
 export interface DiagramHelpContent {
   title: string;
   summary: string;
-  items: { color?: 'rose' | 'cyan' | 'amber' | 'indigo' | 'emerald' | 'slate'; text: string }[];
+  /** each item's dot has the colour of what it explains in the diagram (test 0.6.0: the dots looked like bullets) */
+  items: { color?: 'rose' | 'cyan' | 'amber' | 'indigo' | 'emerald' | 'slate' | 'sky' | 'violet' | 'yellow' | 'white'; text: string }[];
   actionTip: string;
 }
 
@@ -23,6 +24,10 @@ const DOT_CLASS: Record<NonNullable<DiagramHelpContent['items'][number]['color']
   indigo: 'bg-indigo-400',
   emerald: 'bg-emerald-400',
   slate: 'bg-slate-400',
+  sky: 'bg-sky-400',
+  violet: 'bg-violet-400',
+  yellow: 'bg-yellow-400',
+  white: 'bg-slate-100',
 };
 
 export const DiagramInfoTooltip: React.FC<DiagramInfoTooltipProps> = ({

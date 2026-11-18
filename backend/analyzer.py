@@ -298,6 +298,29 @@ def activation_curve(beat_prob: np.ndarray, downbeat_prob: Optional[np.ndarray],
     return curve
 
 
+def tempo_stats(intervals: List[float]) -> dict:
+    """
+    Tempo values from the beat intervals (s). The main tempo (globalBpm) is 60 / the median interval: parts counted
+    at double or half speed do not move it (the mean did – test 0.6.0: tile 131, histogram 115 BPM). The web app
+    shows this one value in the tile, the tempo curve and the histogram.
+    """
+    if not intervals:
+        return {"globalBpm": 120.0, "averageBpm": 120.0, "medianBpm": 120.0, "minBpm": 120.0, "maxBpm": 120.0,
+                "tempoStability": 90}
+    instant_bpms = [round(60.0 / dt, 1) for dt in intervals]
+    main = round(60.0 / float(np.median(intervals)), 1)
+    average_bpm = round(float(np.mean(instant_bpms)), 1)
+    std_bpm = float(np.std(instant_bpms))
+    return {
+        "globalBpm": main,
+        "averageBpm": average_bpm,
+        "medianBpm": main,
+        "minBpm": round(float(np.min(instant_bpms)), 1),
+        "maxBpm": round(float(np.max(instant_bpms)), 1),
+        "tempoStability": max(0, min(100, int(100 - (std_bpm / (average_bpm or 1)) * 100))),
+    }
+
+
 def meter_from_beats(beats_sec: List[float], downbeats_sec: List[float]) -> Tuple[int, Optional[int]]:
     """Beats per bar (most frequent of 2, 3, 4, 6, else 4) and the share of bars with that count in percent."""
     counts = [sum(1 for b in beats_sec if d1 <= b < d2) for d1, d2 in zip(downbeats_sec, downbeats_sec[1:])]
@@ -456,23 +479,9 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
         if 0.15 < dt < 2.5:
             intervals.append(dt)
 
-    if intervals:
-        avg_interval = float(np.mean(intervals))
-        global_bpm = round(60.0 / avg_interval, 1)
-        instant_bpms = [round(60.0 / dt, 1) for dt in intervals]
-        average_bpm = round(float(np.mean(instant_bpms)), 1)
-        median_bpm = round(float(np.median(instant_bpms)), 1)
-        min_bpm = round(float(np.min(instant_bpms)), 1)
-        max_bpm = round(float(np.max(instant_bpms)), 1)
-        std_bpm = float(np.std(instant_bpms))
-        tempo_stability = max(0, min(100, int(100 - (std_bpm / (average_bpm or 1)) * 100)))
-    else:
-        global_bpm = 120.0
-        average_bpm = 120.0
-        median_bpm = 120.0
-        min_bpm = 120.0
-        max_bpm = 120.0
-        tempo_stability = 90
+    stats = tempo_stats(intervals)
+    global_bpm, average_bpm, median_bpm = stats["globalBpm"], stats["averageBpm"], stats["medianBpm"]
+    min_bpm, max_bpm, tempo_stability = stats["minBpm"], stats["maxBpm"], stats["tempoStability"]
 
     # time signature: most frequent number of beats between two downbeats and its share of all bars
     beats_per_bar, bar_share = meter_from_beats(beats_sec, downbeats_sec)
