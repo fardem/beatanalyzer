@@ -482,7 +482,7 @@
       "loupe_tip": "Lupe (~{zoom}× / {span} s) beim Überfahren einschalten",
       "overview": "Übersicht",
       "overview_click": "Klick springt an diese Stelle",
-      "overview_drag": "Blauen Rahmen ziehen zum Verschieben · Klick außerhalb springt",
+      "overview_drag": "Blauen Rahmen ziehen zum Verschieben · Doppelklick spielt den Ausschnitt · Klick daneben springt",
       "quick_back": "Zurück zur ganzen Datei",
       "quick_tip": "{sec} Sekunden um die Abspielposition",
       "quick_too_short": "Der Track ist kürzer als {sec} Sekunden",
@@ -571,7 +571,6 @@
       "fix_meter_tip": "{n} Beats pro Takt: ab der ersten „1“ wird jeder {n}. Beat eine „1“",
       "fix_count": "{n} Schritt(e) aktiv",
       "fix_count_tip": "Korrekturen bleiben erhalten, wenn du „Glätten“ verstellst; Rückgängig nimmt den letzten Schritt zurück, Zurücksetzen alle.",
-      "lanes_resize": "Ziehen ändert die Höhe (bis 2×); Doppelklick: normale Höhe",
       "scope_fix_label": "Gilt für",
       "scope_fix_song": "Ganzer Song",
       "scope_fix_section": "Ausschnitt {range}",
@@ -593,7 +592,9 @@
       "help_folded_4": "Gelbe gestrichelte Striche: das „und“ zwischen den Beats.",
       "help_folded_5": "Weiße gestrichelte Linie: Vorschau des Vorschlags rechts.",
       "help_tempo_3": "Lila Balken: alle übrigen Beat-Abstände – je breiter verteilt, desto mehr schwankt das Tempo.",
-      "help_tempo_4": "Gelbe gestrichelte Linien: halbes und doppeltes Haupttempo. Ein Balken dort heißt: Ein Teil wurde mit halbem oder doppeltem Tempo gezählt."
+      "help_tempo_4": "Gelbe gestrichelte Linien: halbes und doppeltes Haupttempo. Ein Balken dort heißt: Ein Teil wurde mit halbem oder doppeltem Tempo gezählt.",
+      "lanes_taller": "Spuren doppelt so hoch",
+      "lanes_lower": "Spuren wieder normal hoch"
     },
     "structure": {
       "title": "Songstruktur & Live",

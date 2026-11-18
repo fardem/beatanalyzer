@@ -206,6 +206,17 @@ export default function App() {
     setIsPlaying(true);
   }, [result]);
 
+  // double-click on the blue frame: play the section in view from its start (test 0.6.0, point 12)
+  const handlePlayFrom = useCallback(
+    (time: number) => {
+      if (!playerRef.current || !result) return;
+      playerRef.current.play(time);
+      setIsPlaying(true);
+      setCurrentTime(time);
+    },
+    [result]
+  );
+
   const handlePause = useCallback(() => {
     if (!playerRef.current) return;
     playerRef.current.pause();
@@ -538,6 +549,7 @@ export default function App() {
                         onSeek={handleSeek}
                         activeBeat={activeBeat}
                         onEditBeat={(op) => handleApplyOps([op])}
+                        onPlayFrom={handlePlayFrom}
                       />
                     </PanelShell>
                   );
@@ -644,6 +656,9 @@ export default function App() {
                         onSeek={handleSeek}
                         onUpdateBeats={handleUpdateBeats}
                         onEditBeat={(op) => handleApplyOps([op])}
+                        onUndoGrid={handleUndoGrid}
+                        onResetGrid={handleResetGrid}
+                        correctionCount={gridOps.length}
                       />
                     </PanelShell>
                   );

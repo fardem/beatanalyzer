@@ -17,6 +17,8 @@ interface WaveformBeatVisualizerProps {
   activeBeat: BeatItem | null;
   /** Shift+click adds a beat, Alt+click removes the nearest one (only when ≤ EDIT_MAX_VISIBLE_SEC are shown) */
   onEditBeat?: (op: { kind: 'insert'; time: number } | { kind: 'delete'; time: number }) => void;
+  /** double-click on the blue frame of the overview: play the section it shows from its start */
+  onPlayFrom?: (time: number) => void;
 }
 
 const EDIT_MAX_VISIBLE_SEC = 30;   // wider views are too coarse to place a beat by hand
@@ -133,6 +135,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   onSeek,
   activeBeat,
   onEditBeat,
+  onPlayFrom,
 }) => {
   // the detailed waveform of the current view, drawn once and reused while only the playhead moves
   const waveCacheRef = useRef<{ key: string; canvas: HTMLCanvasElement } | null>(null);
@@ -1333,6 +1336,9 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
               : 'cursor-pointer'
           }`}
           onMouseDown={handleMinimapMouseDown}
+          onDoubleClick={(e) => {
+            if (onPlayFrom && zoom > 1.01 && isInsideViewportHitArea(e.clientX)) onPlayFrom(scrollOffsetSec);
+          }}
           onMouseMove={handleMinimapHoverMove}
           onMouseLeave={() => setIsHoveringViewportBox(false)}
         >

@@ -483,7 +483,7 @@
       "loupe_tip": "Üzerine gelince büyüteci aç (~{zoom}× / {span} sn)",
       "overview": "Genel bakış",
       "overview_click": "Oraya atlamak için tıklayın",
-      "overview_drag": "Kaydırmak için mavi çerçeveyi sürükleyin · atlamak için dışına tıklayın",
+      "overview_drag": "Mavi çerçeveyi sürükleyerek taşı · çift tık bölümü çalar · dışına tıklayınca atlar",
       "quick_back": "Tüm dosyaya dön",
       "quick_tip": "Çalma konumu çevresinde {sec} saniye",
       "quick_too_short": "Parça {sec} saniyeden kısa",
@@ -572,7 +572,6 @@
       "fix_meter_tip": "Ölçü başına {n} beat: ilk “1”den itibaren her {n}. beat bir “1” olur",
       "fix_count": "{n} adım etkin",
       "fix_count_tip": "“Düzeltme” kaydırıcısını değiştirdiğinizde ayarlar korunur; Geri al son adımı, Sıfırla hepsini kaldırır.",
-      "lanes_resize": "Yüksekliği değiştirmek için sürükleyin (2×’e kadar); çift tıklama: normal yükseklik",
       "scope_fix_label": "Kapsam",
       "scope_fix_song": "Tüm şarkı",
       "scope_fix_section": "Bölüm {range}",
@@ -594,7 +593,9 @@
       "help_folded_4": "Sarı kesikli çentikler: beat'ler arasındaki “ve”.",
       "help_folded_5": "Beyaz kesikli çizgi: sağdaki önerinin önizlemesi.",
       "help_tempo_3": "Mor çubuklar: diğer tüm beat aralıkları – ne kadar yayılırsa tempo o kadar oynar.",
-      "help_tempo_4": "Sarı kesikli çizgiler: ana temponun yarısı ve iki katı. Orada bir çubuk varsa bir kısım yarı veya iki kat hızla sayılmıştır."
+      "help_tempo_4": "Sarı kesikli çizgiler: ana temponun yarısı ve iki katı. Orada bir çubuk varsa bir kısım yarı veya iki kat hızla sayılmıştır.",
+      "lanes_taller": "Şeritleri iki kat yükselt",
+      "lanes_lower": "Şeritleri normal yüksekliğe getir"
     },
     "structure": {
       "title": "Şarkı yapısı ve canlı",

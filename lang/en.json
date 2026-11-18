@@ -482,7 +482,7 @@
       "loupe_tip": "Turn on the magnifier (~{zoom}× / {span} s) on hover",
       "overview": "Overview",
       "overview_click": "Click to jump there",
-      "overview_drag": "Drag the blue frame to move · click outside to jump",
+      "overview_drag": "Drag the blue frame to move · double-click it to play the section · click outside to jump",
       "quick_back": "Back to the whole file",
       "quick_tip": "{sec} seconds around the playhead",
       "quick_too_short": "The track is shorter than {sec} seconds",
@@ -571,7 +571,6 @@
       "fix_meter_tip": "{n} beats per bar: every {n}th beat from the first “1” becomes a “1”",
       "fix_count": "{n} step(s) active",
       "fix_count_tip": "Corrections stay when you move Smoothing; Undo removes the last step, Reset all of them.",
-      "lanes_resize": "Drag to change the height (up to 2×); double-click: normal height",
       "scope_fix_label": "Apply to",
       "scope_fix_song": "Whole song",
       "scope_fix_section": "Section {range}",
@@ -593,7 +592,9 @@
       "help_folded_4": "Yellow dashed ticks: the “and” between the beats.",
       "help_folded_5": "White dashed line: preview of the suggestion on the right.",
       "help_tempo_3": "Violet bars: all other beat gaps – the wider they spread, the more the tempo moves.",
-      "help_tempo_4": "Yellow dashed lines: half and double the main tempo. A bar there means a part was counted at half or double speed."
+      "help_tempo_4": "Yellow dashed lines: half and double the main tempo. A bar there means a part was counted at half or double speed.",
+      "lanes_taller": "Make the lanes twice as high",
+      "lanes_lower": "Lanes back to normal height"
     },
     "structure": {
       "title": "Song structure & live",
