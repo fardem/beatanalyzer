@@ -639,6 +639,16 @@ def fallback_mir_track(y: np.ndarray, sr: int):
 RESOLVE_MARKER_FORMAT = "beatthis-resolve-markers/1"
 
 
+def app_version() -> str:
+    """Version of BeatAnalyzer (file VERSION in the project folder)."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "VERSION"),
+                  encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
 def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) -> Dict[str, Any]:
     """
     Marker JSON for resolve/BeatAnalyzer_Markers.lua (same format as the export of the web app).
@@ -647,6 +657,7 @@ def resolve_marker_data(result: Dict[str, Any], only_downbeats: bool = False) ->
     beats = [b for b in result["beats"] if b["isDownbeat"]] if only_downbeats else result["beats"]
     data = {
         "format": RESOLVE_MARKER_FORMAT,
+        "generator": {"name": "BeatAnalyzer", "version": app_version()},   # test 0.6.0 b2
         "fileName": result["metadata"]["fileName"],
         "duration": result["metadata"]["duration"],
         "globalBpm": result["globalBpm"],

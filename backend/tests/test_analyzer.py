@@ -589,3 +589,13 @@ class TestMainTempo(unittest.TestCase):
 
     def test_no_intervals(self):
         self.assertEqual(self.analyzer.tempo_stats([])["globalBpm"], 120.0)
+
+
+class TestGenerator(unittest.TestCase):
+    def test_marker_json_names_beatanalyzer_and_version(self):
+        from analyzer import resolve_marker_data
+        result = {"metadata": {"fileName": "a.mp3", "duration": 1.0}, "globalBpm": 120.0,
+                  "timeSignature": {"name": "4/4"}, "beats": []}
+        gen = resolve_marker_data(result)["generator"]
+        self.assertEqual(gen["name"], "BeatAnalyzer")
+        self.assertEqual(gen["version"], open(os.path.join(os.path.dirname(BACKEND_DIR), "VERSION")).read().strip())

@@ -178,6 +178,10 @@ export function generateMidiBytes(result: AnalysisResult): Uint8Array {
 
 export const RESOLVE_MARKER_FORMAT = 'beatthis-resolve-markers/1';
 
+declare const __APP_VERSION__: string | undefined;
+/** version of the web app (file VERSION, built in by Vite); "dev" in the unit tests */
+const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
+
 export interface ResolveMarkerOptions {
   onlyDownbeats?: boolean;
   /** cue marks set while listening (times of the beats they sit on) */
@@ -226,6 +230,7 @@ export function generateResolveMarkerJson(
     : indexed;
   const data = {
     format: RESOLVE_MARKER_FORMAT,
+    generator: { name: 'BeatAnalyzer', version: APP_VERSION },
     fileName: result.metadata.fileName,
     duration: result.metadata.duration,
     globalBpm: result.globalBpm,

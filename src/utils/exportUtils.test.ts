@@ -97,3 +97,9 @@ test('MIDI: pickup and a short lead-in – the first "1" lands on a bar line', (
   assert.equal(m.notes[firstOne].tick % (4 * 480), 0);
   assert.equal(m.notes[firstOne].pitch, 76);
 });
+
+test('marker JSON names BeatAnalyzer and its version', () => {
+  const data = JSON.parse(generateResolveMarkerJson(s));
+  assert.equal(data.generator.name, 'BeatAnalyzer');
+  assert.match(String(data.generator.version), /^\d+\.\d+\.\d+|dev$/);
+});

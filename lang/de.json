@@ -14,7 +14,7 @@
     "time_bpm": "{clock} – {bpm} BPM",
     "confidence": "Confidence {value}",
     "intro": [
-      "BeatAnalyzer",
+      "{made_by}",
       "{file}",
       "{bpm} BPM – {meter}"
     ],

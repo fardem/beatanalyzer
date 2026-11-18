@@ -44,7 +44,7 @@ local BA = {
       ["_meta.percent"] = "{v}%",
       ["output.bar_beat"] = "Bar {bar} – Beat {beat}",
       ["output.confidence"] = "Confidence {value}",
-      ["output.intro"] = "BeatAnalyzer\n{file}\n{bpm} BPM – {meter}",
+      ["output.intro"] = "{made_by}\n{file}\n{bpm} BPM – {meter}",
       ["output.kind_beat"] = "Beat {beat}",
       ["output.kind_downbeat"] = "Downbeat (1)",
       ["output.marker_cue"] = "Cue {n}",
@@ -971,8 +971,15 @@ end
 M.INFO_GAP = 0.5   -- seconds before the first beat needed for an own info subtitle; else it goes under that beat
 
 -- Info block of every subtitle: BeatAnalyzer, file, tempo and meter, model with licence (if the JSON has one).
+-- "BeatAnalyzer 0.6.1": the program and version that made the JSON (older JSON without it: this script's version)
+function M.made_by(data)
+  local gen = type(data) == "table" and type(data.generator) == "table" and data.generator or nil
+  local version = gen and gen.version and tostring(gen.version) or VERSION
+  return "BeatAnalyzer " .. version
+end
+
 function M.info_lines(data)
-  local text = T("output.intro", { file = tostring(data.fileName or ""),
+  local text = T("output.intro", { made_by = M.made_by(data), file = tostring(data.fileName or ""),
                                    bpm = tonumber(data.globalBpm) and fmt_num(data.globalBpm, 1) or "?",
                                    meter = fmt_meter(data.timeSignature or "?") })
   local model = type(data.engine) == "table" and type(data.engine.model) == "table" and data.engine.model or nil
@@ -1083,13 +1090,17 @@ function M.marker_name(m)
 end
 
 -- Note of a marker: the same parts as its subtitle, e.g. "Takt 24 – Beat 2 | 106,860 s | 120,0 BPM | Confidence 75 %".
-function M.marker_note(m)
+-- With `data` (the first marker of a clip): "BeatAnalyzer 0.6.1" in front (test 0.6.0 b2).
+function M.marker_note(m, data)
   local parts = {
     T("output.bar_beat", { bar = tonumber(m.bar) or 0, beat = tonumber(m.beat) or 0 }),
     T("output.marker_note", { time = fmt_num(m.time, 3), bpm = fmt_num(m.bpm, 1) }),
   }
   if tonumber(m.confidence) then
     parts[#parts + 1] = T("output.confidence", { value = fmt_pct(m.confidence) })
+  end
+  if data then
+    table.insert(parts, 1, M.made_by(data))
   end
   return table.concat(parts, " | ")
 end
@@ -1768,7 +1779,7 @@ function Job:mark_some()
           c.skipped = c.skipped + 1
         else
           local name = M.marker_name(m)
-          local note = M.marker_note(m)
+          local note = M.marker_note(m, c.added == 0 and self.data or nil)   -- first marker: "BeatAnalyzer x.y.z"
           if api(clip, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
             c.added = c.added + 1
           else
@@ -1834,8 +1845,9 @@ function Job:mark_timeline()
         local frame = round((tonumber(m.time) or -1) * self.tl_fps)
         if frame >= c.left and (not c.duration or frame < c.left + c.duration) then
           local name = M.marker_name(m)
-          local note = M.marker_note(m)
+          local note = M.marker_note(m, not c.noted and self.data or nil)   -- first marker: "BeatAnalyzer x.y.z"
           if api(item, "AddMarker", frame, color, name, note, 1, MARKER_TAG) then
+            c.noted = true
             self.tl_added = self.tl_added + 1
           end
         end
