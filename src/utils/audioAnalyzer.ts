@@ -129,7 +129,7 @@ export async function analyzeAudioFile(
   const globalBpmEstimate = estimateTempoFromActivation(baf, frameRate);
 
   onProgress?.(85, 'web.progress.browser_tracking');
-  const { beats, downbeats, timeSig, swingRatio } = trackBeatsAndDownbeats(
+  const { beats, downbeats, timeSig } = trackBeatsAndDownbeats(
     baf,
     daf,
     frameRate,
@@ -183,7 +183,6 @@ export async function analyzeAudioFile(
     maxBpm: Math.round(maxBpm * 10) / 10,
     tempoStability,
     timeSignature: timeSig,
-    swingRatio: Math.round(swingRatio * 10) / 10,
     totalBeats,
     totalBars,
     activationCurve,
@@ -461,7 +460,6 @@ function trackBeatsAndDownbeats(
   beats: BeatItem[];
   downbeats: BeatItem[];
   timeSig: { numerator: number; denominator: number; name: string; barShare: number | null };
-  swingRatio: number;
 } {
   const beatPeriodFrames = (60 * frameRate) / estimatedBpm;
   const minInterval = Math.floor(beatPeriodFrames * 0.65);
@@ -569,7 +567,6 @@ function trackBeatsAndDownbeats(
   const downbeats: BeatItem[] = [];
 
   let currentBar = 1;
-  let swingDeviations: number[] = [];
 
   for (let i = 0; i < beatFrames.length; i++) {
     const f = beatFrames[i];
@@ -612,25 +609,7 @@ function trackBeatsAndDownbeats(
       downbeats.push(beatItem);
     }
 
-    // Estimate swing (compare odd beat intervals to even beat intervals)
-    if (i >= 2 && i % 2 === 0) {
-      const dt1 = beats[i - 1].time - beats[i - 2].time;
-      const dt2 = time - beats[i - 1].time;
-      const pairTotal = dt1 + dt2;
-      if (pairTotal > 0.4 && pairTotal < 1.8) {
-        const ratio = (dt1 / pairTotal) * 100;
-        if (ratio >= 45 && ratio <= 75) {
-          swingDeviations.push(ratio);
-        }
-      }
-    }
   }
-
-  // Average swing ratio (50% = perfectly straight, 66.7% = triplet swing)
-  const swingRatio =
-    swingDeviations.length > 5
-      ? swingDeviations.reduce((a, b) => a + b, 0) / swingDeviations.length
-      : 50.0;
 
   const timeSig = {
     numerator: meterBeats,
@@ -639,7 +618,7 @@ function trackBeatsAndDownbeats(
     barShare: null, // downbeats are set every 3rd/4th beat here: a share of those bars says nothing
   };
 
-  return { beats, downbeats, timeSig, swingRatio };
+  return { beats, downbeats, timeSig };
 }
 
 // Onset strength of the browser analysis; there is no downbeat curve (downbeatActivation null).

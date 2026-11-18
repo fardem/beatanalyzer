@@ -280,8 +280,6 @@
       "stability_click": "very steady",
       "stability_groove": "natural groove",
       "stability_varies": "tempo varies",
-      "straight": "straight eighths",
-      "swing": "{swing} swing",
       "tempo": "Tempo",
       "tempo_adagio": "Adagio (calm)",
       "tempo_allegro": "Allegro (fast)",
@@ -294,8 +292,10 @@
       "tip_meter": "Time signature (e.g. 4/4 = 4 beats per bar, 3/4 = waltz). “% of bars” shows how consistently that bar length holds across the track.",
       "tip_bars": "Number of full bars (each starting on beat “1”) and total detected beats in the song.",
       "tip_stability": "How steady the spacing between beats is: >92% = click-track tight, 80–92% = natural human groove, <80% = tempo drift or uneven tracking.",
-      "tip_ibi": "Average gap between consecutive beats in milliseconds (e.g. 500 ms = 120 BPM). “Straight” = even spacing; “Swing” (>55%) = shuffled/laid-back eighth-note feel.",
-      "tip_audio": "Total track length and sample rate of the decoded audio (44.1 kHz = CD standard, 48 kHz = video/studio standard)."
+      "tip_ibi": "Average gap between consecutive beats in milliseconds (e.g. 500 ms = 120 BPM).",
+      "tip_audio": "Total track length and sample rate of the decoded audio (44.1 kHz = CD standard, 48 kHz = video/studio standard).",
+      "jitter": "Grid ± {ms} ms",
+      "jitter_tip": "How much the gaps between the beats wobble (standard deviation; missing beats and tempo changes left out). Below about ±10 ms the markers sit frame-exact in a 25/30 fps timeline; more means a live feel – or a grid that is off in places."
     },
     "nc": {
       "attribution_text": "When sharing or publishing, the authors (Francesco Foscarin, Filip Korzeniowski, Richard Vogl) and the licence must be named – BeatAnalyzer writes this into the JSON exports.",

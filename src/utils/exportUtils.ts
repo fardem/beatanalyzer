@@ -51,7 +51,6 @@ export function generateBeatThisJson(result: AnalysisResult): string {
       min_bpm: result.minBpm,
       max_bpm: result.maxBpm,
       stability_percent: result.tempoStability,
-      swing_ratio_percent: result.swingRatio,
     },
     meter: {
       time_signature: result.timeSignature.name,

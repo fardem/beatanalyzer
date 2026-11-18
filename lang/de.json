@@ -280,8 +280,6 @@
       "stability_click": "sehr gleichmäßig",
       "stability_groove": "natürlicher Groove",
       "stability_varies": "Tempo schwankt",
-      "straight": "gerade Achtel",
-      "swing": "{swing} Swing",
       "tempo": "Tempo",
       "tempo_adagio": "Adagio (ruhig)",
       "tempo_allegro": "Allegro (schnell)",
@@ -294,8 +292,10 @@
       "tip_meter": "Taktart (z. B. 4/4 = 4 Zählzeiten je Takt, 3/4 = Walzer). „% der Takte“ zeigt, wie einheitlich diese Taktlänge im ganzen Song durchläuft.",
       "tip_bars": "Anzahl erkannter Takte (immer ab einer „1“) und die Gesamtzahl aller einzelnen Beats im Track.",
       "tip_stability": "Wie gleichmäßig der Abstand zwischen den Beats bleibt: >92 % = fest wie ein Metronom, 80–92 % = natürlicher Groove, <80 % = stark schwankendes Tempo oder Temposprünge.",
-      "tip_ibi": "Zeitabstand zwischen zwei Schlägen in Millisekunden (z. B. 500 ms = 120 BPM). „Gerade Achtel“ = gleichmäßiges Raster; „Swing“ = federndes, vorgezogenes/verzögertes Spielgefühl (>55 %).",
-      "tip_audio": "Laufzeit und Abtastrate der dekodierten Datei (44,1 kHz = CD-Standard, 48 kHz = Video-/Studio-Standard)."
+      "tip_ibi": "Durchschnittlicher Abstand zwischen zwei Beats in Millisekunden (z. B. 500 ms = 120 BPM).",
+      "tip_audio": "Laufzeit und Abtastrate der dekodierten Datei (44,1 kHz = CD-Standard, 48 kHz = Video-/Studio-Standard).",
+      "jitter": "Raster ± {ms} ms",
+      "jitter_tip": "Wie stark die Abstände zwischen den Beats schwanken (Standardabweichung; fehlende Beats und Tempowechsel nicht mitgezählt). Unter etwa ±10 ms sitzen die Marker in einer 25/30-fps-Timeline framegenau; mehr heißt Live-Gefühl – oder ein Raster, das stellenweise danebenliegt."
     },
     "nc": {
       "attribution_text": "Bei Weitergabe oder Veröffentlichung müssen die Autoren (Francesco Foscarin, Filip Korzeniowski, Richard Vogl) und die Lizenz genannt werden – BeatAnalyzer schreibt das in die JSON-Exporte.",

@@ -27,7 +27,6 @@ export function song(count = 32, meter = 4, firstDown = 0, step = 0.5): Analysis
     maxBpm: 60 / step,
     tempoStability: 100,
     timeSignature: { numerator: meter, denominator: 4, name: `${meter}/4`, barShare: 100 },
-    swingRatio: 50,
     totalBeats: count,
     totalBars: beats.filter((b) => b.isDownbeat).length,
     activationCurve: [],

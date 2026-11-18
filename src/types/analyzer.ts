@@ -66,7 +66,6 @@ export interface AnalysisResult {
     name: string;
     barShare: number | null; // share of bars with this beat count in percent; null with fewer than 2 downbeats
   };
-  swingRatio: number; // 50% = straight, ~66% = triplet swing
   totalBeats: number;
   totalBars: number;
   activationCurve: ActivationPoint[];

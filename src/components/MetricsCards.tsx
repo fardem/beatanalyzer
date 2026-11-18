@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnalysisResult } from '../types/analyzer';
 import { Gauge, Clock, Radio, Music, Zap, Disc3 } from 'lucide-react';
 import { useI18n } from '../i18n';
+import { intervalJitterMs } from '../utils/beatStats';
 import { ValueTooltip } from './DiagramInfoTooltip';
 
 interface MetricsCardsProps {
@@ -81,6 +82,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
 
   const meterText = meter(`${result.timeSignature.numerator}/${result.timeSignature.denominator}`);
 
+  const jitter = useMemo(() => intervalJitterMs(result.beats), [result.beats]);
   const avgIntervalMs =
     result.beats.length > 1
       ? Math.round(
@@ -237,7 +239,11 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({ result, smoothBars, 
           <span className="text-xs font-semibold text-amber-400">ms</span>
         </div>
         <div className="text-[11px] text-slate-400 mt-1 leading-snug line-clamp-2">
-          {result.swingRatio > 55 ? t('web.metrics.swing', { swing: pctValue(result.swingRatio) }) : t('web.metrics.straight')}
+          {jitter !== null ? (
+            <ValueTooltip title={t('web.metrics.jitter', { ms: num(jitter, 1) })} body={t('web.metrics.jitter_tip')}>
+              <span>{t('web.metrics.jitter', { ms: num(jitter, 1) })}</span>
+            </ValueTooltip>
+          ) : null}
         </div>
       </div>
 

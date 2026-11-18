@@ -576,7 +576,6 @@ def analyze_audio_file(file_path: str, original_filename: str, smooth: bool = Tr
             "name": f"{beats_per_bar}/4",
             "barShare": bar_share
         },
-        "swingRatio": 50.0,
         "totalBeats": len(structured_beats),
         "totalBars": len(structured_downbeats),
         "activationCurve": curve,

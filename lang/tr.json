@@ -281,8 +281,6 @@
       "stability_click": "çok düzenli",
       "stability_groove": "doğal groove",
       "stability_varies": "tempo değişken",
-      "straight": "düz sekizlikler",
-      "swing": "{swing} swing",
       "tempo": "Tempo",
       "tempo_adagio": "Adagio (sakin)",
       "tempo_allegro": "Allegro (hızlı)",
@@ -295,8 +293,10 @@
       "tip_meter": "Ölçü birimi (ör. 4/4 = her ölçüde 4 beat, 3/4 = vals). “% ölçü” bu uzunluğun şarkı boyunca ne kadar tutarlı kaldığını gösterir.",
       "tip_bars": "Algılanan toplam ölçü (her biri “1” ile başlar) ve şarkıdaki toplam beat sayısı.",
       "tip_stability": "Beat aralıklarının düzenliliği: >%92 = metronom kesinliği, %80–92 = doğal groove, <%80 = değişken tempo veya düzensiz algılama.",
-      "tip_ibi": "İki beat arasındaki ortalama süre (milisaniye; ör. 500 ms = 120 BPM). “Düz sekizlikler” = eşit aralık; “Swing” (>%55) = esnek üçleme groove hissi.",
-      "tip_audio": "Çözülen sesin süresi ve örnekleme hızı (44,1 kHz = CD standardı, 48 kHz = video/stüdyo standardı)."
+      "tip_ibi": "Art arda iki beat arasındaki ortalama aralık, milisaniye cinsinden (örn. 500 ms = 120 BPM).",
+      "tip_audio": "Çözülen sesin süresi ve örnekleme hızı (44,1 kHz = CD standardı, 48 kHz = video/stüdyo standardı).",
+      "jitter": "Izgara ± {ms} ms",
+      "jitter_tip": "Beat'ler arasındaki aralıkların ne kadar oynadığı (standart sapma; eksik beat'ler ve tempo değişimleri sayılmaz). Yaklaşık ±10 ms'nin altında marker'lar 25/30 fps'lik bir Timeline'da kare kare doğru oturur; daha fazlası canlı bir his – ya da yer yer kayan bir ızgara demektir."
     },
     "nc": {
       "attribution_text": "Paylaşırken veya yayımlarken yazarlar (Francesco Foscarin, Filip Korzeniowski, Richard Vogl) ve lisans belirtilmelidir – BeatAnalyzer bunu JSON dışa aktarımlarına yazar.",
