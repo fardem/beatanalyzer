@@ -530,6 +530,7 @@ export default function App() {
                         currentTime={currentTime}
                         onSeek={handleSeek}
                         activeBeat={activeBeat}
+                        onEditBeat={(op) => handleApplyOps([op])}
                       />
                     </PanelShell>
                   );
@@ -633,6 +634,7 @@ export default function App() {
                         currentTime={currentTime}
                         onSeek={handleSeek}
                         onUpdateBeats={handleUpdateBeats}
+                        onEditBeat={(op) => handleApplyOps([op])}
                       />
                     </PanelShell>
                   );

@@ -417,7 +417,9 @@
       "play_from": "Bu beat'ten çal",
       "search": "Ölçü ara …",
       "title": "Beat ve ölçüler ({n})",
-      "toggle_downbeat": "Downbeat aç/kapat"
+      "toggle_downbeat": "Downbeat aç/kapat",
+      "insert": "Bu beat ile sonraki arasına bir beat ekle (modelin kaçırdığı)",
+      "delete": "Bu beat'i sil (modelin fazladan koyduğu)"
     },
     "tempo": {
       "range": "Aralık:",
@@ -489,7 +491,8 @@
       "help_item1": "Numaralı kırmızı çizgi = ölçünün “1”i – en güçlü kesme noktası (yeni sahne, sert kesme). Camgöbeği çizgiler = beat 2–4, daha hızlı kesme ritimleri için.",
       "help_item2": "Kesikli sarı = model burada emin değil (%60'ın altında). Bu yerlerde kesmeden önce dinle.",
       "help_item3": "Alttaki BAF / DAF: modelin her anda bir beat'ten (camgöbeği) veya bir “1”den (kırmızı) ne kadar emin olduğu – yüksek tepeler net vuruşlardır.",
-      "help_tip": "İpucu: 5–15 sn'ye yakınlaş ya da büyüteci kullan. Çizgi, kick veya snare'in başında olmalı, arkasında değil. Tüm çizgiler biraz erken ya da geç ise “Beat Kanıtları ve Ölçü Ayarı”nda düzelt."
+      "help_tip": "İpucu: 5–15 sn'ye yakınlaş ya da büyüteci kullan. Çizgi, kick veya snare'in başında olmalı, arkasında değil. Tüm çizgiler biraz erken ya da geç ise “Beat Kanıtları ve Ölçü Ayarı”nda düzelt.",
+      "edit_hint": "Shift+tık: beat ekle · Alt+tık: beat sil"
     },
     "spectrum": {
       "mode_live": "Canlı",

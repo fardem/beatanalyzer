@@ -416,7 +416,9 @@
       "play_from": "Ab diesem Beat abspielen",
       "search": "Takt suchen …",
       "title": "Beats und Takte ({n})",
-      "toggle_downbeat": "Downbeat ein/aus"
+      "toggle_downbeat": "Downbeat ein/aus",
+      "insert": "Beat zwischen diesem und dem nächsten einfügen (einer, den das Modell übersehen hat)",
+      "delete": "Diesen Beat löschen (einer, den das Modell zu viel gesetzt hat)"
     },
     "tempo": {
       "range": "Spanne:",
@@ -488,7 +490,8 @@
       "help_item1": "Rote Linie mit Zahl = die „1“ eines Takts – der stärkste Schnittpunkt (neue Szene, harter Schnitt). Cyan-Linien = Beats 2–4, für schnellere Schnittfolgen.",
       "help_item2": "Gelb gestrichelt = hier ist sich das Modell unsicher (unter 60 %). Diese Stellen vor dem Schneiden abhören.",
       "help_item3": "BAF / DAF unten: wie sicher das Modell an jeder Stelle einen Beat (Cyan) oder eine „1“ (Rot) hört – hohe Spitzen sind klare Schläge.",
-      "help_tip": "Tipp: Auf 5–15 s zoomen oder die Lupe nutzen. Eine Linie gehört auf den Beginn von Kick oder Snare, nicht dahinter. Liegen alle Linien etwas zu früh oder zu spät, korrigiere es unter „Beat-Evidenz & Takt-Korrektur“."
+      "help_tip": "Tipp: Auf 5–15 s zoomen oder die Lupe nutzen. Eine Linie gehört auf den Beginn von Kick oder Snare, nicht dahinter. Liegen alle Linien etwas zu früh oder zu spät, korrigiere es unter „Beat-Evidenz & Takt-Korrektur“.",
+      "edit_hint": "Umschalt+Klick: Beat einfügen · Alt+Klick: Beat löschen"
     },
     "spectrum": {
       "mode_live": "Live",

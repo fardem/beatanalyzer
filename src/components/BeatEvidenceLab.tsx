@@ -154,7 +154,12 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
     [sectionActive, winStart, winEnd]
   );
   const apply = useCallback(
-    (op: GridOp) => onApplyOps([fixRange && op.kind !== 'nudge' && op.kind !== 'toggle' ? { ...op, range: fixRange } : op]),
+    (op: GridOp) =>
+      onApplyOps([
+        fixRange && op.kind !== 'nudge' && op.kind !== 'toggle' && op.kind !== 'insert' && op.kind !== 'delete'
+          ? { ...op, range: fixRange }
+          : op,
+      ]),
     [onApplyOps, fixRange]
   );
 

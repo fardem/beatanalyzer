@@ -296,7 +296,9 @@ export type GridOp =
   | { kind: 'tempo'; factor: 0.5 | 2; range?: TimeRange }
   | { kind: 'meter'; beats: number; range?: TimeRange }
   | { kind: 'nudge'; time: number; to: number }
-  | { kind: 'toggle'; time: number; downbeat: boolean };
+  | { kind: 'toggle'; time: number; downbeat: boolean }
+  | { kind: 'insert'; time: number }
+  | { kind: 'delete'; time: number };
 
 const SAME_BEAT_S = 0.0015;   // beat times are rounded to 1 ms
 
@@ -338,7 +340,7 @@ function applyInRange(result: AnalysisResult, op: GridOp & { range: TimeRange })
 }
 
 export function applyGridOp(result: AnalysisResult, op: GridOp): AnalysisResult {
-  if (op.kind !== 'nudge' && op.kind !== 'toggle' && op.range) {
+  if (op.kind !== 'nudge' && op.kind !== 'toggle' && op.kind !== 'insert' && op.kind !== 'delete' && op.range) {
     return applyInRange(result, op as GridOp & { range: TimeRange });
   }
   switch (op.kind) {
@@ -350,6 +352,10 @@ export function applyGridOp(result: AnalysisResult, op: GridOp): AnalysisResult 
       return scaleGridTempo(result, op.factor);
     case 'meter':
       return setBeatsPerBar(result, op.beats);
+    case 'insert':
+      return insertBeat(result, op.time);
+    case 'delete':
+      return deleteBeat(result, op.time);
     case 'nudge':
     case 'toggle': {
       const idx = findBeat(result.beats, op.time);
@@ -364,6 +370,36 @@ export function applyGridOp(result: AnalysisResult, op: GridOp): AnalysisResult 
       return recomputeBeatStats(result, beats);
     }
   }
+}
+
+const INSERT_MIN_GAP_S = 0.03;   // a new beat closer than this to an existing one is a double click, not a missing beat
+
+/**
+ * Adds a beat the model missed (e.g. in a break) at `time`: not a downbeat, no confidence; bars and tempo are
+ * counted again, so the bar it lands in gets one beat more. Nothing happens next to an existing beat (< 30 ms).
+ */
+export function insertBeat(result: AnalysisResult, time: number): AnalysisResult {
+  const t = Math.max(0, Math.round(time * 1000) / 1000);
+  if (result.beats.some((b) => Math.abs(b.time - t) < INSERT_MIN_GAP_S)) return result;
+  const beat: BeatItem = {
+    id: 0,
+    time: t,
+    beatInBar: 1,
+    barIndex: 1,
+    isDownbeat: false,
+    confidence: null,
+    instantBpm: 0,
+    deltaMs: 0,
+  };
+  return recomputeBeatStats(result, [...result.beats, beat].sort((a, b) => a.time - b.time));
+}
+
+/** Removes the beat at `time` (a beat set too much); at least 2 beats stay. Unknown time: unchanged. */
+export function deleteBeat(result: AnalysisResult, time: number): AnalysisResult {
+  if (result.beats.length <= 2) return result;
+  const idx = findBeat(result.beats, time);
+  if (idx < 0) return result;
+  return recomputeBeatStats(result, result.beats.filter((_, i) => i !== idx));
 }
 
 export function applyGridOps(base: AnalysisResult, ops: GridOp[]): AnalysisResult {

@@ -147,3 +147,53 @@ test('section: half beat keeps a gap to the beats after the section', () => {
   const t = out.beats.map((b) => b.time);
   for (let i = 1; i < t.length; i++) assert.ok(t[i] - t[i - 1] >= 0.08, `${t[i - 1]} -> ${t[i]}`);
 });
+
+// --- insert / delete single beats (a beat the model missed or set too much) ---
+import { deleteBeat, insertBeat } from './beatTransforms';
+
+/** a 4/4 song whose 3rd bar lost its 3rd beat (time 5.5) */
+function withGap(): AnalysisResult {
+  const s = song(32, 4, 0);
+  return applyGridOps({ ...s, beats: s.beats.filter((b) => b.time !== 5.5) }, []);
+}
+
+test('insert fills a missing beat: the bar has 4 beats again, bar count unchanged', () => {
+  const broken = applyGridOps(withGap(), [{ kind: 'toggle', time: 0.5, downbeat: true }]);
+  const fixed = insertBeat(broken, 5.5);
+  const bar3 = fixed.beats.filter((b) => b.barIndex === 3);
+  assert.equal(bar3.length, 4);
+  assert.equal(fixed.totalBars, broken.totalBars);
+  const inserted = fixed.beats.find((b) => b.time === 5.5)!;
+  assert.equal(inserted.isDownbeat, false);
+  assert.equal(inserted.confidence, null);
+  assert.equal(Math.round(inserted.instantBpm), 120);
+});
+
+test('insert next to an existing beat (< 30 ms) changes nothing', () => {
+  const s = song(16);
+  assert.equal(insertBeat(s, 1.01), s);
+});
+
+test('delete a downbeat: the bar before gets longer, numbering stays without gaps', () => {
+  const s = song(16);   // downbeats at 0.5, 2.5, 4.5, 6.5
+  const d = deleteBeat(s, 2.5);
+  assert.equal(d.beats.length, 15);
+  assert.equal(d.beats.filter((b) => b.barIndex === 1).length, 7);
+  assert.deepEqual([...new Set(d.beats.map((b) => b.barIndex))], [1, 2, 3]);
+});
+
+test('delete keeps at least 2 beats; unknown time changes nothing', () => {
+  const two = song(2);
+  assert.equal(deleteBeat(two, 0.5), two);
+  const s = song(8);
+  assert.equal(deleteBeat(s, 9.99), s);
+});
+
+test('insert and delete are replayable steps (re-analysis with other smoothing)', () => {
+  const ops: GridOp[] = [{ kind: 'insert', time: 3.25 }, { kind: 'delete', time: 6.0 }, { kind: 'meter', beats: 3 }];
+  const a = applyGridOps(song(24), ops);
+  const b = applyGridOps(song(24), ops);
+  assert.deepEqual(a.beats.map((x) => [x.time, x.barIndex, x.beatInBar]), b.beats.map((x) => [x.time, x.barIndex, x.beatInBar]));
+  assert.ok(a.beats.some((x) => x.time === 3.25));
+  assert.ok(!a.beats.some((x) => x.time === 6.0));
+});

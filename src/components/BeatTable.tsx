@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useI18n } from '../i18n';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
-import { Search, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Play, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 
 interface BeatTableProps {
   result: AnalysisResult;
   currentTime: number;
   onSeek: (time: number) => void;
   onUpdateBeats: (beats: BeatItem[]) => void;
+  /** add a beat (between this and the next one) or remove one; replayable correction steps */
+  onEditBeat?: (op: { kind: 'insert'; time: number } | { kind: 'delete'; time: number }) => void;
 }
 
 export const BeatTable: React.FC<BeatTableProps> = ({
@@ -15,6 +17,7 @@ export const BeatTable: React.FC<BeatTableProps> = ({
   currentTime,
   onSeek,
   onUpdateBeats,
+  onEditBeat,
 }) => {
   const { t, num } = useI18n();
   const [filterType, setFilterType] = useState<'all' | 'downbeats'>('all');
@@ -263,6 +266,32 @@ export const BeatTable: React.FC<BeatTableProps> = ({
                     >
                       1/X
                     </button>
+                    {onEditBeat && (() => {
+                      const idx = result.beats.findIndex((x) => x.id === b.id);
+                      const next = result.beats[idx + 1];
+                      return (
+                        <>
+                          <button
+                            onClick={() => next && onEditBeat({ kind: 'insert', time: (b.time + next.time) / 2 })}
+                            disabled={!next}
+                            className="p-1 rounded bg-slate-800 hover:bg-emerald-700 text-slate-400 hover:text-white transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed align-middle"
+                            title={t('web.table.insert')}
+                            aria-label={t('web.table.insert')}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => onEditBeat({ kind: 'delete', time: b.time })}
+                            disabled={result.beats.length <= 2}
+                            className="p-1 rounded bg-slate-800 hover:bg-rose-700 text-slate-400 hover:text-white transition-colors cursor-pointer disabled:opacity-30 align-middle"
+                            title={t('web.table.delete')}
+                            aria-label={t('web.table.delete')}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </>
+                      );
+                    })()}
                   </td>
                 </tr>
               );
