@@ -1,2 +1,6 @@
 @import "tailwindcss";
 @source not "../dist";   /* the built bundle must not feed the next build (dist/ is committed) */
+
+/* horizontal rows that are swiped with the mouse (section buttons of the song structure): no scrollbar */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

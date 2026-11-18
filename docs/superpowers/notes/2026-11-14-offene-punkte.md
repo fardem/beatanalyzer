@@ -236,5 +236,9 @@ und Histogramm in einer Kachel nebeneinander; alle Bereiche unter den 6 Zahlenka
 Nutzen); stattdessen Songstruktur (Abschnittswechsel auf Downbeats) zusammen mit Live in einer Kachel direkt unter dem
 Player; Live mit Taktzähler, Countdown zur „1“, nächstem Abschnitt; Cue-Marken per Taste M (Umschalt+M: auf die „1“).
 Cue/Abschnitt in der Marker-JSON (`cue`, `section`, `sectionDelta`) → Resolve-Skript setzt gelbe/lila Marker (nur
-Skriptlogik, Fenster unverändert). Hilfetexte aus Cutter-Sicht. Gemeinsame Testliste: `docs/resolve-test-0.5.0.md`.
+Skriptlogik, Fenster unverändert). Hilfetexte aus Cutter-Sicht. Gemeinsame Testliste: `docs/resolve-test-0.5.1.md`.
 Offen: Abschnittserkennung an echten Songs vom Nutzer prüfen lassen (Test 7).
+
+**0.5.1 (2026-11-18), erster Blick des Nutzers auf 0.5.0:** Countdown „Nächste 1 in“ entfernt (verwirrt), Taktzähler
+ausblendbar (Spektrum dann volle Breite), Abschnitts-Knöpfe ohne Scrollbalken, mit gedrückter Maus wischbar.
+Testliste umbenannt: `docs/resolve-test-0.5.1.md`.

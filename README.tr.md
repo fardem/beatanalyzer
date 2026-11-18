@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Sürüm 0.5.0** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
+**Sürüm 0.5.1** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
 
 BeatAnalyzer bir şarkıdaki **beat'leri, downbeat'leri, tempoyu ve ölçüyü** bulur ve bunları **DaVinci Resolve**'a
 aktarır: **ses klibinizde renkli marker'lar** ve şarkının altında bir **Subtitle Track** olarak. Analiz,
@@ -26,7 +26,7 @@ Analizi doğrudan Resolve içindeki bir pencereden başlatabilir ya da tarayıc�
   BeatAnalyzer ayarı önerir (ölçü başı, yarım beat, tempo, ölçü) – önizlemeyle, tüm şarkı veya bir bölüm için, geri
   alınabilir ve “Düzeltme” kaydırıcısı değişince korunur.
 - **Şarkının nerede değiştiğini görün:** şarkı yapısı bölüm değişimlerini (daha yüksek, daha sakin, farklı) kendi
-  “1”lerinde işaretler; dinlerken bir ölçü sayacı sonraki “1”e ve sonraki bölüme geri sayar, **M** tuşu beat
+  “1”lerinde işaretler; dinlerken bir ölçü sayacı ölçüyü ve sonraki bölümün ne kadar uzakta olduğunu gösterir, **M** tuşu beat
   üzerine cue işareti koyar – ikisi de Resolve'a kendi renginde marker olarak gider.
 - **Kendi görünümünüz:** ihtiyacınız olmayan panelleri daraltın ve çalıştığınız sıraya sürükleyin.
 - **Yerel ve gizli:** her şey bilgisayarınızda çalışır – yükleme yok, hesap yok.
@@ -223,10 +223,11 @@ atlamaz). BeatAnalyzer kesin gecikmeyi dosyadan okur ve marker'larla subtitle'la
   şarkı), şarkının ses düzeyi, algılanan beat'lerde **metronom** (downbeat'te daha yüksek tık), hız 0,5× – 1,5×,
   tap tempo.
 - **Şarkı yapısı ve canlı:** şarkı boyunca ölçü başına seviye; bölüm değişimleri (▲ daha yüksek, ▼ daha sakin,
-  ◆ farklı) kendi “1”lerinde durur – tıklayınca oraya atlar. Çalarken: geçerli ölçü, sonraki “1”e kalan beat'ler,
-  sonraki bölüm ve canlı spektrum (her beat'te parlama, “1”de daha güçlü). **M** en yakın beat'e bir cue işareti
-  koyar (Shift+M: en yakın “1”e). Cue işaretleri ve bölüm değişimleri Resolve dışa aktarımına sarı ve mor marker
-  olarak, Audacity etiketlerine de girer.
+  ◆ farklı) kendi “1”lerinde durur – tıklayınca oraya atlar, bölüm düğmeleri fare basılıyken kaydırılabilir.
+  Çalarken: bir ölçü sayacı (geçerli ölçü ve beat, sonraki bölüm; gizlenebilir) ve canlı spektrum (her beat'te
+  parlama, “1”de daha güçlü). **M** – ya da “Şarkı yapısı” başlığının sağındaki *Cue koy* – en yakın beat'e bir
+  cue işareti koyar (Shift+M: en yakın “1”e); cue'lar bölümlerin arasında sarı düğme olarak durur. Cue işaretleri ve
+  bölüm değişimleri Resolve dışa aktarımına sarı ve mor marker olarak, Audacity etiketlerine de girer.
 
 ![Şarkı yapısı ve canlı görünüm](docs/images/web-structure-live.png)
 

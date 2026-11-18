@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Flag, Trash2, X } from 'lucide-react';
+import { Flag, PanelLeftClose, PanelLeftOpen, Trash2, X } from 'lucide-react';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
 import { SongSection, SongStructure, nearestBeatIndex } from '../utils/songStructure';
 import { useI18n } from '../i18n';
 import { DiagramInfoTooltip } from './DiagramInfoTooltip';
 import { LiveSpectrum, LiveSpectrumSource } from './LiveSpectrum';
+import { SectionChips } from './SectionChips';
 
 export interface CueMark {
   /** time of the beat it sits on (s) */
@@ -38,6 +39,7 @@ const KIND_RGB: Record<SongSection['kind'], string> = {
   change: '167, 139, 250',
 };
 const LEVEL_RANGE_DB = 30;
+const STORAGE_COUNTER_KEY = 'beatanalyzer.liveCounter';
 
 export function formatClock(sec: number, tenths = false): string {
   const s = Math.max(0, sec);
@@ -82,6 +84,24 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<{ x: number; text: string } | null>(null);
+  // bar counter left of the live spectrum: can be folded, then the spectrum takes the full width
+  const [showCounter, setShowCounter] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(STORAGE_COUNTER_KEY) !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const toggleCounter = useCallback(() => {
+    setShowCounter((prev) => {
+      try {
+        localStorage.setItem(STORAGE_COUNTER_KEY, prev ? '0' : '1');
+      } catch {
+        // Ignore storage errors
+      }
+      return !prev;
+    });
+  }, []);
   const duration = result.metadata.duration || 1;
   const beats = result.beats;
 
@@ -201,29 +221,31 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
     setHover({ x: e.clientX - r.left, text });
   };
 
-  // live counter: bar, beat, beats to the next "1", next section
+  // live counter: bar, beat, next section
   const live = useMemo(() => {
     const i = beatAt(beats, currentTime);
     const numerator = result.timeSignature.numerator || 4;
     if (i < 0) {
       const first = structure?.sections[0] ?? null;
-      return { bar: null as number | null, beat: 0, toOne: null as number | null, toOneSec: null as number | null, numerator, next: first, barsToNext: first ? 0 : null };
+      return { bar: null as number | null, beat: 0, numerator, next: first, barsToNext: first ? 0 : null };
     }
     const cur = beats[i];
-    let j = i + 1;
-    while (j < beats.length && !beats[j].isDownbeat) j++;
-    const toOne = j < beats.length ? j - i : null;
     const next = structure?.sections.find((s) => s.time > currentTime + 0.02) ?? null;
     return {
       bar: cur.barIndex,
       beat: cur.beatInBar,
-      toOne,
-      toOneSec: j < beats.length ? beats[j].time - currentTime : null,
       numerator,
       next,
       barsToNext: next ? Math.max(0, next.bar - cur.barIndex) : null,
     };
   }, [beats, currentTime, result.timeSignature.numerator, structure]);
+
+  // sections and cue marks in one row, sorted by time (cues numbered in time order, as in the export)
+  type ChipItem = { kind: 'section'; time: number; s: SongSection } | { kind: 'cue'; time: number; n: number; index: number };
+  const chipItems: ChipItem[] = [
+    ...(structure && structure.sections.length > 1 ? structure.sections.map((s) => ({ kind: 'section' as const, time: s.time, s })) : []),
+    ...cues.map((c, index) => ({ kind: 'cue' as const, time: c.time, n: index + 1, index })),
+  ].sort((x, y) => x.time - y.time || (x.kind === 'section' ? -1 : 1));
 
   const cueLabel = (c: CueMark) => {
     const i = nearestBeatIndex(beats, c.time);
@@ -235,8 +257,8 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
     <div className="space-y-4">
       {/* song structure */}
       <div className="space-y-1.5">
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span className="font-medium text-slate-300">{t('web.structure.strip_title')}</span>
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <span className="font-medium text-slate-300 whitespace-nowrap">{t('web.structure.strip_title')}</span>
           <DiagramInfoTooltip
             buttonLabel={t('web.structure.help_label')}
             help={{
@@ -251,9 +273,45 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
             }}
           />
           {structure && structure.sections.length > 1 && (
-            <span className="text-slate-500">{t('web.structure.count', { n: structure.sections.length })}</span>
+            <span className="text-slate-500 whitespace-nowrap">{t('web.structure.count', { n: structure.sections.length })}</span>
           )}
-          {hover && <span className="ml-auto font-mono tabular-nums text-slate-300">{hover.text}</span>}
+          <span className="flex-1 min-w-0 truncate font-mono tabular-nums text-slate-300">{hover?.text}</span>
+          {/* cue marks: set here, shown as flags in the strip and as buttons between the sections */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={(e) => onAddCue(e.shiftKey)}
+              title={t('web.cue.add_tip')}
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-yellow-600/70 bg-yellow-950/50 text-[11px] font-semibold text-yellow-200 hover:bg-yellow-900/60 cursor-pointer"
+            >
+              <Flag className="w-3 h-3" />
+              {t('web.cue.add')}
+              <kbd className="px-1 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-300">M</kbd>
+            </button>
+            {cues.length > 0 && (
+              <button
+                type="button"
+                onClick={onClearCues}
+                aria-label={t('web.cue.clear')}
+                title={t('web.cue.clear')}
+                className="p-1 rounded-md text-slate-500 hover:text-rose-300 hover:bg-slate-800 cursor-pointer"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+            <DiagramInfoTooltip
+              buttonLabel={t('web.cue.help_label')}
+              help={{
+                title: t('web.cue.title'),
+                summary: t('web.cue.help_summary'),
+                items: [
+                  { color: 'amber', text: t('web.cue.help_1') },
+                  { color: 'rose', text: t('web.cue.help_2') },
+                ],
+                actionTip: t('web.cue.help_tip'),
+              }}
+            />
+          </div>
         </div>
         <div ref={wrapRef} className="relative h-20 w-full rounded-xl bg-slate-950/90 border border-slate-800/80 overflow-hidden">
           <canvas
@@ -270,13 +328,37 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
             </div>
           )}
         </div>
-        {structure && structure.sections.length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
-            {structure.sections.map((s) => {
+        {/* sections and cue marks in one row, by time; swipe it with the mouse held down */}
+        {chipItems.length > 1 && (
+          <SectionChips activeIndex={chipItems.findIndex((c) => c.kind === 'section' && currentTime >= c.s.time - 0.02 && currentTime < c.s.end)}>
+            {chipItems.map((c) => {
+              if (c.kind === 'cue') {
+                return (
+                  <span
+                    key={`cue-${c.time}`}
+                    className="shrink-0 inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-lg border border-yellow-600/70 bg-yellow-950/40 text-[11px] font-mono tabular-nums text-yellow-100 whitespace-nowrap"
+                  >
+                    <button type="button" onClick={() => onSeek(c.time)} className="inline-flex items-center gap-1 cursor-pointer hover:text-white" title={t('web.cue.jump')}>
+                      <Flag className="w-3 h-3 text-yellow-400" />
+                      {t('web.cue.name', { n: c.n })} · {cueLabel({ time: c.time })}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveCue(c.index)}
+                      aria-label={t('web.cue.remove')}
+                      title={t('web.cue.remove')}
+                      className="p-0.5 rounded text-yellow-200/50 hover:text-rose-300 cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                );
+              }
+              const s = c.s;
               const active = currentTime >= s.time - 0.02 && currentTime < s.end;
               return (
                 <button
-                  key={s.bar}
+                  key={`sec-${s.bar}`}
                   type="button"
                   onClick={() => onSeek(s.time)}
                   title={t('web.structure.chip_tip', { bars: s.bars })}
@@ -291,7 +373,7 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
                 </button>
               );
             })}
-          </div>
+          </SectionChips>
         )}
       </div>
 
@@ -311,25 +393,23 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
             actionTip: t('web.live.help_tip'),
           }}
         />
+        <button
+          type="button"
+          onClick={toggleCounter}
+          aria-expanded={showCounter}
+          title={showCounter ? t('web.live.counter_hide_tip') : t('web.live.counter_show_tip')}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-700/90 bg-slate-950/75 text-[10px] font-medium text-slate-300 hover:text-white hover:border-slate-600 cursor-pointer whitespace-nowrap"
+        >
+          {showCounter ? <PanelLeftClose className="w-3 h-3" /> : <PanelLeftOpen className="w-3 h-3" />}
+          <span>{showCounter ? t('web.live.counter_hide') : t('web.live.counter_show')}</span>
+        </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-[15rem_minmax(0,1fr)] gap-3">
+      <div className={`grid grid-cols-1 gap-3 ${showCounter ? 'md:grid-cols-[15rem_minmax(0,1fr)]' : ''}`}>
+        {showCounter && (
         <div className="rounded-xl bg-slate-950/90 border border-slate-800/80 p-3 flex flex-col justify-between gap-2 min-h-36">
-          <div className="flex items-baseline justify-between gap-2">
-            <div>
-              <div className="text-[10px] uppercase tracking-wide text-slate-500">{t('web.live.bar')}</div>
-              <div className="text-3xl font-bold font-mono tabular-nums text-white leading-none">{live.bar ?? '–'}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-[10px] uppercase tracking-wide text-slate-500">{t('web.live.next_one')}</div>
-              <div
-                className={`text-3xl font-bold font-mono tabular-nums leading-none ${
-                  live.toOne === 1 ? 'text-rose-400' : 'text-cyan-300'
-                }`}
-                title={t('web.live.next_one_tip')}
-              >
-                {live.toOne ?? '–'}
-              </div>
-            </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-slate-500">{t('web.live.bar')}</div>
+            <div className="text-3xl font-bold font-mono tabular-nums text-white leading-none">{live.bar ?? '–'}</div>
           </div>
           {/* beats of the bar: the "1" in rose, the current beat lit */}
           <div className="flex gap-1" aria-label={t('web.live.beats_aria', { beat: live.beat, n: live.numerator })}>
@@ -363,70 +443,11 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
             )}
           </div>
         </div>
+        )}
         <LiveSpectrum source={liveSource} isPlaying={isPlaying} result={result} currentTime={currentTime} />
       </div>
       </div>
 
-      {/* cue marks */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <button
-          type="button"
-          onClick={(e) => onAddCue(e.shiftKey)}
-          title={t('web.cue.add_tip')}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-yellow-600/70 bg-yellow-950/40 text-[11px] font-semibold text-yellow-200 hover:bg-yellow-900/50 cursor-pointer"
-        >
-          <Flag className="w-3 h-3" />
-          {t('web.cue.add')}
-          <kbd className="ml-1 px-1 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-300">M</kbd>
-        </button>
-        <DiagramInfoTooltip
-          buttonLabel={t('web.cue.help_label')}
-          help={{
-            title: t('web.cue.title'),
-            summary: t('web.cue.help_summary'),
-            items: [
-              { color: 'amber', text: t('web.cue.help_1') },
-              { color: 'rose', text: t('web.cue.help_2') },
-            ],
-            actionTip: t('web.cue.help_tip'),
-          }}
-        />
-        {cues.length === 0 ? (
-          <span className="text-[11px] text-slate-500">{t('web.cue.empty')}</span>
-        ) : (
-          <>
-            {cues.map((c, i) => (
-              <span
-                key={`${c.time}-${i}`}
-                className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md border border-yellow-700/60 bg-slate-900 text-[11px] font-mono tabular-nums text-yellow-100"
-              >
-                <button type="button" onClick={() => onSeek(c.time)} className="cursor-pointer hover:text-white" title={t('web.cue.jump')}>
-                  {t('web.cue.name', { n: i + 1 })} · {cueLabel(c)}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onRemoveCue(i)}
-                  aria-label={t('web.cue.remove')}
-                  title={t('web.cue.remove')}
-                  className="p-0.5 rounded text-slate-500 hover:text-rose-300 cursor-pointer"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-            <button
-              type="button"
-              onClick={onClearCues}
-              title={t('web.cue.clear')}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] text-slate-500 hover:text-rose-300 cursor-pointer"
-            >
-              <Trash2 className="w-3 h-3" />
-              {t('web.cue.clear')}
-            </button>
-            <span className="text-[10px] text-slate-500">{t('web.cue.export_note')}</span>
-          </>
-        )}
-      </div>
     </div>
   );
 };

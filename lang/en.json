@@ -602,16 +602,18 @@
     "live": {
       "title": "Live (while playing)",
       "help_label": "Live view explanation",
-      "help_summary": "Follows the playback: bar counter, countdown to the next “1” and the next section – so you can count along while listening and catch cut points without stopping.",
-      "help_1": "Big numbers: the current bar and the beats until the next “1” (rose when the next beat is the “1”). The row below lights the current beat.",
+      "help_summary": "Follows the playback: bar counter and the next section – so you can count along while listening and catch cut points without stopping.",
+      "help_1": "Bar counter (can be hidden): the current bar and its beats lit in turn, the “1” in rose; below, the next section and how many bars until it starts.",
       "help_2": "Spectrum: kick (rose), snare (cyan), hi-hats (indigo); the glow flashes on every beat, stronger on the “1”. If kick and flash do not land together, the grid is off.",
       "help_tip": "Tip: press M at a cut point while listening – the cue lands on the nearest beat.",
       "bar": "Bar",
-      "next_one": "Next “1” in",
-      "next_one_tip": "Beats until the next “1”",
       "beats_aria": "Beat {beat} of {n}",
       "next_section": "Next section: bar {bar}, in {bars} bars ({time})",
-      "no_next_section": "No further section change"
+      "no_next_section": "No further section change",
+      "counter_show": "Bar counter",
+      "counter_hide": "Bar counter",
+      "counter_show_tip": "Show the bar counter left of the spectrum",
+      "counter_hide_tip": "Hide the bar counter – the spectrum takes the full width"
     },
     "cue": {
       "title": "Cue marks",
@@ -620,14 +622,12 @@
       "help_label": "Cue marks explanation",
       "help_summary": "Mark cut points while listening, without stopping: press M where you want a cut. The mark snaps to the nearest beat, so it is on the beat in Resolve too.",
       "help_1": "M = nearest beat, Shift+M = nearest “1” (start of the bar).",
-      "help_2": "Cues go into the DaVinci Resolve export as yellow markers named “Cue 1”, “Cue 2” … and into the Audacity labels.",
+      "help_2": "Cues appear as yellow flags in the strip and as yellow buttons in the row below, between the sections. They go into the DaVinci Resolve export as yellow markers named “Cue 1”, “Cue 2” … and into the Audacity labels.",
       "help_tip": "Tip: rather press a little early than late – the mark snaps to the nearest beat. Click a cue to jump there, × removes it. Cues follow grid fixes.",
-      "empty": "No cues yet – press M while listening",
       "name": "Cue {n}",
       "jump": "Jump here",
       "remove": "Remove cue",
-      "clear": "Remove all",
-      "export_note": "→ yellow markers in the Resolve export"
+      "clear": "Remove all"
     },
     "layout": {
       "grip": "Move panel {panel}",

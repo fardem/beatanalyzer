@@ -602,16 +602,18 @@
     "live": {
       "title": "Live (beim Abspielen)",
       "help_label": "Erklärung zur Live-Ansicht",
-      "help_summary": "Läuft mit der Wiedergabe mit: Taktzähler, Countdown zur nächsten „1“ und der nächste Abschnitt – so zählst du beim Anhören mit und triffst Schnittpunkte, ohne anzuhalten.",
-      "help_1": "Große Zahlen: aktueller Takt und die Beats bis zur nächsten „1“ (rot, wenn der nächste Beat die „1“ ist). Die Reihe darunter leuchtet beim aktuellen Beat.",
+      "help_summary": "Läuft mit der Wiedergabe mit: Taktzähler und der nächste Abschnitt – so zählst du beim Anhören mit und triffst Schnittpunkte, ohne anzuhalten.",
+      "help_1": "Taktzähler (ausblendbar): aktueller Takt und seine Beats der Reihe nach beleuchtet, die „1“ in Rot; darunter der nächste Abschnitt und in wie vielen Takten er beginnt.",
       "help_2": "Spektrum: Kick (Rot), Snare (Cyan), Hi-Hats (Indigo); das Leuchten blitzt auf jedem Beat, stärker auf der „1“. Kommen Kick und Blitz nicht zusammen, stimmt das Raster nicht.",
       "help_tip": "Tipp: Beim Anhören an einem Schnittpunkt M drücken – die Cue-Marke landet auf dem nächsten Beat.",
       "bar": "Takt",
-      "next_one": "Nächste „1“ in",
-      "next_one_tip": "Beats bis zur nächsten „1“",
       "beats_aria": "Beat {beat} von {n}",
       "next_section": "Nächster Abschnitt: Takt {bar}, in {bars} Takten ({time})",
-      "no_next_section": "Kein weiterer Abschnittswechsel"
+      "no_next_section": "Kein weiterer Abschnittswechsel",
+      "counter_show": "Taktzähler",
+      "counter_hide": "Taktzähler",
+      "counter_show_tip": "Taktzähler links vom Spektrum einblenden",
+      "counter_hide_tip": "Taktzähler ausblenden – das Spektrum bekommt die volle Breite"
     },
     "cue": {
       "title": "Cue-Marken",
@@ -620,14 +622,12 @@
       "help_label": "Erklärung zu Cue-Marken",
       "help_summary": "Schnittpunkte beim Anhören markieren, ohne anzuhalten: an der Stelle M drücken, an der geschnitten werden soll. Die Marke rastet auf den nächsten Beat, sitzt also auch in Resolve im Takt.",
       "help_1": "M = nächster Beat, Umschalt+M = nächste „1“ (Taktanfang).",
-      "help_2": "Cue-Marken gehen als gelbe Marker „Cue 1“, „Cue 2“ … in den DaVinci-Resolve-Export und in die Audacity-Labels.",
+      "help_2": "Cue-Marken erscheinen als gelbe Fähnchen im Streifen und als gelbe Knöpfe in der Reihe darunter, zwischen den Abschnitten. Sie gehen als gelbe Marker „Cue 1“, „Cue 2“ … in den DaVinci-Resolve-Export und in die Audacity-Labels.",
       "help_tip": "Tipp: Lieber etwas zu früh als zu spät drücken – die Marke rastet auf den nächsten Beat. Klick auf eine Marke springt hin, × entfernt sie. Cue-Marken folgen Takt-Korrekturen.",
-      "empty": "Noch keine Cue-Marken – beim Anhören M drücken",
       "name": "Cue {n}",
       "jump": "Hierhin springen",
       "remove": "Cue-Marke entfernen",
-      "clear": "Alle entfernen",
-      "export_note": "→ gelbe Marker im Resolve-Export"
+      "clear": "Alle entfernen"
     },
     "layout": {
       "grip": "Bereich {panel} verschieben",

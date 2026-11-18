@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.5.0** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
+**Version 0.5.1** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
 
 BeatAnalyzer erkennt in einem Song **Beats, Downbeats, Tempo und Taktart** und bringt sie nach
 **DaVinci Resolve** – als **farbige Marker auf deinem Audio-Clip** und als **Subtitle Track** unter dem Song. Die
@@ -27,7 +27,7 @@ Du startest sie direkt aus einem Fenster in Resolve oder nutzt die Web-App im Br
   BeatAnalyzer schlägt die Korrektur vor (Takt-Start, Halb-Beat, Tempo, Taktart) – mit Vorschau, für den ganzen Song
   oder einen Ausschnitt, rückgängig zu machen und beim Verstellen von „Glätten“ erhalten.
 - **Sehen, wo sich der Song ändert:** Die Songstruktur markiert Abschnittswechsel (lauter, leiser, anders) auf
-  ihrer „1“; beim Anhören zählt ein Taktzähler zur nächsten „1“ und zum nächsten Abschnitt herunter, und die Taste
+  ihrer „1“; beim Anhören zeigt ein Taktzähler den Takt und wie weit der nächste Abschnitt entfernt ist, und die Taste
   **M** setzt Cue-Marken auf den Beat – beides kommt als Marker in eigener Farbe nach Resolve.
 - **Deine eigene Ansicht:** Bereiche, die du nicht brauchst, zuklappen und in die Reihenfolge ziehen, in der du
   arbeitest.
@@ -230,10 +230,12 @@ brauchen keinen Ausgleich – das Fenster sagt es dann.
   ganzer Song), Lautstärke des Songs, **Metronom** auf den erkannten Beats (höherer Klick auf dem Downbeat),
   Geschwindigkeit 0,5× bis 1,5×, Tap-Tempo.
 - **Songstruktur & Live:** Pegel je Takt über den Song; Abschnittswechsel (▲ lauter, ▼ leiser, ◆ anders) sitzen auf
-  ihrer „1“ – Klick springt hin. Beim Abspielen: aktueller Takt, Beats bis zur nächsten „1“, der nächste Abschnitt
-  und das Live-Spektrum (Blitz auf jedem Beat, stärker auf der „1“). **M** setzt eine Cue-Marke auf den nächsten
-  Beat (Umschalt+M: auf die nächste „1“). Cue-Marken und Abschnittswechsel gehen als gelbe und lila Marker in den
-  Resolve-Export und in die Audacity-Labels.
+  ihrer „1“ – Klick springt hin, die Abschnitts-Knöpfe lassen sich mit gedrückter Maus wischen. Beim Abspielen: ein
+  Taktzähler (aktueller Takt und Beat, nächster Abschnitt; ausblendbar) und das Live-Spektrum (Blitz auf jedem Beat,
+  stärker auf der „1“). **M** – oder *Cue setzen* rechts neben dem Titel „Songstruktur“ – setzt eine
+  Cue-Marke auf den nächsten Beat (Umschalt+M: auf die nächste „1“); Cues stehen als gelbe Knöpfe zwischen den
+  Abschnitten. Cue-Marken und Abschnittswechsel gehen als gelbe und lila Marker in den Resolve-Export und in die
+  Audacity-Labels.
 
 ![Songstruktur und Live-Ansicht](docs/images/web-structure-live.png)
 
