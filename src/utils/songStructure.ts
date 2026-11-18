@@ -1,5 +1,5 @@
 import { BeatItem } from '../types/analyzer';
-import { bandEvidence } from './beatEvidence';
+import { bandEvidence, getMonoSamples } from './beatEvidence';
 import { FrameFeatures, frameFeatures, TIMBRE_COEFFS } from './dsp';
 
 /**
@@ -78,13 +78,7 @@ const frameCache = new WeakMap<AudioBuffer, FrameFeatures>();
 function framesOf(buffer: AudioBuffer): FrameFeatures {
   const cached = frameCache.get(buffer);
   if (cached) return cached;
-  const n = buffer.length;
-  const mono = new Float32Array(n);
-  for (let c = 0; c < buffer.numberOfChannels; c++) {
-    const d = buffer.getChannelData(c);
-    for (let i = 0; i < n; i++) mono[i] += d[i] / buffer.numberOfChannels;
-  }
-  const f = frameFeatures(mono, buffer.sampleRate);
+  const f = frameFeatures(getMonoSamples(buffer), buffer.sampleRate);   // the mono copy of the band curves
   frameCache.set(buffer, f);
   return f;
 }

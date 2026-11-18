@@ -1,5 +1,5 @@
 import { AnalysisResult, BeatItem } from '../types/analyzer';
-import { splitBands } from './dsp';
+import { lowAndHigh } from './dsp';
 
 export interface FoldedBarData {
   numerator: number;
@@ -54,7 +54,7 @@ export interface BeatEvidenceData {
 
 const monoCache = new WeakMap<AudioBuffer, Float32Array>();
 
-function getMonoSamples(buffer: AudioBuffer): Float32Array {
+export function getMonoSamples(buffer: AudioBuffer): Float32Array {
   const cached = monoCache.get(buffer);
   if (cached) return cached;
 
@@ -132,7 +132,7 @@ function computeBandCurves(buffer: AudioBuffer): {
   const mono = getMonoSamples(buffer);
 
   // zero-phase band filters on the full sample rate (see dsp.ts), then the RMS of each 10 ms frame
-  const { low, mid, high } = splitBands(mono, sr);
+  const { low, high } = lowAndHigh(mono, sr);   // mid = mono − low − high, per sample below (no third copy)
   const rawLow = new Float32Array(numFrames);
   const rawMid = new Float32Array(numFrames);
   const rawHigh = new Float32Array(numFrames);
@@ -144,8 +144,9 @@ function computeBandCurves(buffer: AudioBuffer): {
     let sumMid = 0;
     let sumHigh = 0;
     for (let i = startSample; i < endSample; i++) {
+      const m = mono[i] - low[i] - high[i];
       sumLow += low[i] * low[i];
-      sumMid += mid[i] * mid[i];
+      sumMid += m * m;
       sumHigh += high[i] * high[i];
     }
     const count = endSample - startSample;

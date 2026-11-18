@@ -61,11 +61,14 @@ export const MID_HIGH_HZ = 2500;
  * Low and high are 4th-order Butterworth (Linkwitz-Riley) run zero-phase; mid is the rest, so the three bands add
  * up to the signal exactly.
  */
-export function splitBands(mono: Float32Array, sr: number): { low: Float32Array; mid: Float32Array; high: Float32Array } {
+export function lowAndHigh(mono: Float32Array, sr: number): { low: Float32Array; high: Float32Array } {
   const lp = biquadLowpass(LOW_MID_HZ, sr);
   const hp = biquadHighpass(MID_HIGH_HZ, sr);
-  const low = filtfilt(mono, [lp, lp]);
-  const high = filtfilt(mono, [hp, hp]);
+  return { low: filtfilt(mono, [lp, lp]), high: filtfilt(mono, [hp, hp]) };
+}
+
+export function splitBands(mono: Float32Array, sr: number): { low: Float32Array; mid: Float32Array; high: Float32Array } {
+  const { low, high } = lowAndHigh(mono, sr);
   const mid = new Float32Array(mono.length);
   for (let i = 0; i < mono.length; i++) mid[i] = mono[i] - low[i] - high[i];
   return { low, mid, high };
