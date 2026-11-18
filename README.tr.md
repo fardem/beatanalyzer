@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Sürüm 0.6.0** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
+**Sürüm 0.6.1** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
 
 BeatAnalyzer bir şarkıdaki **beat'leri, downbeat'leri, tempoyu ve ölçüyü** bulur ve bunları **DaVinci Resolve**'a
 aktarır: **ses klibinizde renkli marker'lar** ve şarkının altında bir **Subtitle Track** olarak. Analiz,
@@ -166,8 +166,9 @@ işaretlemeniz gerekir:
 
 - **Timeline'da Subtitle Track oluştur:** şarkı açık Timeline'ın bir ses izindeyse, altına „BeatAnalyzer -
   &lt;şarkı&gt;“ adlı bir Subtitle Track eklenir – şarkının bulunduğu her ses izi için bir tane.
-- **Marker renklerini ayarla:** downbeat, beat 2, 3, 4 ve diğer beat'ler için birer renk – ya da marker yok. Küçük
-  kareler geçerli renkleri gösterir.
+- **Marker renklerini ayarla:** downbeat, beat 2, 3, 4 ve diğer beat'ler için birer renk – ya da marker yok – ve web
+  uygulamasından gelen cue işaretleri ile bölüm değişimleri için (varsayılan sarı ve mor). Küçük kareler geçerli
+  renkleri gösterir. İlk marker'ın notu BeatAnalyzer'ı ve sürümünü belirtir.
 
 **Notlar** renkli kutularda görünür: bilgi için mavi (örn. MP3 gecikmesi), md_beat_this lisansı ve sorular için
 kehribar, hatalar için kırmızı, sonuç için yeşil.
@@ -220,7 +221,7 @@ atlamaz). BeatAnalyzer kesin gecikmeyi dosyadan okur ve marker'larla subtitle'la
 - **Dalga formu ve beat ızgarası:** çizgi olarak ölçüler ve beat'ler, modelin beat (BAF) ve downbeat (DAF) eğrileri.
   Hızlı yakınlaştırma 5 s / 15 s / 30 s / 60 s, büyüteç, sürüklenebilir çerçeveli genel görünüm.
 - **Oynatıcı:** istenen yerden çalma, **döngü** (gri = kapalı, sarı A-B = mavi çerçevedeki bölüm, yeşil = tüm
-  şarkı), şarkının ses düzeyi, algılanan beat'lerde örnek hassasiyetinde **metronom** (downbeat'te daha yüksek tık), hız 0,5× – 1,5×,
+  şarkı), şarkının ses düzeyi (notaya tıklayınca şarkı susar – yalnızca metronom), algılanan beat'lerde örnek hassasiyetinde **metronom** (downbeat'te daha yüksek tık), hız 0,5× – 1,5×,
   tap tempo.
 - **Şarkı yapısı ve canlı:** her ölçü diğer tüm ölçülerle karşılaştırılır – notalarına (akorlar), ses rengine
   (enstrümanlar) ve ses seviyesine göre; bölüm değişimleri (▲ daha yüksek, ▼ daha sakin, ◆ farklı) kendi “1”lerinde

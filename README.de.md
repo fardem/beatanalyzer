@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.6.0** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
+**Version 0.6.1** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
 
 BeatAnalyzer erkennt in einem Song **Beats, Downbeats, Tempo und Taktart** und bringt sie nach
 **DaVinci Resolve** – als **farbige Marker auf deinem Audio-Clip** und als **Subtitle Track** unter dem Song. Die
@@ -171,8 +171,9 @@ ausgeblendet.
 
 - **Subtitle Track in der Timeline anlegen:** Liegt der Song auf einer Audiospur der offenen Timeline, kommt
   darunter ein Subtitle Track „BeatAnalyzer - &lt;Song&gt;“ – einer je Audiospur, auf der der Song liegt.
-- **Markerfarben anpassen:** je eine Farbe für Downbeat, Beat 2, 3, 4 und übrige Beats – oder kein Marker. Die
-  kleinen Quadrate zeigen die aktuellen Farben.
+- **Markerfarben anpassen:** je eine Farbe für Downbeat, Beat 2, 3, 4 und übrige Beats – oder kein Marker – sowie
+  für Cue-Marken und Abschnittswechsel aus der Web-App (Standard gelb und lila). Die kleinen Quadrate zeigen die
+  aktuellen Farben. Die Notiz des ersten Markers nennt BeatAnalyzer und seine Version.
 
 **Hinweise** erscheinen in farbigen Kästen: blau für Informationen (z. B. die MP3-Verzögerung), bernsteinfarben für
 die Lizenz von md_beat_this und für Rückfragen, rot für Fehler, grün für das Ergebnis.
@@ -228,7 +229,7 @@ brauchen keinen Ausgleich – das Fenster sagt es dann.
 - **Wellenform & Beat-Raster:** Takte und Beats als Linien, die Kurven des Modells für Beats (BAF) und Downbeats
   (DAF). Schnellzoom 5 s / 15 s / 30 s / 60 s, Lupe, Übersicht mit verschiebbarem Rahmen.
 - **Player:** Wiedergabe ab jeder Stelle, **Loop** (grau = aus, gelb A-B = Ausschnitt im blauen Rahmen, grün =
-  ganzer Song), Lautstärke des Songs, samplegenaues **Metronom** auf den erkannten Beats (höherer Klick auf dem Downbeat),
+  ganzer Song), Lautstärke des Songs (Klick auf die Note schaltet den Song stumm – nur das Metronom), samplegenaues **Metronom** auf den erkannten Beats (höherer Klick auf dem Downbeat),
   Geschwindigkeit 0,5× bis 1,5×, Tap-Tempo.
 - **Songstruktur & Live:** jeder Takt wird mit jedem anderen verglichen – nach Tönen (Akkorden), Klangfarbe
   (Instrumenten) und Lautstärke; Abschnittswechsel (▲ lauter, ▼ leiser, ◆ anders) sitzen auf ihrer „1“, und Teile,

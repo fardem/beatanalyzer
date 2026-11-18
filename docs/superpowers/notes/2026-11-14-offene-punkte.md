@@ -249,3 +249,10 @@ mit unverändertem Songnamen, Metronom samplegenau, Swing-Zeile raus (Raster ± 
 einfügen/löschen, nullphasige Bandfilter ohne Aliasing, Songstruktur über Harmonie/Klangfarbe/Pegel mit Buchstaben,
 Altlasten (Ersatzseite, AI Studio) entfernt. Nicht übernommen: WSOLA, automatische 5/4–7/8, neue Swing-Messung,
 bereinigte Dateinamen, Beat-Linien ziehen, Web Worker. Testliste: `docs/resolve-test-0.6.0.md`.
+
+**0.6.1 (2026-11-18), Test 0.4.0–0.6.0 bestanden:** Fehler: Song-Lautstärke wirkungslos nach mehreren Plays (alte
+Gain-Knoten hingen am Analyser), drei Tempo-Werte für einen Song (Durchschnitt statt Median). Wünsche umgesetzt:
+Note = Song stumm, Cue-/Abschnittsfarben im Resolve-Fenster (Wunsch des Nutzers, Fenster dafür geändert), Version in
+JSON / erstem Marker / Untertitel, Doppelklick auf blauen Rahmen spielt Ausschnitt, Rückgängig in der Beat-Tabelle,
+Spuren 1×/2× statt Griff, Hilfe-Punkte in den Farben der Grafiken. Testliste: `docs/resolve-test-0.6.1.md`.
+Testlisten künftig auf Deutsch.

@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.6.0** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
+**Version 0.6.1** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
 
 BeatAnalyzer finds the **beats, downbeats, tempo and time signature** of a song and puts them into
 **DaVinci Resolve** as **coloured markers on your audio clip** and as a **subtitle track** under the song. The
@@ -163,8 +163,9 @@ md_beat_this gives no per-frame probabilities, so the slider is hidden there.
 
 - **Create a Subtitle Track in the Timeline:** if the song is on an audio track of the open timeline, a subtitle
   track "BeatAnalyzer - &lt;song&gt;" goes under it – one per audio track the song is on.
-- **Adjust marker colours:** one colour each for the downbeat, beats 2, 3, 4 and other beats – or no marker. The
-  small squares show the current colours.
+- **Adjust marker colours:** one colour each for the downbeat, beats 2, 3, 4 and other beats – or no marker – and
+  for the cue marks and section changes from the web app (yellow and purple by default). The small squares show the
+  current colours. The first marker's note names BeatAnalyzer and its version.
 
 **Notes** appear in coloured boxes: blue for information (e.g. the MP3 delay), amber for the licence of md_beat_this
 and for questions, red for errors, green for the result.
@@ -218,7 +219,7 @@ window shows it before and after. MP3 files without that delay need no correctio
 - **Waveform & beat grid:** bars and beats as lines, the beat (BAF) and downbeat (DAF) curves of the model.
   Quick zoom 5 s / 15 s / 30 s / 60 s, magnifier, overview with a frame you can drag.
 - **Player:** play from any point, **loop** (grey = off, yellow A-B = the section in the blue frame, green = the
-  whole song), song volume, sample-exact **metronome** on the detected beats (higher click on the downbeat), speed
+  whole song), song volume (click the note to mute the song and hear only the metronome), sample-exact **metronome** on the detected beats (higher click on the downbeat), speed
   0.5× to 1.5×,
   tap tempo.
 - **Song structure & live:** every bar is compared with every other by its notes (chords), its sound colour

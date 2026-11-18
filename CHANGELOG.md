@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.6.1] – 2026-11-18
+
+Fixes and wishes from the test of 0.4.0 – 0.6.0.
+
+### Fixed
+- **Song volume sometimes did nothing:** every play added a new volume stage behind the spectrum analyser; the old
+  ones kept sounding at the old volume. The audio graph is now built once.
+- **Three different tempos for one song** (test "Ağır Kapı": tile 131, tempo curve Ø 152, histogram 115 BPM): the
+  main tempo is now 60 / the median beat gap everywhere – tile, tempo curve (dashed line "main"), histogram and the
+  server. Parts counted at half or double speed no longer move it.
+- The metronome plans 300 ms ahead (was 120 ms), so a busy moment right after the analysis does not drop a click.
+
+### Added
+- **Mute the song** with a click on the note next to the song volume – only the metronome is heard.
+- **Resolve window:** own colours for cue marks and section changes under *Adjust marker colours* (default yellow and
+  purple; "no marker" keeps the colour of the beat).
+- **BeatAnalyzer and its version** in the marker JSON (`generator`, web app and analysis from Resolve), in the note
+  of the first marker and in the subtitle info block ("BeatAnalyzer 0.6.1").
+- **Double-click on the blue frame** of the overview plays the section from its start.
+- **Undo / reset in the beat table header** (the same steps as in the fix panel).
+
+### Changed
+- Band lanes: a **1× / 2× button** instead of the grip (the heights in between brought nothing).
+- **Help dots in the colours of the diagrams:** every item of the ? help now stands for one colour of its diagram
+  (lanes, folded bar, tempo curve, histogram, song structure, live view, cue marks).
+
 ## [0.6.0] – 2026-11-18
 
 The points of an outside review (Gemini) that make BeatAnalyzer better, the song structure by harmony and sound colour,
