@@ -602,16 +602,18 @@
     "live": {
       "title": "Live (beim Abspielen)",
       "help_label": "Erklärung zur Live-Ansicht",
-      "help_summary": "Läuft mit der Wiedergabe mit: Taktzähler, Countdown zur nächsten „1“ und der nächste Abschnitt – so zählst du beim Anhören mit und triffst Schnittpunkte, ohne anzuhalten.",
-      "help_1": "Große Zahlen: aktueller Takt und die Beats bis zur nächsten „1“ (rot, wenn der nächste Beat die „1“ ist). Die Reihe darunter leuchtet beim aktuellen Beat.",
+      "help_summary": "Läuft mit der Wiedergabe mit: Taktzähler und der nächste Abschnitt – so zählst du beim Anhören mit und triffst Schnittpunkte, ohne anzuhalten.",
+      "help_1": "Taktzähler (ausblendbar): aktueller Takt und seine Beats der Reihe nach beleuchtet, die „1“ in Rot; darunter der nächste Abschnitt und in wie vielen Takten er beginnt.",
       "help_2": "Spektrum: Kick (Rot), Snare (Cyan), Hi-Hats (Indigo); das Leuchten blitzt auf jedem Beat, stärker auf der „1“. Kommen Kick und Blitz nicht zusammen, stimmt das Raster nicht.",
       "help_tip": "Tipp: Beim Anhören an einem Schnittpunkt M drücken – die Cue-Marke landet auf dem nächsten Beat.",
       "bar": "Takt",
-      "next_one": "Nächste „1“ in",
-      "next_one_tip": "Beats bis zur nächsten „1“",
       "beats_aria": "Beat {beat} von {n}",
       "next_section": "Nächster Abschnitt: Takt {bar}, in {bars} Takten ({time})",
-      "no_next_section": "Kein weiterer Abschnittswechsel"
+      "no_next_section": "Kein weiterer Abschnittswechsel",
+      "counter_show": "Taktzähler",
+      "counter_hide": "Taktzähler",
+      "counter_show_tip": "Taktzähler links vom Spektrum einblenden",
+      "counter_hide_tip": "Taktzähler ausblenden – das Spektrum bekommt die volle Breite"
     },
     "cue": {
       "title": "Cue-Marken",

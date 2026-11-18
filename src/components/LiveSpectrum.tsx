@@ -206,7 +206,16 @@ export const LiveSpectrum: React.FC<LiveSpectrumProps> = ({ source, isPlaying, r
     };
     if (!isPlaying) fadeUntil = performance.now() + 2000;
     raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+    // a new size (e.g. the bar counter next to it folded) while paused: draw once more, else the old frame stretches
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(frame);
+    });
+    ro.observe(wrap);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
   }, [isPlaying, source, t]);
 
   return (

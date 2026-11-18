@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Flag, Trash2, X } from 'lucide-react';
+import { Flag, PanelLeftClose, PanelLeftOpen, Trash2, X } from 'lucide-react';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
 import { SongSection, SongStructure, nearestBeatIndex } from '../utils/songStructure';
 import { useI18n } from '../i18n';
 import { DiagramInfoTooltip } from './DiagramInfoTooltip';
 import { LiveSpectrum, LiveSpectrumSource } from './LiveSpectrum';
+import { SectionChips } from './SectionChips';
 
 export interface CueMark {
   /** time of the beat it sits on (s) */
@@ -38,6 +39,7 @@ const KIND_RGB: Record<SongSection['kind'], string> = {
   change: '167, 139, 250',
 };
 const LEVEL_RANGE_DB = 30;
+const STORAGE_COUNTER_KEY = 'beatanalyzer.liveCounter';
 
 export function formatClock(sec: number, tenths = false): string {
   const s = Math.max(0, sec);
@@ -82,6 +84,24 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<{ x: number; text: string } | null>(null);
+  // bar counter left of the live spectrum: can be folded, then the spectrum takes the full width
+  const [showCounter, setShowCounter] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(STORAGE_COUNTER_KEY) !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const toggleCounter = useCallback(() => {
+    setShowCounter((prev) => {
+      try {
+        localStorage.setItem(STORAGE_COUNTER_KEY, prev ? '0' : '1');
+      } catch {
+        // Ignore storage errors
+      }
+      return !prev;
+    });
+  }, []);
   const duration = result.metadata.duration || 1;
   const beats = result.beats;
 
@@ -201,24 +221,19 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
     setHover({ x: e.clientX - r.left, text });
   };
 
-  // live counter: bar, beat, beats to the next "1", next section
+  // live counter: bar, beat, next section
   const live = useMemo(() => {
     const i = beatAt(beats, currentTime);
     const numerator = result.timeSignature.numerator || 4;
     if (i < 0) {
       const first = structure?.sections[0] ?? null;
-      return { bar: null as number | null, beat: 0, toOne: null as number | null, toOneSec: null as number | null, numerator, next: first, barsToNext: first ? 0 : null };
+      return { bar: null as number | null, beat: 0, numerator, next: first, barsToNext: first ? 0 : null };
     }
     const cur = beats[i];
-    let j = i + 1;
-    while (j < beats.length && !beats[j].isDownbeat) j++;
-    const toOne = j < beats.length ? j - i : null;
     const next = structure?.sections.find((s) => s.time > currentTime + 0.02) ?? null;
     return {
       bar: cur.barIndex,
       beat: cur.beatInBar,
-      toOne,
-      toOneSec: j < beats.length ? beats[j].time - currentTime : null,
       numerator,
       next,
       barsToNext: next ? Math.max(0, next.bar - cur.barIndex) : null,
@@ -271,7 +286,9 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
           )}
         </div>
         {structure && structure.sections.length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
+          <SectionChips
+            activeIndex={structure.sections.findIndex((s) => currentTime >= s.time - 0.02 && currentTime < s.end)}
+          >
             {structure.sections.map((s) => {
               const active = currentTime >= s.time - 0.02 && currentTime < s.end;
               return (
@@ -291,7 +308,7 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
                 </button>
               );
             })}
-          </div>
+          </SectionChips>
         )}
       </div>
 
@@ -311,25 +328,23 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
             actionTip: t('web.live.help_tip'),
           }}
         />
+        <button
+          type="button"
+          onClick={toggleCounter}
+          aria-expanded={showCounter}
+          title={showCounter ? t('web.live.counter_hide_tip') : t('web.live.counter_show_tip')}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-700/90 bg-slate-950/75 text-[10px] font-medium text-slate-300 hover:text-white hover:border-slate-600 cursor-pointer whitespace-nowrap"
+        >
+          {showCounter ? <PanelLeftClose className="w-3 h-3" /> : <PanelLeftOpen className="w-3 h-3" />}
+          <span>{showCounter ? t('web.live.counter_hide') : t('web.live.counter_show')}</span>
+        </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-[15rem_minmax(0,1fr)] gap-3">
+      <div className={`grid grid-cols-1 gap-3 ${showCounter ? 'md:grid-cols-[15rem_minmax(0,1fr)]' : ''}`}>
+        {showCounter && (
         <div className="rounded-xl bg-slate-950/90 border border-slate-800/80 p-3 flex flex-col justify-between gap-2 min-h-36">
-          <div className="flex items-baseline justify-between gap-2">
-            <div>
-              <div className="text-[10px] uppercase tracking-wide text-slate-500">{t('web.live.bar')}</div>
-              <div className="text-3xl font-bold font-mono tabular-nums text-white leading-none">{live.bar ?? '–'}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-[10px] uppercase tracking-wide text-slate-500">{t('web.live.next_one')}</div>
-              <div
-                className={`text-3xl font-bold font-mono tabular-nums leading-none ${
-                  live.toOne === 1 ? 'text-rose-400' : 'text-cyan-300'
-                }`}
-                title={t('web.live.next_one_tip')}
-              >
-                {live.toOne ?? '–'}
-              </div>
-            </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-slate-500">{t('web.live.bar')}</div>
+            <div className="text-3xl font-bold font-mono tabular-nums text-white leading-none">{live.bar ?? '–'}</div>
           </div>
           {/* beats of the bar: the "1" in rose, the current beat lit */}
           <div className="flex gap-1" aria-label={t('web.live.beats_aria', { beat: live.beat, n: live.numerator })}>
@@ -363,6 +378,7 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
             )}
           </div>
         </div>
+        )}
         <LiveSpectrum source={liveSource} isPlaying={isPlaying} result={result} currentTime={currentTime} />
       </div>
       </div>

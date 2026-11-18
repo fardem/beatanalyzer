@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.5.0** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
+**Version 0.5.1** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
 
 BeatAnalyzer finds the **beats, downbeats, tempo and time signature** of a song and puts them into
 **DaVinci Resolve** as **coloured markers on your audio clip** and as a **subtitle track** under the song. The
@@ -26,7 +26,7 @@ You can start it straight from a window inside Resolve, or use the web app in yo
   suggests the fix (bar start, half beat, tempo, time signature) with a preview – for the whole song or a section,
   undoable, and kept when you change Smoothing.
 - **See where the song changes:** the song structure marks section changes (louder, quieter, different) on their
-  "1"; while listening, a bar counter counts down to the next "1" and the next section, and the key **M** sets cue
+  "1"; while listening, a bar counter shows the bar and how far the next section is, and the key **M** sets cue
   marks on the beat – both go to Resolve as markers in their own colour.
 - **Your own view:** fold the panels you do not need and drag them into the order you work in.
 - **Local and private:** everything runs on your PC; no upload, no account.
@@ -221,8 +221,8 @@ window shows it before and after. MP3 files without that delay need no correctio
   whole song), song volume, **metronome** on the detected beats (higher click on the downbeat), speed 0.5× to 1.5×,
   tap tempo.
 - **Song structure & live:** level per bar over the song; section changes (▲ louder, ▼ quieter, ◆ different) sit on
-  their "1" – click to jump there. While playing: the current bar, the beats until the next "1", the next section,
-  and the live spectrum (flash on every beat, stronger on the "1"). **M** sets a cue mark on the nearest beat
+  their "1" – click or swipe the section buttons (mouse held down) to move along. While playing: a bar counter
+  (current bar and beat, the next section; can be hidden) and the live spectrum (flash on every beat, stronger on the "1"). **M** sets a cue mark on the nearest beat
   (Shift+M: on the nearest "1"). Cue marks and section changes go into the Resolve export as yellow and purple
   markers, and into the Audacity labels.
 

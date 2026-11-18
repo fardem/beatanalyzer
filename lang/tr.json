@@ -603,16 +603,18 @@
     "live": {
       "title": "Canlı (çalarken)",
       "help_label": "Canlı görünüm açıklaması",
-      "help_summary": "Çalmayı takip eder: ölçü sayacı, sonraki “1”e geri sayım ve sonraki bölüm – böylece dinlerken sayabilir, durmadan kesme noktalarını yakalarsın.",
-      "help_1": "Büyük sayılar: geçerli ölçü ve sonraki “1”e kalan beat'ler (sonraki beat “1” ise kırmızı). Alttaki sıra geçerli beat'i yakar.",
+      "help_summary": "Çalmayı takip eder: ölçü sayacı ve sonraki bölüm – böylece dinlerken sayabilir, durmadan kesme noktalarını yakalarsın.",
+      "help_1": "Ölçü sayacı (gizlenebilir): geçerli ölçü ve beat'leri sırayla yanar, “1” kırmızı; altında sonraki bölüm ve kaç ölçü sonra başladığı.",
       "help_2": "Spektrum: kick (kırmızı), snare (camgöbeği), hi-hat (çivit); parıltı her beat'te yanar, “1”de daha güçlü. Kick ve parıltı birlikte gelmiyorsa ızgara kaymıştır.",
       "help_tip": "İpucu: dinlerken bir kesme noktasında M'ye bas – cue en yakın beat'e oturur.",
       "bar": "Ölçü",
-      "next_one": "Sonraki “1”",
-      "next_one_tip": "Sonraki “1”e kalan beat sayısı",
       "beats_aria": "Beat {beat} / {n}",
       "next_section": "Sonraki bölüm: ölçü {bar}, {bars} ölçü sonra ({time})",
-      "no_next_section": "Başka bölüm değişimi yok"
+      "no_next_section": "Başka bölüm değişimi yok",
+      "counter_show": "Ölçü sayacı",
+      "counter_hide": "Ölçü sayacı",
+      "counter_show_tip": "Spektrumun solunda ölçü sayacını göster",
+      "counter_hide_tip": "Ölçü sayacını gizle – spektrum tüm genişliği alır"
     },
     "cue": {
       "title": "Cue işaretleri",

@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.1] – 2026-11-18
+
+### Changed
+- **Section buttons** of the song structure: no scrollbar any more – the row runs past the panel edge and is swiped
+  left and right with the mouse held down (or by touch); the edges fade where more buttons are hidden. A swipe does
+  not jump; a click still does. While playing, the row follows the section that plays.
+- **Bar counter** of the live view: the countdown to the next "1" is gone (it confused more than it helped – the
+  beat row shows it anyway). The counter can be hidden with the button "Bar counter"; the live spectrum then takes
+  the full width (kept in the browser).
+
+### Fixed
+- The live spectrum is drawn again when its size changes while paused (before, the last frame was stretched).
+
 ## [0.5.0] – 2026-11-18
 
 Web app reworked from a cutter's point of view; the Resolve window stays as it is (it only reads two new marker kinds

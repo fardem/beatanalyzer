@@ -1,6 +1,6 @@
-# Test – Versions 0.4.0, 0.4.1 and 0.5.0
+# Test – Versions 0.4.0, 0.4.1, 0.5.0 and 0.5.1
 
-One list for the three versions (0.4.0 and 0.4.1 were not tested separately). 0.3.2: points 1–3 passed; the fresh
+One list for these versions (0.4.0, 0.4.1 and 0.5.0 were not tested separately; 0.5.1 adds your wishes from the first look at 0.5.0). 0.3.2: points 1–3 passed; the fresh
 install with `torch_setup.py` was not run (see docs/tested-environment.md).
 
 Almost all points are in the **web app**. The Resolve window is unchanged; only point 25 needs Resolve (new marker
@@ -17,13 +17,15 @@ colours). Before: get the new version, `start.bat` (the updater also installs th
 | 4 | Click the grip, then press ↑ / ↓ | the panel moves one place up / down |
 | 5 | Reload the page and analyse again | order and folding are kept; *Reset view* (below the last panel) brings back the default |
 
-## Song structure & live (0.5.0)
+## Song structure & live (0.5.0, 0.5.1)
 
 | # | What to do | What should happen |
 |---|---|---|
 | 6 | A song with clear parts (intro, chorus, break) | bars of the strip rise and fall with the song; section changes as lines with ▲ / ▼ / ◆ and bar number, buttons below ("Bar 33 · 0:57 louder +5 dB") |
 | 7 | Do the section changes fit what you hear? Click a button or into the strip | playback jumps to the "1" of that bar; the change is audible there (or within a bar) – please note songs where it is clearly off |
-| 8 | Press play | big bar number, "Next "1" in" counts down 4-3-2-1 (rose on 1), the beats light up in turn, "Next section: bar …, in … bars"; spectrum moves, flash on every beat |
+| 8 | Press play | big bar number, the beats light up in turn (the "1" in rose), "Next section: bar …, in … bars"; **no** countdown to the next "1" any more; spectrum moves, flash on every beat |
+| 8a | Button **Bar counter** next to "Live (while playing)", while playing and while paused | the counter disappears, the spectrum takes the full width (not stretched); again: back; kept after reload |
+| 8b | A song with many sections, or a narrow window: hold the mouse on the section buttons and swipe left / right | no scrollbar; the row moves with the mouse, the edges fade where more buttons are; letting go after a swipe does **not** jump; a plain click jumps; while playing the row follows the playing section |
 | 9 | While playing press **M** twice at different places, then **Shift+M** | yellow flags in the strip, buttons "Cue 1 · 12.3 · 0:23.4"; Shift+M lands on a "1" (x.1); click jumps there, × removes |
 | 10 | Set a cue, then **+1 beat** in the fix panel | the cue stays on a beat of the new grid |
 
