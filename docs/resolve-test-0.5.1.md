@@ -1,78 +1,79 @@
-# Test – Versions 0.4.0, 0.4.1, 0.5.0 and 0.5.1
+# Test – Versionen 0.4.0, 0.4.1, 0.5.0 und 0.5.1
 
-One list for these versions (0.4.0, 0.4.1 and 0.5.0 were not tested separately; 0.5.1 adds your wishes from the first look at 0.5.0). 0.3.2: points 1–3 passed; the fresh
-install with `torch_setup.py` was not run (see docs/tested-environment.md).
+Eine Liste für diese Versionen (0.4.0, 0.4.1 und 0.5.0 wurden nicht einzeln getestet; 0.5.1 enthält deine Wünsche vom
+ersten Blick auf 0.5.0). 0.3.2: Punkte 1–3 bestanden; die Neuinstallation mit `torch_setup.py` wurde nicht
+durchgeführt (siehe docs/tested-environment.md).
 
-Almost all points are in the **web app**. The Resolve window is unchanged; only point 25 needs Resolve (new marker
-colours). Before: get the new version, `start.bat` (the updater also installs the new Resolve script). Analyse with
-**beat_this** (as you normally do).
+Fast alle Punkte betreffen die **Web-App**. Das Resolve-Fenster ist unverändert; nur Punkt 25 braucht Resolve (neue
+Marker-Farben). Vorher: neue Version holen, `start.bat` (der Updater installiert auch das neue Resolve-Skript).
+Analysieren mit **beat_this** (wie du es sonst auch machst). Die Begriffe unten sind die der deutschen Oberfläche.
 
-## Layout (0.5.0)
+## Ansicht (0.5.0)
 
-| # | What to do | What should happen |
+| # | Was tun | Was soll passieren |
 |---|---|---|
-| 1 | Analyse a song | order: waveform, player, **song structure & live**, beat evidence, tempo, beat table; the six tiles stay on top |
-| 2 | Click the title of a panel, then again | the panel folds to its title bar and opens again |
-| 3 | Drag a panel at its grip (⋮⋮ left of the title) above or below another | a cyan line shows where it lands; the panel moves there |
-| 4 | Click the grip, then press ↑ / ↓ | the panel moves one place up / down |
-| 5 | Reload the page and analyse again | order and folding are kept; *Reset view* (below the last panel) brings back the default |
+| 1 | Einen Song analysieren | Reihenfolge: Wellenform, Player, **Songstruktur & Live**, Beat-Evidenz, Tempo, Beat-Tabelle; die sechs Zahlenkacheln bleiben oben |
+| 2 | Auf den Titel eines Bereichs klicken, dann noch einmal | der Bereich klappt auf seine Titelzeile zu und wieder auf |
+| 3 | Einen Bereich am Griff (⋮⋮ links vom Titel) über oder unter einen anderen ziehen | eine cyanfarbene Linie zeigt, wo er landet; der Bereich wandert dorthin |
+| 4 | Auf den Griff klicken, dann ↑ / ↓ drücken | der Bereich rutscht eine Stelle nach oben / unten |
+| 5 | Seite neu laden und wieder analysieren | Reihenfolge und Klappzustand bleiben; *Ansicht zurücksetzen* (unter dem letzten Bereich) stellt den Standard wieder her |
 
-## Song structure & live (0.5.0, 0.5.1)
+## Songstruktur & Live (0.5.0, 0.5.1)
 
-| # | What to do | What should happen |
+| # | Was tun | Was soll passieren |
 |---|---|---|
-| 6 | A song with clear parts (intro, chorus, break) | bars of the strip rise and fall with the song; section changes as lines with ▲ / ▼ / ◆ and bar number, buttons below ("Bar 33 · 0:57 louder +5 dB") |
-| 7 | Do the section changes fit what you hear? Click a button or into the strip | playback jumps to the "1" of that bar; the change is audible there (or within a bar) – please note songs where it is clearly off |
-| 8 | Press play | big bar number, the beats light up in turn (the "1" in rose), "Next section: bar …, in … bars"; **no** countdown to the next "1" any more; spectrum moves, flash on every beat |
-| 8a | Button **Bar counter** next to "Live (while playing)", while playing and while paused | the counter disappears, the spectrum takes the full width (not stretched); again: back; kept after reload |
-| 8b | A song with many sections, or a narrow window: hold the mouse on the section buttons and swipe left / right | no scrollbar; the row moves with the mouse, the edges fade where more buttons are; letting go after a swipe does **not** jump; a plain click jumps; while playing the row follows the playing section |
-| 9 | While playing press **M** twice at different places, then **Shift+M** (or click *Set cue* on the right of the "Song structure" title) | yellow flags in the strip; yellow buttons "Cue 1 · 12.3 · 0:23.4" in the row **between the sections**, by time; Shift+M lands on a "1" (x.1); click jumps there, × removes, the bin next to *Set cue* removes all |
-| 10 | Set a cue, then **+1 beat** in the fix panel | the cue stays on a beat of the new grid |
+| 6 | Ein Song mit klaren Teilen (Intro, Refrain, Break) | die Balken im Streifen steigen und fallen mit dem Song; Abschnittswechsel als Linien mit ▲ / ▼ / ◆ und Taktnummer, darunter Knöpfe („Takt 33 · 0:57 lauter +5 dB“) |
+| 7 | Passen die Abschnittswechsel zu dem, was du hörst? Einen Knopf oder in den Streifen klicken | Wiedergabe springt auf die „1“ dieses Takts; der Wechsel ist dort zu hören (oder innerhalb eines Takts) – bitte Songs notieren, bei denen es deutlich daneben liegt |
+| 8 | Abspielen | große Taktnummer, die Beats leuchten der Reihe nach (die „1“ in Rot), „Nächster Abschnitt: Takt …, in … Takten“; **kein** Countdown zur nächsten „1“ mehr; Spektrum bewegt sich, Blitz auf jedem Beat |
+| 8a | Knopf **Taktzähler** neben „Live (beim Abspielen)“, beim Abspielen und in der Pause | der Zähler verschwindet, das Spektrum nimmt die volle Breite (nicht verzerrt); nochmal: wieder da; bleibt nach Neuladen |
+| 8b | Ein Song mit vielen Abschnitten oder ein schmales Fenster: Maus auf den Abschnitts-Knöpfen gedrückt halten und nach links / rechts wischen | kein Scrollbalken; die Reihe folgt der Maus, die Ränder blenden aus, wo noch Knöpfe sind; Loslassen nach dem Wischen springt **nicht**; normaler Klick springt; beim Abspielen läuft die Reihe zum spielenden Abschnitt mit |
+| 9 | Beim Abspielen zweimal an verschiedenen Stellen **M** drücken, dann **Umschalt+M** (oder *Cue setzen* rechts neben dem Titel „Songstruktur“ klicken) | gelbe Fähnchen im Streifen; gelbe Knöpfe „Cue 1 · 12.3 · 0:23.4“ in der Reihe **zwischen den Abschnitten**, nach Zeit; Umschalt+M landet auf einer „1“ (x.1); Klick springt hin, × entfernt, der Mülleimer neben *Cue setzen* entfernt alle |
+| 10 | Eine Cue-Marke setzen, dann **+1 Beat** in der Takt-Korrektur | die Cue-Marke bleibt auf einem Beat des neuen Rasters |
 
-## Beat evidence (0.4.0, layout 0.5.0)
+## Beat-Evidenz (0.4.0, Ansicht 0.5.0)
 
-| # | What to do | What should happen |
+| # | Was tun | Was soll passieren |
 |---|---|---|
-| 11 | Analyse a steady 4/4 song | band lanes Low/Mid/High; **folded bar fills the full height** next to the fix panel; verdict usually green (kick on beat 1) |
-| 12 | Zoom the waveform (e.g. 15 s), move the blue frame | lanes follow; "Section / whole track" at the folded bar switches the averaging |
-| 13 | Drag the grip below the lanes down; double-click it | up to twice the height; double-click: normal; kept after reload |
+| 11 | Einen gleichmäßigen 4/4-Song analysieren | Spuren Low/Mid/High; **gefalteter Takt füllt die volle Höhe** neben der Takt-Korrektur; Urteil meist grün (Kick auf Beat 1) |
+| 12 | Wellenform zoomen (z. B. 15 s), blauen Rahmen verschieben | die Spuren folgen; „Ausschnitt / Gesamter Track“ am gefalteten Takt schaltet die Mittelung um |
+| 13 | Den Griff unter den Spuren nach unten ziehen; doppelklicken | bis zur doppelten Höhe; Doppelklick: normal; bleibt nach Neuladen |
 
-## Grid fixes (0.4.0)
+## Takt-Korrektur (0.4.0)
 
-| # | What to do | What should happen |
+| # | Was tun | Was soll passieren |
 |---|---|---|
-| 14 | **+1 beat**, then **Undo** | the "1" moves one beat later everywhere (waveform, table, metronome, tiles); Undo brings it back; "n step(s) active" counts |
-| 15 | **Tempo ½×**, **Tempo 2×**, then **Reset** (circle arrow) | beats halve / double, the tempo tile follows; Reset returns to the analysis |
-| 16 | Beats per bar **3**, then **4** | time signature tile 3/4 → 4/4; bars counted again from the first "1" |
-| 17 | Make 1–2 fixes, then move the Smoothing slider | after recomputing the fixes are still there ("n step(s) active" unchanged) |
-| 18 | Beat table: nudge a beat ±10 ms, then Undo in the fix panel | Undo also takes back the table edit |
+| 14 | **+1 Beat**, dann **Rückgängig** | die „1“ rückt überall einen Beat später (Wellenform, Tabelle, Metronom, Kacheln); Rückgängig holt sie zurück; „n Schritt(e) aktiv“ zählt mit |
+| 15 | **Tempo ½×**, **Tempo 2×**, dann **Zurücksetzen** (Kreispfeil) | Beats halbieren / verdoppeln sich, die Tempo-Kachel folgt; Zurücksetzen kehrt zur Analyse zurück |
+| 16 | Beats pro Takt **3**, dann **4** | Kachel Taktart 3/4 → 4/4; Takte ab der ersten „1“ neu gezählt |
+| 17 | 1–2 Korrekturen machen, dann den Regler **Glätten** bewegen | nach dem Neuberechnen sind die Korrekturen noch da („n Schritt(e) aktiv“ unverändert) |
+| 18 | Beat-Tabelle: einen Beat um ±10 ms verschieben, dann Rückgängig in der Takt-Korrektur | Rückgängig nimmt auch die Tabellen-Änderung zurück |
 
-## Suggestion and section (0.4.1)
+## Vorschlag und Ausschnitt (0.4.1)
 
-| # | What to do | What should happen |
+| # | Was tun | Was soll passieren |
 |---|---|---|
-| 19 | A song beat_this gets right | "Grid looks right – no suggestion" (green) – no false alarm |
-| 20 | Same song, **+1 beat** (break it on purpose) | suggestion "−1 beat" with a dashed line in the folded bar; *Apply* restores the grid |
-| 21 | Same with **3** beats per bar (on a 4/4 song) | suggestion "4 beats per bar" (maybe with a bar-start step); the dashed preview has its own marks 1–4 |
-| 22 | A song with a kick on every beat (house/techno) | "No clear kick pattern – no suggestion, check by ear" |
-| 23 | A song beat_this counted double only in parts (e.g. "Teoman – Ağır Kapı"): zoom there, **Apply to: Section**, **Tempo ½×** | only the beats in the blue frame change; the tempo curve flattens there; with Section active the suggestion refers to the section |
+| 19 | Ein Song, den beat_this richtig erkennt | „Raster passt – kein Vorschlag“ (grün) – kein Fehlalarm |
+| 20 | Gleicher Song, **+1 Beat** (absichtlich kaputt machen) | Vorschlag „−1 Beat“ mit gestrichelter Linie im gefalteten Takt; *Anwenden* stellt das Raster wieder her |
+| 21 | Dasselbe mit **3** Beats pro Takt (bei einem 4/4-Song) | Vorschlag „4 Beats pro Takt“ (evtl. mit einem Takt-Start-Schritt); die gestrichelte Vorschau hat eigene Marken 1–4 |
+| 22 | Ein Song mit Kick auf jedem Beat (House/Techno) | „Kein klares Kick-Muster – kein Vorschlag, nach Gehör prüfen“ |
+| 23 | Ein Song, den beat_this nur stellenweise doppelt gezählt hat (z. B. „Teoman – Ağır Kapı“): dorthin zoomen, **Gilt für: Ausschnitt**, **Tempo ½×** | nur die Beats im blauen Rahmen ändern sich; die Tempo-Kurve wird dort flach; mit aktivem Ausschnitt bezieht sich auch der Vorschlag auf den Ausschnitt |
 
 ## Tempo (0.5.0)
 
-| # | What to do | What should happen |
+| # | Was tun | Was soll passieren |
 |---|---|---|
-| 24 | Open the panel **Tempo** | tempo curve (left) and tempo histogram (right) side by side, compact; range and Ø in the title bar also when folded; click into the curve jumps there |
+| 24 | Den Bereich **Tempo** aufklappen | Tempo-Verlauf (links) und Tempo-Histogramm (rechts) nebeneinander, kompakt; Spanne und Ø auch zugeklappt in der Titelzeile; Klick in die Kurve springt dorthin |
 
-## Export to Resolve (0.4.0 and 0.5.0)
+## Export nach Resolve (0.4.0 und 0.5.0)
 
-| # | What to do | What should happen |
+| # | Was tun | Was soll passieren |
 |---|---|---|
-| 25 | After fixes and 2 cues: Export → DaVinci Resolve (note "Included: 2 cue mark(s) … section change(s)"), load the JSON in the Resolve window | markers follow the corrected grid; cues are **yellow** ("Cue 1 – 12.3"), section changes **purple** ("Section ▲ +5 dB – Bar 5") |
-| 26 | *(optional)* Export → Audacity, import the labels | extra labels "Cue 1", "Section ▲ +5 dB" |
+| 25 | Nach Korrekturen und 2 Cue-Marken: Exportieren → DaVinci Resolve (Hinweis „Enthalten: 2 Cue-Marke(n) … Abschnittswechsel“), die JSON im Resolve-Fenster laden | Marker folgen dem korrigierten Raster; Cues sind **gelb** („Cue 1 – 12.3“), Abschnittswechsel **lila** („Abschnitt ▲ +5 dB – Takt 5“) |
+| 26 | *(optional)* Exportieren → Audacity, die Labels importieren | zusätzliche Labels „Cue 1“, „Section ▲ +5 dB“ (Audacity-Labels sind englisch) |
 
-## Languages and help (all three versions)
+## Sprachen und Hilfe (alle Versionen)
 
-| # | What to do | What should happen |
+| # | Was tun | Was soll passieren |
 |---|---|---|
-| 27 | German and Turkish | all new texts translated; Turkish says "beat", "cue", "marker" (not "vuruş", "işaretçi"); fix panel "Ölçü Ayarı" |
-| 28 | Read the **?** help of waveform, song structure, live, cue marks, folded bar, lanes, tempo curve, histogram | understandable for cutting: what does it mean for my cut, what should I do? Note anything unclear or missing |
+| 27 | Englisch und Türkisch | alle neuen Texte übersetzt; Türkisch sagt „beat“, „cue“, „marker“ (nicht „vuruş“, „işaretçi“); Takt-Korrektur heißt „Ölçü Ayarı“ |
+| 28 | Die **?**-Hilfen lesen: Wellenform, Songstruktur, Live, Cue-Marken, gefalteter Takt, Spuren, Tempo-Verlauf, Histogramm | verständlich fürs Schneiden: Was heißt das für meinen Schnitt, was soll ich tun? Unklares oder Fehlendes notieren |
