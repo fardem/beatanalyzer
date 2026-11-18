@@ -5,6 +5,7 @@ no Pydantic/FastAPI dependencies, works with Python 3.9 to 3.13+
 """
 
 import os
+import re
 import sys
 import json
 import tempfile
@@ -106,10 +107,54 @@ def read_app_version():
 APP_VERSION = read_app_version()
 
 
+MAX_UPLOAD_BYTES = 2 * 1024 ** 3   # 2 GB: a two-hour WAV fits; anything larger is refused before reading
+LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "[::1]")
+
+
+class PayloadTooLargeError(Exception):
+    pass
+
+
+def request_allowed(origin, host) -> bool:
+    """
+    Only the web app of this server may change something. The server listens on 127.0.0.1, but any website open in
+    the browser can still send requests to it; and a foreign name pointing to 127.0.0.1 (DNS rebinding) arrives
+    with that name as Host. So: the Host must be a loopback name, and a request with an Origin (every browser POST)
+    must come from exactly this host and port. No Origin = a local tool (curl, command line).
+    """
+    if not host:
+        return False
+    hostname = host.rsplit(":", 1)[0] if not host.endswith("]") else host
+    if hostname not in LOOPBACK_HOSTS:
+        return False
+    if not origin:
+        return True
+    parsed = urlparse(origin)
+    return parsed.scheme == "http" and parsed.netloc == host
+
+
+def display_name(raw) -> str:
+    """The song's file name as the user knows it (umlauts, spaces, brackets stay – Resolve finds the clip by it);
+    only folder parts and control characters are dropped."""
+    name = re.split(r"[\\/]", str(raw or ""))[-1]
+    name = "".join(ch for ch in name if ch >= " " and ch != "\x7f").strip()[:255]
+    return name or "audio"
+
+
+def temp_upload_path(name: str) -> str:
+    """A new, unique file in TEMP_DIR for an upload; from the name only a plain extension is taken over."""
+    ext = os.path.splitext(display_name(name))[1].lower()
+    if not re.fullmatch(r"\.[a-z0-9]{1,5}", ext):
+        ext = ""
+    fd, path = tempfile.mkstemp(dir=TEMP_DIR, prefix="track_", suffix=ext)
+    os.close(fd)
+    return path
+
+
 def extract_uploaded_file(headers, rfile):
     """
     Multipart form-data parser without external dependencies.
-    Works with Python 3.9 to 3.13.
+    Works with Python 3.9 to 3.13. Refuses bodies larger than MAX_UPLOAD_BYTES before reading them.
     """
     try:
         content_length = int(headers.get('Content-Length', 0))
@@ -118,6 +163,8 @@ def extract_uploaded_file(headers, rfile):
 
     if content_length <= 0:
         return None, None
+    if content_length > MAX_UPLOAD_BYTES:
+        raise PayloadTooLargeError("The file is larger than 2 GB.")
 
     content_type = headers.get('Content-Type', '')
 
@@ -696,11 +743,24 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             print(f"[BeatAnalyzer Server] {self.address_string()} - {args[0]}")
 
     def send_cors_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+        # only the web app of this server (same origin) – never "*": any website could use the server otherwise
+        origin = self.headers.get("Origin")
+        if origin and request_allowed(origin, self.headers.get("Host")):
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+    def refuse_foreign(self) -> bool:
+        """Answers 403 for a request from another website (or a foreign Host); True when refused."""
+        if request_allowed(self.headers.get("Origin"), self.headers.get("Host")):
+            return False
+        self.send_error_json(403, "Request from another website refused.")
+        return True
 
     def do_OPTIONS(self):
+        if self.refuse_foreign():
+            return
         self.send_response(200)
         self.send_cors_headers()
         self.end_headers()
@@ -810,6 +870,8 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
             self.send_error(500, f"Error loading the file: {e}")
 
     def do_POST(self):
+        if self.refuse_foreign():
+            return
         parsed = urlparse(self.path)
         if parsed.path == "/api/analyze":
             self.handle_analyze()
@@ -824,14 +886,20 @@ class BeatThisRequestHandler(BaseHTTPRequestHandler):
 
     def handle_analyze(self):
         try:
-            file_bytes, filename = extract_uploaded_file(self.headers, self.rfile)
+            try:
+                file_bytes, filename = extract_uploaded_file(self.headers, self.rfile)
+            except PayloadTooLargeError as err:
+                self.close_connection = True   # the body was not read
+                self.send_error_json(413, str(err))
+                return
             if not file_bytes:
                 self.send_error_json(400, "No valid audio file received.")
                 return
+            filename = display_name(filename)   # shown and exported as is; the temp file gets its own name
 
             print(f"[BeatAnalyzer Server] Analysing: {filename} ({len(file_bytes)} bytes)...")
 
-            temp_path = os.path.join(TEMP_DIR, f"track_{os.getpid()}_{filename}")
+            temp_path = temp_upload_path(filename)
             with open(temp_path, "wb") as f_out:
                 f_out.write(file_bytes)
 
