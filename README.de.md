@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.5.1** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
+**Version 0.6.0** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
 
 BeatAnalyzer erkennt in einem Song **Beats, Downbeats, Tempo und Taktart** und bringt sie nach
 **DaVinci Resolve** – als **farbige Marker auf deinem Audio-Clip** und als **Subtitle Track** unter dem Song. Die
@@ -27,7 +27,7 @@ Du startest sie direkt aus einem Fenster in Resolve oder nutzt die Web-App im Br
   BeatAnalyzer schlägt die Korrektur vor (Takt-Start, Halb-Beat, Tempo, Taktart) – mit Vorschau, für den ganzen Song
   oder einen Ausschnitt, rückgängig zu machen und beim Verstellen von „Glätten“ erhalten.
 - **Sehen, wo sich der Song ändert:** Die Songstruktur markiert Abschnittswechsel (lauter, leiser, anders) auf
-  ihrer „1“; beim Anhören zeigt ein Taktzähler den Takt und wie weit der nächste Abschnitt entfernt ist, und die Taste
+  ihrer „1“ und gibt wiederkehrenden Teilen denselben Buchstaben; beim Anhören zeigt ein Taktzähler den Takt und wie weit der nächste Abschnitt entfernt ist, und die Taste
   **M** setzt Cue-Marken auf den Beat – beides kommt als Marker in eigener Farbe nach Resolve.
 - **Deine eigene Ansicht:** Bereiche, die du nicht brauchst, zuklappen und in die Reihenfolge ziehen, in der du
   arbeitest.
@@ -223,14 +223,16 @@ brauchen keinen Ausgleich – das Fenster sagt es dann.
   (⋮⋮, oder mit den Pfeiltasten darauf) verschieben; die Web-App merkt sich das. *Ansicht zurücksetzen* stellt die
   Standard-Reihenfolge wieder her.
 - **Kacheln:** Tempo, Taktart (mit dem Anteil der Takte, die sie haben), Taktanzahl, Tempo-Stabilität,
-  Beat-Abstand, Audiodatei. Der Regler **Glätten** in der Kachel Taktart rechnet die Takte sofort neu.
+  Beat-Abstand mit der Schwankung des Rasters (± ms: unter etwa 10 ms sitzen die Marker framegenau), Audiodatei. Der
+  Regler **Glätten** in der Kachel Taktart rechnet die Takte sofort neu.
 - **Wellenform & Beat-Raster:** Takte und Beats als Linien, die Kurven des Modells für Beats (BAF) und Downbeats
   (DAF). Schnellzoom 5 s / 15 s / 30 s / 60 s, Lupe, Übersicht mit verschiebbarem Rahmen.
 - **Player:** Wiedergabe ab jeder Stelle, **Loop** (grau = aus, gelb A-B = Ausschnitt im blauen Rahmen, grün =
-  ganzer Song), Lautstärke des Songs, **Metronom** auf den erkannten Beats (höherer Klick auf dem Downbeat),
+  ganzer Song), Lautstärke des Songs, samplegenaues **Metronom** auf den erkannten Beats (höherer Klick auf dem Downbeat),
   Geschwindigkeit 0,5× bis 1,5×, Tap-Tempo.
-- **Songstruktur & Live:** Pegel je Takt über den Song; Abschnittswechsel (▲ lauter, ▼ leiser, ◆ anders) sitzen auf
-  ihrer „1“ – Klick springt hin, die Abschnitts-Knöpfe lassen sich mit gedrückter Maus wischen. Beim Abspielen: ein
+- **Songstruktur & Live:** jeder Takt wird mit jedem anderen verglichen – nach Tönen (Akkorden), Klangfarbe
+  (Instrumenten) und Lautstärke; Abschnittswechsel (▲ lauter, ▼ leiser, ◆ anders) sitzen auf ihrer „1“, und Teile,
+  die wiederkommen, bekommen denselben Buchstaben (A, B, A, B, C …) – Klick springt hin, die Abschnitts-Knöpfe lassen sich mit gedrückter Maus wischen. Beim Abspielen: ein
   Taktzähler (aktueller Takt und Beat, nächster Abschnitt; ausblendbar) und das Live-Spektrum (Blitz auf jedem Beat,
   stärker auf der „1“). **M** – oder *Cue setzen* rechts neben dem Titel „Songstruktur“ – setzt eine
   Cue-Marke auf den nächsten Beat (Umschalt+M: auf die nächste „1“); Cues stehen als gelbe Knöpfe zwischen den
@@ -250,8 +252,10 @@ brauchen keinen Ausgleich – das Fenster sagt es dann.
 - **Tempo:** Tempo-Verlauf über den ganzen Song und daneben, wie oft jedes Tempo vorkommt (Marken für ½× / 2×) –
   ein gleichmäßiges Raster zeigt sich als flache Linie und ein hoher Balken. Zugeklappt, solange das Tempo
   gleichmäßig ist.
-- **Beat-Tabelle:** einen Beat um ±10 ms verschieben oder zum Downbeat machen (`1/X`); die Korrekturen gehen in
-  alle Exporte.
+- **Beat-Tabelle:** einen Beat um ±10 ms verschieben, zum Downbeat machen (`1/X`), einen übersehenen Beat
+  **einfügen** (+) oder einen zu viel gesetzten **löschen** (Papierkorb); in der Wellenform bei 30 s oder weniger:
+  **Umschalt+Klick** fügt ein, **Alt+Klick** löscht. Alles lässt sich rückgängig machen, bleibt beim Glätten erhalten
+  und geht in alle Exporte.
 
 4. **Exportieren** – Knopf oben rechts.
 
@@ -265,7 +269,7 @@ ist deutlich ungenauer als mit beat_this.
 | DaVinci Resolve | `<Name>_resolve_markers.json` | Weg *JSON laden* im Resolve-Fenster |
 | Audacity | `<Name>_audacity_labels.txt` | *Datei → Importieren → Textmarken* |
 | beat_this JSON | `<Name>_beat_this.json` | alle Werte, z. B. für eigene Skripte |
-| MIDI | `<Name>_click_track.mid` | Klickspur für eine DAW |
+| MIDI | `<Name>_click_track.mid` | Klickspur für eine DAW, mit Tempo-Map: jeder Klick auf seinem Beat, die Takte folgen dem Song |
 | CSV | `<Name>_beats.csv` | Tabelle mit Zeit, Takt, Beat, Tempo |
 
 ## Sprachen

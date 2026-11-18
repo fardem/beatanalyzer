@@ -1,4 +1,5 @@
 import { AnalysisResult, BeatItem } from '../types/analyzer';
+import { lowAndHigh } from './dsp';
 
 export interface FoldedBarData {
   numerator: number;
@@ -53,7 +54,7 @@ export interface BeatEvidenceData {
 
 const monoCache = new WeakMap<AudioBuffer, Float32Array>();
 
-function getMonoSamples(buffer: AudioBuffer): Float32Array {
+export function getMonoSamples(buffer: AudioBuffer): Float32Array {
   const cached = monoCache.get(buffer);
   if (cached) return cached;
 
@@ -130,19 +131,8 @@ function computeBandCurves(buffer: AudioBuffer): {
   const sr = buffer.sampleRate;
   const mono = getMonoSamples(buffer);
 
-  // Subsample by stride=2 when sampleRate >= 32kHz -> effective rate >= 16kHz (Nyquist >= 8kHz)
-  const stride = sr >= 32000 ? 2 : 1;
-  const effSr = sr / stride;
-
-  // 2-stage cascaded IIR filters for Low (<150Hz), Mid (150-2500Hz), High (>2500Hz)
-  const alphaLow = Math.exp((-2 * Math.PI * 150) / effSr);
-  const alphaHigh = Math.exp((-2 * Math.PI * 2500) / effSr);
-
-  let lp1a = 0;
-  let lp1b = 0;
-  let lp2a = 0;
-  let lp2b = 0;
-
+  // zero-phase band filters on the full sample rate (see dsp.ts), then the RMS of each 10 ms frame
+  const { low, high } = lowAndHigh(mono, sr);   // mid = mono − low − high, per sample below (no third copy)
   const rawLow = new Float32Array(numFrames);
   const rawMid = new Float32Array(numFrames);
   const rawHigh = new Float32Array(numFrames);
@@ -153,26 +143,13 @@ function computeBandCurves(buffer: AudioBuffer): {
     let sumLow = 0;
     let sumMid = 0;
     let sumHigh = 0;
-    let count = 0;
-
-    for (let i = startSample; i < endSample; i += stride) {
-      const s = mono[i];
-
-      lp1a = alphaLow * lp1a + (1 - alphaLow) * s;
-      lp1b = alphaLow * lp1b + (1 - alphaLow) * lp1a;
-      const low = lp1b;
-
-      lp2a = alphaHigh * lp2a + (1 - alphaHigh) * s;
-      lp2b = alphaHigh * lp2b + (1 - alphaHigh) * lp2a;
-      const mid = lp2b - low;
-      const high = s - lp2b;
-
-      sumLow += low * low;
-      sumMid += mid * mid;
-      sumHigh += high * high;
-      count++;
+    for (let i = startSample; i < endSample; i++) {
+      const m = mono[i] - low[i] - high[i];
+      sumLow += low[i] * low[i];
+      sumMid += m * m;
+      sumHigh += high[i] * high[i];
     }
-
+    const count = endSample - startSample;
     if (count > 0) {
       rawLow[f] = Math.sqrt(sumLow / count);
       rawMid[f] = Math.sqrt(sumMid / count);

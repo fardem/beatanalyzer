@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Sürüm 0.5.1** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
+**Sürüm 0.6.0** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
 
 BeatAnalyzer bir şarkıdaki **beat'leri, downbeat'leri, tempoyu ve ölçüyü** bulur ve bunları **DaVinci Resolve**'a
 aktarır: **ses klibinizde renkli marker'lar** ve şarkının altında bir **Subtitle Track** olarak. Analiz,
@@ -26,7 +26,7 @@ Analizi doğrudan Resolve içindeki bir pencereden başlatabilir ya da tarayıc�
   BeatAnalyzer ayarı önerir (ölçü başı, yarım beat, tempo, ölçü) – önizlemeyle, tüm şarkı veya bir bölüm için, geri
   alınabilir ve “Düzeltme” kaydırıcısı değişince korunur.
 - **Şarkının nerede değiştiğini görün:** şarkı yapısı bölüm değişimlerini (daha yüksek, daha sakin, farklı) kendi
-  “1”lerinde işaretler; dinlerken bir ölçü sayacı ölçüyü ve sonraki bölümün ne kadar uzakta olduğunu gösterir, **M** tuşu beat
+  “1”lerinde işaretler ve geri gelen kısımlara aynı harfi verir; dinlerken bir ölçü sayacı ölçüyü ve sonraki bölümün ne kadar uzakta olduğunu gösterir, **M** tuşu beat
   üzerine cue işareti koyar – ikisi de Resolve'a kendi renginde marker olarak gider.
 - **Kendi görünümünüz:** ihtiyacınız olmayan panelleri daraltın ve çalıştığınız sıraya sürükleyin.
 - **Yerel ve gizli:** her şey bilgisayarınızda çalışır – yükleme yok, hesap yok.
@@ -215,15 +215,16 @@ atlamaz). BeatAnalyzer kesin gecikmeyi dosyadan okur ve marker'larla subtitle'la
 
 - **Görünümünüz:** kutucukların altındaki her panel başlığına tıklayınca daralır ve tutamağından (⋮⋮ ya da üzerinde
   ok tuşları) sürüklenerek taşınır; web uygulaması düzeni hatırlar. *Görünümü sıfırla* varsayılan sırayı geri getirir.
-- **Kutucuklar:** tempo, ölçü (bu ölçüdeki ölçülerin payıyla), toplam ölçü, tempo kararlılığı, beat aralığı, ses
-  dosyası. Ölçü kutucuğundaki **Düzeltme** kaydırıcısı ölçüleri hemen yeniden hesaplar.
+- **Kutucuklar:** tempo, ölçü (bu ölçüdeki ölçülerin payıyla), toplam ölçü, tempo kararlılığı, ızgara sapmasıyla beat aralığı (± ms:
+  yaklaşık 10 ms'nin altında marker'lar kare kare doğru oturur), ses dosyası. Ölçü kutucuğundaki **Düzeltme** kaydırıcısı ölçüleri hemen yeniden hesaplar.
 - **Dalga formu ve beat ızgarası:** çizgi olarak ölçüler ve beat'ler, modelin beat (BAF) ve downbeat (DAF) eğrileri.
   Hızlı yakınlaştırma 5 s / 15 s / 30 s / 60 s, büyüteç, sürüklenebilir çerçeveli genel görünüm.
 - **Oynatıcı:** istenen yerden çalma, **döngü** (gri = kapalı, sarı A-B = mavi çerçevedeki bölüm, yeşil = tüm
-  şarkı), şarkının ses düzeyi, algılanan beat'lerde **metronom** (downbeat'te daha yüksek tık), hız 0,5× – 1,5×,
+  şarkı), şarkının ses düzeyi, algılanan beat'lerde örnek hassasiyetinde **metronom** (downbeat'te daha yüksek tık), hız 0,5× – 1,5×,
   tap tempo.
-- **Şarkı yapısı ve canlı:** şarkı boyunca ölçü başına seviye; bölüm değişimleri (▲ daha yüksek, ▼ daha sakin,
-  ◆ farklı) kendi “1”lerinde durur – tıklayınca oraya atlar, bölüm düğmeleri fare basılıyken kaydırılabilir.
+- **Şarkı yapısı ve canlı:** her ölçü diğer tüm ölçülerle karşılaştırılır – notalarına (akorlar), ses rengine
+  (enstrümanlar) ve ses seviyesine göre; bölüm değişimleri (▲ daha yüksek, ▼ daha sakin, ◆ farklı) kendi “1”lerinde
+  durur ve geri gelen kısımlar aynı harfi alır (A, B, A, B, C …) – tıklayınca oraya atlar, bölüm düğmeleri fare basılıyken kaydırılabilir.
   Çalarken: bir ölçü sayacı (geçerli ölçü ve beat, sonraki bölüm; gizlenebilir) ve canlı spektrum (her beat'te
   parlama, “1”de daha güçlü). **M** – ya da “Şarkı yapısı” başlığının sağındaki *Cue koy* – en yakın beat'e bir
   cue işareti koyar (Shift+M: en yakın “1”e); cue'lar bölümlerin arasında sarı düğme olarak durur. Cue işaretleri ve
@@ -240,7 +241,9 @@ atlamaz). BeatAnalyzer kesin gecikmeyi dosyadan okur ve marker'larla subtitle'la
   yerde). “Düzeltme” kaydırıcısı değişince korunur ve tüm dışa aktarımlara – Resolve için marker JSON'a da – gider.
 - **Tempo:** tüm şarkı boyunca tempo eğrisi ve yanında her temponun ne sıklıkla geçtiği (½× / 2× işaretleri) –
   sabit bir ızgara düz bir çizgi ve tek yüksek bir çubuk olarak görünür. Tempo sabitken daraltılmış.
-- **Beat tablosu:** bir beat'i ±10 ms kaydırın ya da downbeat yapın (`1/X`); düzeltmeler tüm dışa aktarımlara gider.
+- **Beat tablosu:** bir beat'i ±10 ms kaydırın, downbeat yapın (`1/X`), modelin kaçırdığı bir beat'i **ekleyin** (+)
+  ya da fazladan olanı **silin** (çöp kutusu); dalga formunda 30 sn veya daha az görünürken: **Shift+tık** ekler,
+  **Alt+tık** siler. Tüm düzeltmeler geri alınabilir, Düzeltme kaydırıcısıyla korunur ve tüm dışa aktarımlara gider.
 
 4. **Dışa aktar** – sağ üstteki düğme.
 
@@ -254,7 +257,7 @@ Python sunucusu olmadan (örn. yalnızca `npm run dev`) tarayıcı kendisi hesap
 | DaVinci Resolve | `<ad>_resolve_markers.json` | Resolve penceresindeki *JSON yükle* yolu |
 | Audacity | `<ad>_audacity_labels.txt` | *File → Import → Labels* |
 | beat_this JSON | `<ad>_beat_this.json` | tüm değerler, örn. kendi betikleriniz için |
-| MIDI | `<ad>_click_track.mid` | DAW için klik izi |
+| MIDI | `<ad>_click_track.mid` | DAW için klik izi, tempo haritasıyla: her klik kendi beat'inde, ölçüler şarkıyı izler |
 | CSV | `<ad>_beats.csv` | zaman, ölçü, beat, tempo tablosu |
 
 ## Diller

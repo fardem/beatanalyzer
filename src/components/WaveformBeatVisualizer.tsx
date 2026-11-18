@@ -15,7 +15,12 @@ interface WaveformBeatVisualizerProps {
   currentTime: number;
   onSeek: (time: number) => void;
   activeBeat: BeatItem | null;
+  /** Shift+click adds a beat, Alt+click removes the nearest one (only when ≤ EDIT_MAX_VISIBLE_SEC are shown) */
+  onEditBeat?: (op: { kind: 'insert'; time: number } | { kind: 'delete'; time: number }) => void;
 }
+
+const EDIT_MAX_VISIBLE_SEC = 30;   // wider views are too coarse to place a beat by hand
+const DELETE_HIT_PX = 8;
 
 const LOUPE_MIN_VISIBLE_SEC = 45;
 const LOUPE_TARGET_OPTICAL_GAIN = 5.0;
@@ -127,6 +132,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   currentTime,
   onSeek,
   activeBeat,
+  onEditBeat,
 }) => {
   // the detailed waveform of the current view, drawn once and reused while only the playhead moves
   const waveCacheRef = useRef<{ key: string; canvas: HTMLCanvasElement } | null>(null);
@@ -865,7 +871,28 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   }, [drawMainCanvas, drawMinimap, drawLoupeCanvas]);
 
   // Mouse seeking & dragging
+  const canEditBeats = Boolean(onEditBeat) && visibleDuration <= EDIT_MAX_VISIBLE_SEC + 0.01;
+
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Shift+click: add a beat the model missed; Alt+click: remove the beat under the pointer
+    if (canEditBeats && onEditBeat && (e.shiftKey || e.altKey)) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      e.preventDefault();
+      const x = e.clientX - rect.left;
+      const time = scrollOffsetSec + Math.max(0, Math.min(1, x / rect.width)) * visibleDuration;
+      if (e.shiftKey) {
+        onEditBeat({ kind: 'insert', time });
+      } else {
+        const tolerance = (DELETE_HIT_PX / rect.width) * visibleDuration;
+        let best: BeatItem | null = null;
+        for (const b of result.beats) {
+          if (Math.abs(b.time - time) <= tolerance && (!best || Math.abs(b.time - time) < Math.abs(best.time - time))) best = b;
+        }
+        if (best) onEditBeat({ kind: 'delete', time: best.time });
+      }
+      return;
+    }
     setIsDragging(true);
     handleSeekFromEvent(e);
   };
@@ -1290,6 +1317,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       <div className="space-y-1">
         <div className="flex justify-between text-[10px] text-slate-500 font-mono px-0.5">
           <span>{t('web.wave.overview')}</span>
+          {canEditBeats && <span className="text-slate-400">{t('web.wave.edit_hint')}</span>}
           <span>
             {zoom > 1.01
               ? t('web.wave.overview_drag')

@@ -242,3 +242,10 @@ Offen: Abschnittserkennung an echten Songs vom Nutzer prüfen lassen (Test 7).
 **0.5.1 (2026-11-18), erster Blick des Nutzers auf 0.5.0:** Countdown „Nächste 1 in“ entfernt (verwirrt), Taktzähler
 ausblendbar (Spektrum dann volle Breite), Abschnitts-Knöpfe ohne Scrollbalken, mit gedrückter Maus wischbar.
 Testliste umbenannt: `docs/resolve-test-0.5.1.md`.
+
+**0.6.0 (2026-11-18), Gemini-Kritik:** Bewertung im Gespräch; umgesetzt, was besser macht (Plan:
+`docs/superpowers/plans/2026-11-18-0.6.0-kritik-umsetzen.md`): Server nur für die eigene Web-App, sichere Temp-Dateien
+mit unverändertem Songnamen, Metronom samplegenau, Swing-Zeile raus (Raster ± ms), MIDI mit Tempo-Map, Beats
+einfügen/löschen, nullphasige Bandfilter ohne Aliasing, Songstruktur über Harmonie/Klangfarbe/Pegel mit Buchstaben,
+Altlasten (Ersatzseite, AI Studio) entfernt. Nicht übernommen: WSOLA, automatische 5/4–7/8, neue Swing-Messung,
+bereinigte Dateinamen, Beat-Linien ziehen, Web Worker. Testliste: `docs/resolve-test-0.6.0.md`.

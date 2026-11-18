@@ -159,6 +159,7 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
       ctx.font = '600 10px ui-monospace, SFMono-Regular, Menlo, monospace';
       ctx.textBaseline = 'top';
       ctx.textAlign = 'left';
+      let labelsEnd = -Infinity;   // right edge of the last label: close changes keep their line, not their text
       structure.sections.forEach((s, i) => {
         const sx = x(s.time);
         if (i > 0) {
@@ -166,9 +167,13 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
           ctx.fillRect(sx - 1, top - 2, 2, plotH + 2);
         }
         ctx.fillStyle = `rgba(${KIND_RGB[s.kind]}, 0.95)`;
-        const label = `${KIND_ARROW[s.kind]} ${s.bar}`;
+        const full = `${s.label} ${KIND_ARROW[s.kind]} ${s.bar}`;
+        const label = ctx.measureText(full).width + 6 <= Math.max(0, x(s.end) - sx) || i === structure.sections.length - 1 ? full : s.label;
         const tw = ctx.measureText(label).width;
-        ctx.fillText(label, Math.min(w - tw - 2, sx + 3), 2);
+        const lx = Math.min(w - tw - 2, sx + 3);
+        if (lx < labelsEnd + 4) return;
+        ctx.fillText(label, lx, 2);
+        labelsEnd = lx + tw;
       });
     }
     // cue marks
@@ -367,6 +372,9 @@ export const StructureLivePanel: React.FC<StructureLivePanelProps> = ({
                   }`}
                 >
                   <span className="font-mono tabular-nums">
+                    <span className="inline-block min-w-[1.1rem] px-1 mr-1 rounded bg-slate-950/70 text-white font-bold text-center" title={t('web.structure.label_tip')}>
+                      {s.label}
+                    </span>
                     {KIND_ARROW[s.kind]} {t('web.structure.bar', { bar: s.bar })} · {formatClock(s.time)}
                   </span>{' '}
                   <span className="opacity-80">{sectionLabel(s)}</span>

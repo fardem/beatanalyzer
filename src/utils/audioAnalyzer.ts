@@ -1,4 +1,5 @@
 import { AnalysisModel, AnalysisResult, AudioMetadata, BeatItem, ActivationPoint } from '../types/analyzer';
+import { bandEvidence } from './beatEvidence';
 
 /** An error whose text comes from the language files (key under web.*), translated where it is shown. */
 export class LocalizedError extends Error {
@@ -116,20 +117,17 @@ export async function analyzeAudioFile(
   }
 
   onProgress?.(45, 'web.progress.browser_flux');
-  const monoChannel = downmixToMono(audioBuffer);
+  // the same band curves as the beat evidence (zero-phase filters, see dsp.ts) – one signal chain in the app
+  const bands = bandEvidence(audioBuffer);
 
   onProgress?.(60, 'web.progress.browser_activation');
-  const { baf, daf, frameRate, hopSize } = computeActivationFunctions(
-    monoChannel,
-    sampleRate,
-    duration
-  );
+  const { baf, daf, frameRate } = computeActivationFunctions(bands.lowOnset, bands.midOnset, bands.highOnset, bands.frameRate);
 
   onProgress?.(75, 'web.progress.browser_tempo');
   const globalBpmEstimate = estimateTempoFromActivation(baf, frameRate);
 
   onProgress?.(85, 'web.progress.browser_tracking');
-  const { beats, downbeats, timeSig, swingRatio } = trackBeatsAndDownbeats(
+  const { beats, downbeats, timeSig } = trackBeatsAndDownbeats(
     baf,
     daf,
     frameRate,
@@ -183,7 +181,6 @@ export async function analyzeAudioFile(
     maxBpm: Math.round(maxBpm * 10) / 10,
     tempoStability,
     timeSignature: timeSig,
-    swingRatio: Math.round(swingRatio * 10) / 10,
     totalBeats,
     totalBars,
     activationCurve,
@@ -206,25 +203,6 @@ function detectFormat(name: string, mime: string): string {
   if (mime.includes('aac') || mime.includes('mp4')) return 'AAC';
   if (mime.includes('ogg')) return 'OGG';
   return 'AUDIO';
-}
-
-function downmixToMono(buffer: AudioBuffer): Float32Array {
-  const numChannels = buffer.numberOfChannels;
-  const length = buffer.length;
-  const mono = new Float32Array(length);
-
-  if (numChannels === 1) {
-    mono.set(buffer.getChannelData(0));
-    return mono;
-  }
-
-  for (let c = 0; c < numChannels; c++) {
-    const channelData = buffer.getChannelData(c);
-    for (let i = 0; i < length; i++) {
-      mono[i] += channelData[i] / numChannels;
-    }
-  }
-  return mono;
 }
 
 function extractWaveformPeaks(buffer: AudioBuffer, numBuckets: number): Float32Array {
@@ -266,88 +244,25 @@ function extractWaveformPeaks(buffer: AudioBuffer, numBuckets: number): Float32A
  * and temporal transformer-like receptive field convolutions.
  */
 function computeActivationFunctions(
-  signal: Float32Array,
-  sampleRate: number,
-  duration: number
-): { baf: Float32Array; daf: Float32Array; frameRate: number; hopSize: number } {
-  // 100 FPS frame rate (10ms hop size), standard for CPJKU beat_this and madmom
-  const hopSize = Math.floor(sampleRate / 100);
-  const fftSize = 2048;
-  const numFrames = Math.floor(signal.length / hopSize);
-  const frameRate = sampleRate / hopSize;
-
-  const baf = new Float32Array(numFrames);
-  const daf = new Float32Array(numFrames);
-
-  // Filter bands:
-  // Low: 30 - 180 Hz (Kick drums, bass rhythm -> downbeat indicators)
-  // Mid: 200 - 2500 Hz (Snare, guitar, vocals, keys -> beat indicators)
-  // High: 2500 - 8000 Hz (Hi-hats, shakers, cymbals -> beat sub-divisions)
-
-  // Energy accumulator per band
-  let prevLowEnergy = 0;
-  let prevMidEnergy = 0;
-  let prevHighEnergy = 0;
-
-  // Simple bandpass filter coefficients (IIR 1st order approximations for ultra-fast processing)
-  // Low cutoff ~ 180Hz
-  const alphaLow = Math.exp((-2 * Math.PI * 180) / sampleRate);
-  // High cutoff ~ 2500Hz
-  const alphaHigh = Math.exp((-2 * Math.PI * 2500) / sampleRate);
-
-  let lowFilt = 0;
-  let midFilt = 0;
-
-  for (let f = 0; f < numFrames; f++) {
-    const frameStart = f * hopSize;
-    const frameEnd = Math.min(frameStart + fftSize, signal.length);
-
-    let lowEnergy = 0;
-    let midEnergy = 0;
-    let highEnergy = 0;
-
-    for (let i = frameStart; i < frameEnd; i += 2) {
-      const s = signal[i];
-      // Low pass
-      lowFilt = alphaLow * lowFilt + (1 - alphaLow) * s;
-      const lowVal = lowFilt;
-      // Mid pass
-      midFilt = alphaHigh * midFilt + (1 - alphaHigh) * (s - lowVal);
-      const midVal = midFilt;
-      const highVal = s - lowVal - midVal;
-
-      lowEnergy += lowVal * lowVal;
-      midEnergy += midVal * midVal;
-      highEnergy += highVal * highVal;
-    }
-
-    // Half-wave rectified spectral flux
-    const lowFlux = Math.max(0, lowEnergy - prevLowEnergy);
-    const midFlux = Math.max(0, midEnergy - prevMidEnergy);
-    const highFlux = Math.max(0, highEnergy - prevHighEnergy);
-
-    prevLowEnergy = lowEnergy * 0.95;
-    prevMidEnergy = midEnergy * 0.95;
-    prevHighEnergy = highEnergy * 0.95;
-
-    // Combined beat activation (weighted sum of bands)
-    const rawBeatAct = lowFlux * 1.4 + midFlux * 1.8 + highFlux * 0.8;
-    // Downbeat activation strongly favors low-end kick energy + mid harmonic change
-    const rawDownbeatAct = lowFlux * 2.2 + midFlux * 0.6;
-
-    baf[f] = rawBeatAct;
-    daf[f] = rawDownbeatAct;
+  low: Float32Array,
+  mid: Float32Array,
+  high: Float32Array,
+  frameRate: number
+): { baf: Float32Array; daf: Float32Array; frameRate: number } {
+  const n = low.length;
+  const baf = new Float32Array(n);
+  const daf = new Float32Array(n);
+  for (let f = 0; f < n; f++) {
+    // beats: all hits; downbeats: mostly the kick, a little of the snare body
+    baf[f] = low[f] * 1.4 + mid[f] * 1.8 + high[f] * 0.8;
+    daf[f] = low[f] * 2.2 + mid[f] * 0.6;
   }
-
-  // Normalize and apply non-linear sigmoid/transformer activation shaping
   normalizeActivation(baf);
   normalizeActivation(daf);
-
-  // Apply temporal smoothing & contrast enhancement to mimic transformer attention peaks
-  enhanceActivationPeaks(baf, frameRate, 0.08); // 80ms window
-  enhanceActivationPeaks(daf, frameRate, 0.12); // 120ms window
-
-  return { baf, daf, frameRate, hopSize };
+  // temporal smoothing & contrast, so the tracker below finds clear peaks
+  enhanceActivationPeaks(baf, frameRate, 0.08);
+  enhanceActivationPeaks(daf, frameRate, 0.12);
+  return { baf, daf, frameRate };
 }
 
 function normalizeActivation(arr: Float32Array) {
@@ -391,7 +306,7 @@ function enhanceActivationPeaks(arr: Float32Array, frameRate: number, windowSec:
 /**
  * Autocorrelation tempo estimator with octave disambiguation
  */
-function estimateTempoFromActivation(activation: Float32Array, frameRate: number): number {
+export function estimateTempoFromActivation(activation: Float32Array, frameRate: number): number {
   // Search lag range corresponding to 55 BPM to 210 BPM
   const minLag = Math.floor((60 / 210) * frameRate);
   const maxLag = Math.floor((60 / 55) * frameRate);
@@ -399,7 +314,7 @@ function estimateTempoFromActivation(activation: Float32Array, frameRate: number
   const ac = new Float32Array(numLags);
 
   const step = 2;
-  const N = Math.min(activation.length, Math.floor(frameRate * 60)); // Analyze up to 60s for speed
+  const N = activation.length;   // the whole song: a long quiet intro must not hide the tempo
 
   for (let lag = minLag; lag <= maxLag; lag++) {
     let sum = 0;
@@ -461,7 +376,6 @@ function trackBeatsAndDownbeats(
   beats: BeatItem[];
   downbeats: BeatItem[];
   timeSig: { numerator: number; denominator: number; name: string; barShare: number | null };
-  swingRatio: number;
 } {
   const beatPeriodFrames = (60 * frameRate) / estimatedBpm;
   const minInterval = Math.floor(beatPeriodFrames * 0.65);
@@ -569,7 +483,6 @@ function trackBeatsAndDownbeats(
   const downbeats: BeatItem[] = [];
 
   let currentBar = 1;
-  let swingDeviations: number[] = [];
 
   for (let i = 0; i < beatFrames.length; i++) {
     const f = beatFrames[i];
@@ -612,25 +525,7 @@ function trackBeatsAndDownbeats(
       downbeats.push(beatItem);
     }
 
-    // Estimate swing (compare odd beat intervals to even beat intervals)
-    if (i >= 2 && i % 2 === 0) {
-      const dt1 = beats[i - 1].time - beats[i - 2].time;
-      const dt2 = time - beats[i - 1].time;
-      const pairTotal = dt1 + dt2;
-      if (pairTotal > 0.4 && pairTotal < 1.8) {
-        const ratio = (dt1 / pairTotal) * 100;
-        if (ratio >= 45 && ratio <= 75) {
-          swingDeviations.push(ratio);
-        }
-      }
-    }
   }
-
-  // Average swing ratio (50% = perfectly straight, 66.7% = triplet swing)
-  const swingRatio =
-    swingDeviations.length > 5
-      ? swingDeviations.reduce((a, b) => a + b, 0) / swingDeviations.length
-      : 50.0;
 
   const timeSig = {
     numerator: meterBeats,
@@ -639,7 +534,7 @@ function trackBeatsAndDownbeats(
     barShare: null, // downbeats are set every 3rd/4th beat here: a share of those bars says nothing
   };
 
-  return { beats, downbeats, timeSig, swingRatio };
+  return { beats, downbeats, timeSig };
 }
 
 // Onset strength of the browser analysis; there is no downbeat curve (downbeatActivation null).

@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.5.1"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.6.0"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -50,9 +50,9 @@ local BA = {
       ["output.marker_cue"] = "Cue {n}",
       ["output.marker_downbeat"] = "Bar {bar}",
       ["output.marker_note"] = "{time} s | {bpm} BPM",
-      ["output.marker_section_change"] = "Section ◆",
-      ["output.marker_section_down"] = "Section ▼ {db} dB",
-      ["output.marker_section_up"] = "Section ▲ {db} dB",
+      ["output.marker_section_change"] = "Section {label} ◆",
+      ["output.marker_section_down"] = "Section {label} ▼ {db} dB",
+      ["output.marker_section_up"] = "Section {label} ▲ {db} dB",
       ["output.meter"] = "{num}/{den}{suffix}",
       ["output.meter_suffix.16"] = "",
       ["output.meter_suffix.2"] = "",
@@ -1065,7 +1065,8 @@ end
 M.build_srt = build_srt
 
 -- Name of a marker: "Bar 24" on a downbeat, "24.2" on other beats; cue marks and section changes from the web
--- app put their own label in front, e.g. "Cue 2 – Bar 33" or "Section ▲ +6 dB – Bar 33".
+-- app put their own label in front, e.g. "Cue 2 – Bar 33" or "Section B ▲ +6 dB – Bar 33" (B: the letter of the
+-- part in the song structure; older JSON without a letter gives "Section ▲ +6 dB – Bar 33").
 function M.marker_name(m)
   local name = m.type == "downbeat" and T("output.marker_downbeat", { bar = tonumber(m.bar) or 0 })
     or string.format("%d.%d", tonumber(m.bar) or 0, tonumber(m.beat) or 0)
@@ -1074,7 +1075,9 @@ function M.marker_name(m)
   elseif m.section == "up" or m.section == "down" or m.section == "change" then
     local d = tonumber(m.sectionDelta) or 0
     local db = (d > 0 and "+" or (d < 0 and "−" or "")) .. string.format("%d", math.floor(math.abs(d) + 0.5))
-    return T("output.marker_section_" .. m.section, { db = db }) .. " – " .. name
+    local label = type(m.sectionLabel) == "string" and m.sectionLabel or ""
+    local text = T("output.marker_section_" .. m.section, { db = db, label = label }):gsub("%s+", " ")
+    return text .. " – " .. name
   end
   return name
 end

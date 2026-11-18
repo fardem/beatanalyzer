@@ -28,9 +28,9 @@
     },
     "model_line": "Model: {name} – {license} lisansı kapsamında kullanım",
     "marker_cue": "Cue {n}",
-    "marker_section_up": "Bölüm ▲ {db} dB",
-    "marker_section_down": "Bölüm ▼ {db} dB",
-    "marker_section_change": "Bölüm ◆"
+    "marker_section_up": "Bölüm {label} ▲ {db} dB",
+    "marker_section_down": "Bölüm {label} ▼ {db} dB",
+    "marker_section_change": "Bölüm {label} ◆"
   },
   "plugin": {
     "msg_not_json": "Dosya bir BeatAnalyzer marker JSON'u değil.",
@@ -281,8 +281,6 @@
       "stability_click": "çok düzenli",
       "stability_groove": "doğal groove",
       "stability_varies": "tempo değişken",
-      "straight": "düz sekizlikler",
-      "swing": "{swing} swing",
       "tempo": "Tempo",
       "tempo_adagio": "Adagio (sakin)",
       "tempo_allegro": "Allegro (hızlı)",
@@ -295,8 +293,10 @@
       "tip_meter": "Ölçü birimi (ör. 4/4 = her ölçüde 4 beat, 3/4 = vals). “% ölçü” bu uzunluğun şarkı boyunca ne kadar tutarlı kaldığını gösterir.",
       "tip_bars": "Algılanan toplam ölçü (her biri “1” ile başlar) ve şarkıdaki toplam beat sayısı.",
       "tip_stability": "Beat aralıklarının düzenliliği: >%92 = metronom kesinliği, %80–92 = doğal groove, <%80 = değişken tempo veya düzensiz algılama.",
-      "tip_ibi": "İki beat arasındaki ortalama süre (milisaniye; ör. 500 ms = 120 BPM). “Düz sekizlikler” = eşit aralık; “Swing” (>%55) = esnek üçleme groove hissi.",
-      "tip_audio": "Çözülen sesin süresi ve örnekleme hızı (44,1 kHz = CD standardı, 48 kHz = video/stüdyo standardı)."
+      "tip_ibi": "Art arda iki beat arasındaki ortalama aralık, milisaniye cinsinden (örn. 500 ms = 120 BPM).",
+      "tip_audio": "Çözülen sesin süresi ve örnekleme hızı (44,1 kHz = CD standardı, 48 kHz = video/stüdyo standardı).",
+      "jitter": "Izgara ± {ms} ms",
+      "jitter_tip": "Beat'ler arasındaki aralıkların ne kadar oynadığı (standart sapma; eksik beat'ler ve tempo değişimleri sayılmaz). Yaklaşık ±10 ms'nin altında marker'lar 25/30 fps'lik bir Timeline'da kare kare doğru oturur; daha fazlası canlı bir his – ya da yer yer kayan bir ızgara demektir."
     },
     "nc": {
       "attribution_text": "Paylaşırken veya yayımlarken yazarlar (Francesco Foscarin, Filip Korzeniowski, Richard Vogl) ve lisans belirtilmelidir – BeatAnalyzer bunu JSON dışa aktarımlarına yazar.",
@@ -417,7 +417,9 @@
       "play_from": "Bu beat'ten çal",
       "search": "Ölçü ara …",
       "title": "Beat ve ölçüler ({n})",
-      "toggle_downbeat": "Downbeat aç/kapat"
+      "toggle_downbeat": "Downbeat aç/kapat",
+      "insert": "Bu beat ile sonraki arasına bir beat ekle (modelin kaçırdığı)",
+      "delete": "Bu beat'i sil (modelin fazladan koyduğu)"
     },
     "tempo": {
       "range": "Aralık:",
@@ -489,7 +491,8 @@
       "help_item1": "Numaralı kırmızı çizgi = ölçünün “1”i – en güçlü kesme noktası (yeni sahne, sert kesme). Camgöbeği çizgiler = beat 2–4, daha hızlı kesme ritimleri için.",
       "help_item2": "Kesikli sarı = model burada emin değil (%60'ın altında). Bu yerlerde kesmeden önce dinle.",
       "help_item3": "Alttaki BAF / DAF: modelin her anda bir beat'ten (camgöbeği) veya bir “1”den (kırmızı) ne kadar emin olduğu – yüksek tepeler net vuruşlardır.",
-      "help_tip": "İpucu: 5–15 sn'ye yakınlaş ya da büyüteci kullan. Çizgi, kick veya snare'in başında olmalı, arkasında değil. Tüm çizgiler biraz erken ya da geç ise “Beat Kanıtları ve Ölçü Ayarı”nda düzelt."
+      "help_tip": "İpucu: 5–15 sn'ye yakınlaş ya da büyüteci kullan. Çizgi, kick veya snare'in başında olmalı, arkasında değil. Tüm çizgiler biraz erken ya da geç ise “Beat Kanıtları ve Ölçü Ayarı”nda düzelt.",
+      "edit_hint": "Shift+tık: beat ekle · Alt+tık: beat sil"
     },
     "spectrum": {
       "mode_live": "Canlı",
@@ -585,11 +588,10 @@
       "subtitle": "Şarkının nerede değiştiği – ve dinlerken nerede olduğun",
       "strip_title": "Şarkı yapısı",
       "help_label": "Şarkı yapısı açıklaması",
-      "help_summary": "Tüm şarkı boyunca ölçü başına ses seviyesi. Sesin belirgin şekilde değiştiği yerlerde (intro → kıta, yükseliş → drop, nakarat → break) BeatAnalyzer bir bölüm değişimi işaretler – her zaman bir “1” üzerinde, çünkü değişimdeki kesme oraya aittir.",
-      "help_1": "Yeşil ▲: şarkı yükseliyor veya doluyor (nakarat, drop) – sert bir kesme ya da yeni sahne için güçlü bir yer.",
-      "help_2": "Mavi ▼: şarkı sakinleşiyor (break, köprü, outro) – sakin çekimler, ağır çekim veya geçiş için iyi. Mor ◆: ses aşağı yukarı aynı seviyede değişiyor.",
-      "help_3": "Sarı çizgi: çalma konumu. Sarı bayraklar: cue işaretlerin.",
-      "help_tip": "Şeride veya bir bölüm düğmesine tıklamak oradaki “1”e atlar. Bölüm değişimleri DaVinci Resolve dışa aktarımına mor marker olarak girer. Seviyelerden çıkan bir ipucudur, müzikal bir analiz değil – güvenmeden önce dinle.",
+      "help_summary": "Şarkının nerede değiştiği ve hangi kısımların geri geldiği. BeatAnalyzer her ölçüyü diğer tüm ölçülerle karşılaştırır – notalarına (akorlar), ses rengine (enstrümanlar) ve ses seviyesine göre – ve önceki ölçüler sonrakilerden belirgin şekilde farklı olduğunda bir bölüm değişimi işaretler: her zaman bir “1” üzerinde, çünkü değişimdeki kesme oraya aittir.",
+      "help_1": "Harfler: aynı harf aynı malzeme demektir – B, sonra yine B = nakarat geri geliyor. Bir kesme düzenini veya görünümü tekrarlamak için iyi.",
+      "help_2": "▲ daha yüksek (nakarat, drop) – sert bir kesme için güçlü yer. ▼ daha sakin (break, köprü) – sakin çekimler, ağır çekim, geçiş. ◆ aşağı yukarı aynı seviyede farklı (yeni akorlar veya enstrümanlar).",
+      "help_tip": "Şeride veya bir bölüm düğmesine tıklamak oradaki “1”e atlar. Bölüm değişimleri DaVinci Resolve dışa aktarımına mor marker olarak girer (“Bölüm B ▲ +5 dB”). Sesten hesaplanır, müzikal bir analiz değildir – güvenmeden önce dinle.",
       "count": "{n} bölüm",
       "none": "Şarkı yapısı için ölçü sayısı az",
       "hover": "Ölçü {bar} · {time} · {db} dB",
@@ -598,7 +600,9 @@
       "kind_down": "daha sakin {db} dB",
       "kind_change": "değişim",
       "bar": "Ölçü {bar}",
-      "chip_tip": "{bars} ölçü – tıklayınca “1”e atlar"
+      "chip_tip": "{bars} ölçü – tıklayınca “1”e atlar",
+      "label_tip": "Aynı harf = şarkının aynı kısmı (örn. nakarat)",
+      "help_3": "Sarı çizgi: çalma konumu. Sarı bayraklar: cue işaretlerin."
     },
     "live": {
       "title": "Canlı (çalarken)",

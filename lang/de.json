@@ -27,9 +27,9 @@
     },
     "model_line": "Model: {name} – Nutzung im Rahmen der {license}-Lizenz",
     "marker_cue": "Cue {n}",
-    "marker_section_up": "Abschnitt ▲ {db} dB",
-    "marker_section_down": "Abschnitt ▼ {db} dB",
-    "marker_section_change": "Abschnitt ◆"
+    "marker_section_up": "Abschnitt {label} ▲ {db} dB",
+    "marker_section_down": "Abschnitt {label} ▼ {db} dB",
+    "marker_section_change": "Abschnitt {label} ◆"
   },
   "plugin": {
     "msg_not_json": "Die Datei ist keine Marker-JSON von BeatAnalyzer.",
@@ -280,8 +280,6 @@
       "stability_click": "sehr gleichmäßig",
       "stability_groove": "natürlicher Groove",
       "stability_varies": "Tempo schwankt",
-      "straight": "gerade Achtel",
-      "swing": "{swing} Swing",
       "tempo": "Tempo",
       "tempo_adagio": "Adagio (ruhig)",
       "tempo_allegro": "Allegro (schnell)",
@@ -294,8 +292,10 @@
       "tip_meter": "Taktart (z. B. 4/4 = 4 Zählzeiten je Takt, 3/4 = Walzer). „% der Takte“ zeigt, wie einheitlich diese Taktlänge im ganzen Song durchläuft.",
       "tip_bars": "Anzahl erkannter Takte (immer ab einer „1“) und die Gesamtzahl aller einzelnen Beats im Track.",
       "tip_stability": "Wie gleichmäßig der Abstand zwischen den Beats bleibt: >92 % = fest wie ein Metronom, 80–92 % = natürlicher Groove, <80 % = stark schwankendes Tempo oder Temposprünge.",
-      "tip_ibi": "Zeitabstand zwischen zwei Schlägen in Millisekunden (z. B. 500 ms = 120 BPM). „Gerade Achtel“ = gleichmäßiges Raster; „Swing“ = federndes, vorgezogenes/verzögertes Spielgefühl (>55 %).",
-      "tip_audio": "Laufzeit und Abtastrate der dekodierten Datei (44,1 kHz = CD-Standard, 48 kHz = Video-/Studio-Standard)."
+      "tip_ibi": "Durchschnittlicher Abstand zwischen zwei Beats in Millisekunden (z. B. 500 ms = 120 BPM).",
+      "tip_audio": "Laufzeit und Abtastrate der dekodierten Datei (44,1 kHz = CD-Standard, 48 kHz = Video-/Studio-Standard).",
+      "jitter": "Raster ± {ms} ms",
+      "jitter_tip": "Wie stark die Abstände zwischen den Beats schwanken (Standardabweichung; fehlende Beats und Tempowechsel nicht mitgezählt). Unter etwa ±10 ms sitzen die Marker in einer 25/30-fps-Timeline framegenau; mehr heißt Live-Gefühl – oder ein Raster, das stellenweise danebenliegt."
     },
     "nc": {
       "attribution_text": "Bei Weitergabe oder Veröffentlichung müssen die Autoren (Francesco Foscarin, Filip Korzeniowski, Richard Vogl) und die Lizenz genannt werden – BeatAnalyzer schreibt das in die JSON-Exporte.",
@@ -416,7 +416,9 @@
       "play_from": "Ab diesem Beat abspielen",
       "search": "Takt suchen …",
       "title": "Beats und Takte ({n})",
-      "toggle_downbeat": "Downbeat ein/aus"
+      "toggle_downbeat": "Downbeat ein/aus",
+      "insert": "Beat zwischen diesem und dem nächsten einfügen (einer, den das Modell übersehen hat)",
+      "delete": "Diesen Beat löschen (einer, den das Modell zu viel gesetzt hat)"
     },
     "tempo": {
       "range": "Spanne:",
@@ -488,7 +490,8 @@
       "help_item1": "Rote Linie mit Zahl = die „1“ eines Takts – der stärkste Schnittpunkt (neue Szene, harter Schnitt). Cyan-Linien = Beats 2–4, für schnellere Schnittfolgen.",
       "help_item2": "Gelb gestrichelt = hier ist sich das Modell unsicher (unter 60 %). Diese Stellen vor dem Schneiden abhören.",
       "help_item3": "BAF / DAF unten: wie sicher das Modell an jeder Stelle einen Beat (Cyan) oder eine „1“ (Rot) hört – hohe Spitzen sind klare Schläge.",
-      "help_tip": "Tipp: Auf 5–15 s zoomen oder die Lupe nutzen. Eine Linie gehört auf den Beginn von Kick oder Snare, nicht dahinter. Liegen alle Linien etwas zu früh oder zu spät, korrigiere es unter „Beat-Evidenz & Takt-Korrektur“."
+      "help_tip": "Tipp: Auf 5–15 s zoomen oder die Lupe nutzen. Eine Linie gehört auf den Beginn von Kick oder Snare, nicht dahinter. Liegen alle Linien etwas zu früh oder zu spät, korrigiere es unter „Beat-Evidenz & Takt-Korrektur“.",
+      "edit_hint": "Umschalt+Klick: Beat einfügen · Alt+Klick: Beat löschen"
     },
     "spectrum": {
       "mode_live": "Live",
@@ -584,11 +587,10 @@
       "subtitle": "Wo sich der Song ändert – und wo du beim Anhören gerade bist",
       "strip_title": "Songstruktur",
       "help_label": "Erklärung zur Songstruktur",
-      "help_summary": "Lautstärke je Takt über den ganzen Song. Wo sich der Klang deutlich ändert (Intro → Strophe, Aufbau → Drop, Refrain → Break), setzt BeatAnalyzer einen Abschnittswechsel – immer auf eine „1“, denn dort gehört ein Schnitt auf den Wechsel hin.",
-      "help_1": "Grün ▲: Der Song wird lauter oder voller (Refrain, Drop) – eine starke Stelle für einen harten Schnitt oder eine neue Szene.",
-      "help_2": "Blau ▼: Der Song wird leiser (Break, Bridge, Outro) – gut für ruhige Bilder, Zeitlupe oder eine Blende. Violett ◆: Der Klang ändert sich bei etwa gleicher Lautstärke.",
-      "help_3": "Gelbe Linie: Abspielposition. Gelbe Fähnchen: deine Cue-Marken.",
-      "help_tip": "Klick in den Streifen oder auf einen Abschnitt springt zur „1“ dort. Die Abschnittswechsel gehen als lila Marker in den DaVinci-Resolve-Export. Sie sind ein Hinweis aus den Pegeln, keine musikalische Analyse – vorher anhören.",
+      "help_summary": "Wo sich der Song ändert und welche Teile wiederkommen. BeatAnalyzer vergleicht jeden Takt mit jedem anderen – nach Tönen (Akkorden), Klangfarbe (Instrumenten) und Lautstärke – und setzt einen Abschnittswechsel, wo sich die Takte davor deutlich von denen danach unterscheiden: immer auf eine „1“, denn dort gehört ein Schnitt auf den Wechsel hin.",
+      "help_1": "Buchstaben: gleicher Buchstabe heißt gleiches Material – B und später wieder B = der Refrain kommt wieder. Gut, um ein Schnittmuster oder einen Look zu wiederholen.",
+      "help_2": "▲ lauter (Refrain, Drop) – starke Stelle für einen harten Schnitt. ▼ leiser (Break, Bridge) – ruhige Bilder, Zeitlupe, Blende. ◆ anders bei etwa gleicher Lautstärke (neue Akkorde oder Instrumente).",
+      "help_tip": "Klick in den Streifen oder auf einen Abschnitt springt zur „1“ dort. Abschnittswechsel gehen als lila Marker in den DaVinci-Resolve-Export („Abschnitt B ▲ +5 dB“). Berechnet aus dem Klang, keine musikalische Analyse – vorher anhören.",
       "count": "{n} Abschnitte",
       "none": "Zu wenige Takte für eine Songstruktur",
       "hover": "Takt {bar} · {time} · {db} dB",
@@ -597,7 +599,9 @@
       "kind_down": "leiser {db} dB",
       "kind_change": "Wechsel",
       "bar": "Takt {bar}",
-      "chip_tip": "{bars} Takte – Klick springt zur „1“"
+      "chip_tip": "{bars} Takte – Klick springt zur „1“",
+      "label_tip": "Gleicher Buchstabe = gleicher Teil des Songs (z. B. der Refrain)",
+      "help_3": "Gelbe Linie: Abspielposition. Gelbe Fähnchen: deine Cue-Marken."
     },
     "live": {
       "title": "Live (beim Abspielen)",

@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.6.0] – 2026-11-18
+
+The points of an outside review (Gemini) that make BeatAnalyzer better, the song structure by harmony and sound colour,
+and legacy code removed. Points of the review that would make it worse were not taken over (see
+docs/superpowers/plans/2026-11-18-0.6.0-kritik-umsetzen.md).
+
+### Security
+- **The local server only answers its own web app:** before, any website open in the browser could make it apply an
+  update, install the Resolve script, change settings or analyse files (`Access-Control-Allow-Origin: *`). Requests
+  from another origin and requests with a foreign Host name (DNS rebinding) are refused with 403.
+- **Uploads:** the temp file gets its own unique name in the temp folder (before, the file name of the upload went into
+  the path – with `..\` it could leave the folder on Windows, and two uploads of the same name collided). The song
+  name in the result and the marker JSON stays exactly as it is (umlauts, spaces), so Resolve still finds the clip.
+  Uploads above 2 GB are refused before reading.
+- Static files are served only from `dist/` (`/../` could read files of the BeatAnalyzer folder).
+
+### Added
+- **Song structure by harmony, sound colour and level:** every bar is compared with every other by its notes
+  (chroma), its sound colour (cepstrum of 20 mel bands) and its loudness; a novelty curve with a checkerboard kernel
+  (Foote) finds the changes, with a threshold relative to the song. A chord change or new instruments at the same
+  loudness are now found too. **Parts that come back get the same letter** (A, B, A, B, C …) – in the strip, the
+  buttons, the Resolve markers ("Section B ▲ +5 dB – Bar 33") and the Audacity labels.
+- **Insert and delete beats:** in the beat table (+ / bin) and in the waveform zoomed to 30 s or less (Shift+click
+  adds, Alt+click removes); replayable correction steps – undo, kept with Smoothing, in every export.
+- **MIDI with a tempo map:** a tempo event before every beat; every click lies on its beat (< 1 ms), the bars in the
+  DAW follow the song, and a lead-in of whole beats puts the first "1" on a bar line.
+- **Grid jitter** in the beat interval tile ("Grid ± 4 ms"): how much the beat gaps wobble.
+
+### Changed
+- **Metronome sample-exact:** clicks are planned 120 ms ahead on the exact AudioContext time (before, they started
+  from the drawing loop – up to ~25 ms late and wobbling). Also correct across loops and speed changes.
+- **Band filters** for beat evidence, folded bar and song structure: zero-phase 4th-order Butterworth on the full
+  sample rate (before: 1st/2nd order on every 2nd sample – hi-hats folded into the low bands, and the filter delay
+  moved kick attacks later). The browser analysis (without server) uses the same band curves and the whole song for
+  its tempo (before, the first 60 s only).
+
+### Removed
+- The "straight eighths / swing" line: the server always sent 50 %, the browser value measured quarter-note jitter.
+- The 530-line stand-alone page of the server (a second, older web app); without `dist/` a short note says how to
+  build it. AI Studio dev settings and an unused image.
+
+### Fixed
+- The server log crashed on every error response (`send_error`), e.g. for an unknown address.
+- The analysis cache of the server is locked (two analyses at the same time could mix it up).
+
 ## [0.5.1] – 2026-11-18
 
 ### Changed
