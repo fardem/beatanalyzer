@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.6.3] – 2026-11-19
+
+Fixes from the test of 0.6.2.
+
+### Fixed
+- **Quick windows flashed on a double-click** (window → whole file → window). Now a click on another window or on
+  *whole file* acts at once; a click on the window already shown goes back to the whole file only after 0.5 s
+  without a second click. Two clicks within 0.5 s make the window the default.
+
+### Changed
+- **Resolve window:** cue marks and section changes, which only come from the web app, stand under one heading
+  *From the web app* (a line over both); collapsed, a thin line marks their two swatches. The cue row is now called
+  *Cue mark*.
+- **Documentation:** the READMEs (en/de/tr) say clearly that music with strong rubato, free jazz or no fixed metre
+  needs Smoothing at 0 % – the smoothing is made for a fairly steady grid and could set bar lines where the music
+  has none.
+  The tooltip of the Smoothing slider (web app and Resolve window, de/en/tr) says the same in one line.
+
 ## [0.6.2] – 2026-11-19
 
 Fixes and wishes from the test of 0.6.1.

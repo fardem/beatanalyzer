@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.6.2** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
+**Version 0.6.3** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
 
 BeatAnalyzer finds the **beats, downbeats, tempo and time signature** of a song and puts them into
 **DaVinci Resolve** as **coloured markers on your audio clip** and as a **subtitle track** under the song. The
@@ -158,6 +158,14 @@ before you can analyse:
 
 **Smoothing** (0 % = off … 100 %, default 90 %) sets how evenly the bars are laid out (see [Features](#features)).
 md_beat_this gives no per-frame probabilities, so the slider is hidden there.
+
+> **Strong rubato, free jazz, free-time music: set Smoothing to 0 %.** Smoothing (in the backend `smooth_bars`, a
+> Viterbi pass with `REANCHOR_PENALTY`) is made for popular music with a fairly steady grid: it keeps counting full
+> bars and starts a new grid only where the model clearly hears a new "1". In classical music with strong rubato,
+> in free jazz or in music without a fixed metre this can lay bar lines where the music has none. With 0 % the bars
+> follow the downbeats of the model as they are (command line: `--no-smooth-bars`). Smoothing never moves the beats
+> themselves – but in such music the beat detection is less sure as well, so check the result by ear. BeatAnalyzer
+> does not guess the genre; you choose.
 
 **2. Output in Resolve**
 

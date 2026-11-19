@@ -4,6 +4,8 @@ import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
 import {
   DEFAULT_WINDOW_KEY,
   initialZoomFor,
+  QUICK_DOUBLE_CLICK_MS,
+  quickWindowClick,
   isDragMove,
   parseDefaultWindow,
   releaseSeekTime,
@@ -166,6 +168,12 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   const [showBeats, setShowBeats] = useState<boolean>(true);
   const [isLoupeEnabled, setIsLoupeEnabled] = useState<boolean>(false);
   // quick window applied when a song loads; set by double-click on 5 s / 15 s / ... (wish of the user, test 0.6.1)
+  // last click on a quick window and the pending "back to the whole file" (double-click detection, test 0.6.2 G2)
+  const quickLastClickRef = useRef<{ sec: number; at: number } | null>(null);
+  const quickResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (quickResetTimerRef.current) clearTimeout(quickResetTimerRef.current);
+  }, []);
   const [defaultWindow, setDefaultWindow] = useState<number | null>(() => {
     try {
       return parseDefaultWindow(localStorage.getItem(DEFAULT_WINDOW_KEY), QUICK_WINDOWS_SEC);
@@ -1072,6 +1080,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   }, [minimapDragMode, duration, visibleDuration, onSeek, followPlayhead]);
 
   const handleZoom = (factor: number) => {
+    cancelQuickReset();
     const nextZoom = Math.max(1.0, Math.min(maxZoom, zoom * factor));
     const centerTime = scrollOffsetSec + visibleDuration / 2;
     const nextVisibleDur = duration / nextZoom;
@@ -1080,14 +1089,29 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     setScrollOffsetSec(nextOffset);
   };
 
-  // a second click on the active window shows the whole file again
+  // click on a quick window (test 0.6.2 G2): another window at once; the window already shown goes back to the whole
+  // file only when no second click follows within 500 ms; two clicks within 500 ms make it the default. So a
+  // double-click no longer flashes the whole file in between.
   const handleQuickWindow = (windowSec: number) => {
     if (duration <= windowSec) return;
-    if (activeQuickWindow === windowSec) {
-      handleResetZoom();
+    const now = performance.now();
+    const action = quickWindowClick(windowSec, activeQuickWindow, quickLastClickRef.current, now);
+    cancelQuickReset();
+    if (action === 'default') {
+      quickLastClickRef.current = null;
+      toggleDefault(windowSec);
+      if (activeQuickWindow !== windowSec) showQuickWindow(windowSec);
       return;
     }
-    showQuickWindow(windowSec);
+    quickLastClickRef.current = { sec: windowSec, at: now };
+    if (action === 'wait') {
+      quickResetTimerRef.current = setTimeout(() => {
+        quickResetTimerRef.current = null;
+        showWholeFile();
+      }, QUICK_DOUBLE_CLICK_MS);
+    } else {
+      showQuickWindow(windowSec);
+    }
   };
 
   const showQuickWindow = (windowSec: number) => {
@@ -1098,10 +1122,8 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     setScrollOffsetSec(nextOffset);
   };
 
-  // double-click: this window becomes the default when a song loads, or the default is cleared; the two clicks
-  // before it switched the window on and off again, so it is shown once more
-  const handleQuickWindowDoubleClick = (windowSec: number) => {
-    if (duration <= windowSec) return;
+  // this window becomes the default when a song loads, or the default is cleared
+  const toggleDefault = (windowSec: number) => {
     const next = toggleDefaultWindow(defaultWindow, windowSec);
     setDefaultWindow(next);
     try {
@@ -1110,12 +1132,23 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
     } catch {
       /* without storage the default holds until the page is reloaded */
     }
-    showQuickWindow(windowSec);
   };
 
-  const handleResetZoom = () => {
+  const cancelQuickReset = () => {
+    if (quickResetTimerRef.current) clearTimeout(quickResetTimerRef.current);
+    quickResetTimerRef.current = null;
+  };
+
+  const showWholeFile = () => {
     setZoom(1.0);
     setScrollOffsetSec(0);
+  };
+
+  // the whole-file button acts at once and ends a pending click on a quick window
+  const handleResetZoom = () => {
+    cancelQuickReset();
+    quickLastClickRef.current = null;
+    showWholeFile();
   };
 
   // Compute clamped floating loupe coordinates inside 240px container
@@ -1267,7 +1300,6 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
                   key={sec}
                   type="button"
                   onClick={() => handleQuickWindow(sec)}
-                  onDoubleClick={() => handleQuickWindowDoubleClick(sec)}
                   disabled={tooShort}
                   aria-pressed={active}
                   className={`px-1.5 py-0.5 rounded text-[11px] font-mono tabular-nums whitespace-nowrap ${

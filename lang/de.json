@@ -109,7 +109,7 @@
     "sec_output": "2. Ausgabe in Resolve",
     "smooth_label": "Glätten",
     "smooth_off": "aus",
-    "smooth_tip": "0 % = aus: Takte wie von beat_this.\nMehr % = gleichmäßigeres Raster.\n100 % = voll geglättet; neu angesetzt nur bei klar anderer „1“.\nDie Beats bleiben unverändert.",
+    "smooth_tip": "0 % = aus: Takte wie von beat_this.\nMehr % = gleichmäßigeres Raster.\n100 % = voll geglättet; neu angesetzt nur bei klar anderer „1“.\nDie Beats bleiben unverändert.\nRubato, Free Jazz, kein festes Metrum: 0 % nehmen.",
     "analyze_none": "Im Media Pool genau einen Audio-Clip auswählen.",
     "analyze_many": "Mehrere Clips ausgewählt – bitte genau einen Audio-Clip auswählen.",
     "analyze_no_path": "Der ausgewählte Eintrag hat keine Datei (z. B. Timeline oder Compound Clip).",
@@ -146,8 +146,9 @@
     "msg_mp3_shift": "MP3: Marker um {ms} ms nach hinten gesetzt (so viel später spielt Resolve MP3 ab).",
     "note_mp3_json": "MP3: Die Marker werden {ms} ms später gesetzt (so viel später spielt Resolve MP3-Dateien ab).",
     "note_mp3_json_zero": "MP3: kein Ausgleich nötig (die Datei hat keinen Encoder-Vorlauf; Resolve spielt sie ohne Verzögerung ab).",
-    "color_cue": "Cue (Web-App)",
-    "color_section": "Abschnittswechsel"
+    "color_cue": "Cue-Marke",
+    "color_section": "Abschnittswechsel",
+    "color_webapp": "Aus der Web-App"
   },
   "web": {
     "app": {

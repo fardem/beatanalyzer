@@ -48,3 +48,23 @@ export function seekInFrame(time: number, frameStart: number, frameLength: numbe
   const frameEnd = Math.min(frameStart + frameLength, duration - END_MARGIN_SEC);
   return time >= frameStart && time < frameEnd ? time : frameStart;
 }
+
+/** two clicks on the same quick window within this time are a double-click */
+export const QUICK_DOUBLE_CLICK_MS = 500;
+
+/**
+ * What a click on a quick window does (wish of the user, test 0.6.2 G2):
+ * - 'default': the second click on the same window within 500 ms – it becomes (or stops being) the default;
+ * - 'wait': a click on the window already shown – back to the whole file only if no second click follows in 500 ms,
+ *   so a double-click does not flash the whole file in between;
+ * - 'show': any other window – shown at once.
+ */
+export function quickWindowClick(
+  sec: number,
+  activeSec: number | null,
+  last: { sec: number; at: number } | null,
+  now: number
+): 'default' | 'wait' | 'show' {
+  if (last && last.sec === sec && now - last.at < QUICK_DOUBLE_CLICK_MS) return 'default';
+  return activeSec === sec ? 'wait' : 'show';
+}

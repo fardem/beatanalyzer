@@ -110,7 +110,7 @@
     "sec_output": "2. Resolve'daki çıktı",
     "smooth_label": "Düzeltme",
     "smooth_off": "kapalı",
-    "smooth_tip": "%0 = kapalı: ölçüler beat_this'in duyduğu gibi.\nDaha fazla % = daha düzenli ızgara.\n%100 = tam düzeltme; yalnızca „1“ açıkça başka yerdeyse yeniden başlar.\nBeat'ler değişmez.",
+    "smooth_tip": "%0 = kapalı: ölçüler beat_this'in duyduğu gibi.\nDaha fazla % = daha düzenli ızgara.\n%100 = tam düzeltme; yalnızca „1“ açıkça başka yerdeyse yeniden başlar.\nBeat'ler değişmez.\nRubato, free jazz, sabit ölçü yok: %0 kullanın.",
     "analyze_none": "Media Pool'da tam olarak bir ses klibi seçin.",
     "analyze_many": "Birden fazla klip seçili – lütfen tam olarak bir ses klibi seçin.",
     "analyze_no_path": "Seçili öğenin dosyası yok (ör. Timeline veya Compound Clip).",
@@ -147,8 +147,9 @@
     "msg_mp3_shift": "MP3: marker'lar {ms} ms ileri kaydırıldı (Resolve MP3'ü bu kadar geç çalar).",
     "note_mp3_json": "MP3: marker'lar {ms} ms sonra konur (Resolve MP3 dosyalarını bu kadar geç çalar).",
     "note_mp3_json_zero": "MP3: düzeltme gerekmiyor (dosyada kodlayıcı gecikmesi yok; Resolve gecikmesiz çalar).",
-    "color_cue": "Cue (web uygulaması)",
-    "color_section": "Bölüm değişimi"
+    "color_cue": "Cue işareti",
+    "color_section": "Bölüm değişimi",
+    "color_webapp": "Web uygulamasından"
   },
   "web": {
     "app": {

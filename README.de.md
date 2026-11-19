@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.6.2** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
+**Version 0.6.3** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
 
 BeatAnalyzer erkennt in einem Song **Beats, Downbeats, Tempo und Taktart** und bringt sie nach
 **DaVinci Resolve** – als **farbige Marker auf deinem Audio-Clip** und als **Subtitle Track** unter dem Song. Die
@@ -166,6 +166,14 @@ setzen, bevor du analysieren kannst:
 **Glätten** (0 % = aus … 100 %, Standard 90 %) bestimmt, wie gleichmäßig die Takte eingeteilt werden (siehe
 [Funktionen](#funktionen)). md_beat_this liefert keine Wahrscheinlichkeiten je Frame, deshalb ist der Regler dort
 ausgeblendet.
+
+> **Starkes Rubato, Free Jazz, Musik ohne festes Metrum: Glätten auf 0 % stellen.** Glätten (im Backend
+> `smooth_bars`, ein Viterbi-Durchlauf mit `REANCHOR_PENALTY`) ist für populäre Musik mit einem recht stabilen
+> Raster gemacht: Es zählt volle Takte weiter und setzt nur dort neu an, wo das Modell klar eine neue „1“ hört. In
+> klassischer Musik mit starkem Rubato, im Free Jazz oder in Musik ohne festes Metrum kann es so Taktstriche setzen,
+> wo musikalisch keine sind. Mit 0 % folgen die Takte den Downbeats des Modells, wie sie sind (Kommandozeile:
+> `--no-smooth-bars`). Die Beats selbst verschiebt Glätten nie – in solcher Musik ist aber auch die Beat-Erkennung
+> unsicherer, also das Ergebnis nach Gehör prüfen. BeatAnalyzer rät das Genre nicht; du entscheidest.
 
 **2. Ausgabe in Resolve**
 
