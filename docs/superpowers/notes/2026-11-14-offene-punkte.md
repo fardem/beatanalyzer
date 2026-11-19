@@ -268,6 +268,29 @@ anderes Fenster sofort, das aktive wartet 0,5 s auf einen zweiten Klick. G5: Cue
 Resolve-Fenster unter einer Überschrift „Aus der Web-App“ (beide kommen nur aus der Web-App). Testliste:
 `docs/resolve-test-0.6.3.md`.
 
-**Idee (offen):** Für Rubato / Free Jazz eine Genre-Heuristik, die „Glätten 0 %“ vorschlägt (z. B. bei stark
-schwankendem Tempo-Verlauf oder geringer Downbeat-Sicherheit). Vorerst nur als Hinweis in den READMEs (Abschnitt
-„Glätten“, 2026-11-19).
+## Vorgemerkt für 0.6.4 / 0.6.5 – Glätten bei Rubato und Free Jazz
+
+Wann es gebaut wird, sagt der Nutzer an.
+
+**Problem.** Glätten (`smooth_bars` in `backend/analyzer.py`: ein Viterbi-Durchlauf mit `REANCHOR_PENALTY = 9.0`)
+geht von einem recht stabilen Raster aus. Es zählt volle Takte weiter und setzt nur dort neu an, wo das Modell klar
+eine neue „1“ hört. Bei klassischer Musik mit starkem Rubato, bei Free Jazz und bei Musik ohne festes Metrum kann es
+deshalb Taktstriche setzen, wo musikalisch keine sind. Die Beats selbst verschiebt es nie, nur die Takteinteilung.
+
+**1. Hinweis im Tooltip von „Glätten“ (Pflicht).** Der Tooltip des Reglers muss den Hinweis tragen, dass bei
+solcher Musik 0 % zu nehmen ist, in allen drei Sprachen. Derselbe Text (`plugin.smooth_tip`) erscheint in der
+Web-App (Kachel Taktart) und im Resolve-Fenster.
+- *Stand:* In 0.6.3 schon vorgezogen. Die letzte Zeile lautet „Rubato, Free Jazz, kein festes Metrum: 0 % nehmen.“
+  (en: „Rubato, free jazz, no fixed metre: use 0 %.“, tr: „Rubato, free jazz, sabit ölçü yok: %0 kullanın.“).
+  Die READMEs (de/en/tr) erklären es ausführlich im Abschnitt „Glätten“. In 0.6.4 / 0.6.5 prüfen, ob das reicht.
+
+**2. Vorschlag „Glätten 0 %“ aus der Analyse (Idee, offen).** BeatAnalyzer rät heute kein Genre. Statt einer
+Genre-Erkennung könnte eine einfache Heuristik das Signal selbst bewerten und einen Hinweis zeigen, ähnlich dem
+Vorschlag der Takt-Korrektur:
+- *Mögliche Anzeichen:* stark schwankender Tempo-Verlauf (große Streuung der Beat-Abstände über den Song, nicht nur an
+  einzelnen Stellen); geringe Sicherheit der Downbeats; viele Stellen, an denen Glätten neu ansetzt oder gegen das
+  Modell entscheidet.
+- *Verhalten:* nur ein Hinweis mit Knopf („Glätten auf 0 % stellen“), nie automatisch umstellen. Gilt für Web-App
+  und Resolve-Fenster.
+- *Offen:* Schwellwerte (an echten Rubato-, Free-Jazz- und Pop-Beispielen festlegen; Pop mit Tempowechseln darf keinen
+  Fehlalarm auslösen), Text, ob md_beat_this (ohne Regler) einen eigenen Hinweis braucht.
