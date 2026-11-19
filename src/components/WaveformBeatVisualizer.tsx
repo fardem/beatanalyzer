@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
 import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
+import { isDragMove, releaseSeekTime } from '../utils/waveView';
 import { useI18n } from '../i18n';
 
 interface WaveformBeatVisualizerProps {
@@ -1018,7 +1019,14 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       }
     };
 
-    const handleWindowMouseUp = () => {
+    const handleWindowMouseUp = (e: MouseEvent) => {
+      // a drag of the blue frame plays on from where the mouse is released (test 0.6.1 F5);
+      // not with the loop "section": there the left edge of the frame is the start of the loop
+      const start = minimapDragStartRef.current;
+      const rect = minimapCanvasRef.current?.getBoundingClientRect();
+      if (minimapDragMode === 'pan' && start && rect && followPlayhead && isDragMove(start.startX, e.clientX)) {
+        onSeek(releaseSeekTime(e.clientX, rect.left, rect.width, duration));
+      }
       minimapDragStartRef.current = null;
       setMinimapDragMode('none');
     };
@@ -1029,7 +1037,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
     };
-  }, [minimapDragMode, duration, visibleDuration, onSeek]);
+  }, [minimapDragMode, duration, visibleDuration, onSeek, followPlayhead]);
 
   const handleZoom = (factor: number) => {
     const nextZoom = Math.max(1.0, Math.min(maxZoom, zoom * factor));
