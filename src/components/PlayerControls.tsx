@@ -13,6 +13,7 @@ import {
   Music,
 } from 'lucide-react';
 import { BeatItem, PlaybackSpeed } from '../types/analyzer';
+import { MetronomeIcon } from './MetronomeIcon';
 import { useI18n } from '../i18n';
 
 interface PlayerControlsProps {
@@ -38,6 +39,13 @@ interface PlayerControlsProps {
   /** off, the section shown in the waveform, or the whole song; a click goes to the next mode */
   loopMode: 'off' | 'view' | 'song';
   onCycleLoop: () => void;
+}
+
+// speaker button of the song and the metronome: on = cyan, muted = grey (the same look for both)
+function speakerButtonClass(on: boolean): string {
+  return `p-1.5 rounded-lg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+    on ? 'text-cyan-400 hover:text-cyan-300 bg-cyan-950/50' : 'text-slate-500 hover:text-slate-300'
+  }`;
 }
 
 export const PlayerControls: React.FC<PlayerControlsProps> = ({
@@ -242,29 +250,31 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         <div className="flex flex-wrap items-center gap-4">
           {/* volume of the song; song, metronome and speed are all h-10 (test 0.2.9: different heights) */}
           <div className="flex items-center gap-2 h-10 bg-slate-950/60 border border-slate-800 rounded-xl px-3">
-            {/* the note mutes the song – only the metronome is heard (test 0.6.0 b1) */}
+            {/* the same look for song and metronome: speaker button (crossed out when muted), own symbol, slider
+                (test 0.6.1 F1) */}
             <button
               type="button"
               onClick={onToggleSongMuted}
               aria-pressed={songMuted}
               aria-label={songMuted ? t('web.player.song_unmute') : t('web.player.song_mute')}
               title={songMuted ? t('web.player.song_unmute') : t('web.player.song_mute')}
-              className={`inline-flex items-center gap-2 rounded-md px-1 -mx-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-                songMuted ? 'text-rose-300' : 'text-slate-300 hover:text-white'
-              }`}
+              className={speakerButtonClass(!songMuted)}
             >
-              {songMuted ? <VolumeX className="w-4 h-4" /> : <Music className="w-4 h-4 text-indigo-300" />}
-              <span className={`text-xs font-medium hidden sm:inline ${songMuted ? 'line-through' : ''}`}>{t('web.player.song')}</span>
+              {songMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
+            {/* only the symbol, no word (wish of the user, test 0.6.1) */}
+            <span role="img" aria-label={t('web.player.song')} title={t('web.player.song')} className="shrink-0 text-slate-400">
+              <Music className="w-4 h-4" aria-hidden="true" />
+            </span>
             <input
               type="range"
               min="0"
               max="1"
               step="0.05"
-              value={musicVolume}
+              value={songMuted ? 0 : musicVolume}
               onChange={(e) => onSetMusicVolume(parseFloat(e.target.value))}
               disabled={songMuted}
-              className="w-16 accent-indigo-400 cursor-pointer disabled:opacity-40"
+              className="w-16 accent-indigo-400 cursor-pointer disabled:opacity-30"
               title={t('web.player.song_volume')}
               aria-label={t('web.player.song_volume')}
             />
@@ -273,22 +283,18 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           {/* Metronome toggle & volume */}
           <div className="flex items-center gap-2 h-10 bg-slate-950/60 border border-slate-800 rounded-xl px-3">
             <button
+              type="button"
               onClick={onToggleMetronome}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                metronomeEnabled
-                  ? 'text-cyan-400 hover:text-cyan-300 bg-cyan-950/50'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
+              aria-pressed={!metronomeEnabled}
+              aria-label={metronomeEnabled ? t('web.player.metronome_off') : t('web.player.metronome_on')}
               title={metronomeEnabled ? t('web.player.metronome_off') : t('web.player.metronome_on')}
+              className={speakerButtonClass(metronomeEnabled)}
             >
-              {metronomeEnabled ? (
-                <Volume2 className="w-4 h-4" />
-              ) : (
-                <VolumeX className="w-4 h-4" />
-              )}
+              {metronomeEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </button>
-
-            <span className="text-xs font-medium text-slate-300 hidden sm:inline">{t('web.player.metronome')}</span>
+            <span role="img" aria-label={t('web.player.metronome')} title={t('web.player.metronome')} className="shrink-0 text-slate-400">
+              <MetronomeIcon className="w-4 h-4" />
+            </span>
 
             <input
               type="range"
@@ -300,6 +306,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
               disabled={!metronomeEnabled}
               className="w-16 accent-cyan-400 cursor-pointer disabled:opacity-30"
               title={t('web.player.metronome_volume')}
+              aria-label={t('web.player.metronome_volume')}
             />
           </div>
 
