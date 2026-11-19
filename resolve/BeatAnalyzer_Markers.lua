@@ -77,11 +77,12 @@ local BA = {
       ["plugin.choose_title"] = "BeatAnalyzer – choose marker JSON",
       ["plugin.clip_found"] = "{names} in the Media Pool · {length}",
       ["plugin.color_beat"] = "Beat {n}",
-      ["plugin.color_cue"] = "Cue (web app)",
+      ["plugin.color_cue"] = "Cue mark",
       ["plugin.color_downbeat"] = "Downbeat",
       ["plugin.color_none"] = "no marker",
       ["plugin.color_other"] = "other",
       ["plugin.color_section"] = "Section change",
+      ["plugin.color_webapp"] = "From the web app",
       ["plugin.engine"] = "Analysed with {engine}",
       ["plugin.engine_unknown"] = "Analysis program: not given in the JSON (older JSON or analysed in the browser)",
       ["plugin.explain_absent"] = "The song is not in the Timeline '{timeline}'. Only the Subtitle in the Media Pool is created.",
@@ -2261,6 +2262,9 @@ function M.main()
         mini_swatch("beat3"),
         mini_swatch("beat4"),
         mini_swatch("other"),
+        -- a thin line before the two colours from the web app (the heading when open)
+        ui:Label({ ID = "ColorWebAppMini", Text = "", Weight = 0, MinimumSize = { 1, 12 }, MaximumSize = { 1, 12 },
+                   ToolTip = T("plugin.color_webapp"), StyleSheet = "background-color: " .. C.slate600 .. ";" }),
         mini_swatch("cue"),
         mini_swatch("section") }),
       ui:HGroup({ Weight = 0, Spacing = 8,
@@ -2269,10 +2273,16 @@ function M.main()
         color_col("beat3", T("plugin.color_beat", { n = 3 })),
         color_col("beat4", T("plugin.color_beat", { n = 4 })),
         color_col("other", T("plugin.color_other")) }),
-      -- markers from the web app: cue marks and section changes (test 0.6.0: own, adjustable colours)
+      -- markers from the web app: cue marks and section changes (test 0.6.0: own, adjustable colours); one heading
+      -- with a line over both columns says where they come from (test 0.6.2 G5)
       ui:HGroup({ Weight = 0, Spacing = 8,
-        color_col("cue", T("plugin.color_cue")),
-        color_col("section", T("plugin.color_section")),
+        ui:VGroup({ Weight = 2, Spacing = 4,
+          ui:Label({ ID = "ColorWebAppHdr", Text = T("plugin.color_webapp"), Weight = 0,
+                     StyleSheet = "color: " .. C.cyan300 .. "; font-size: 11px; border-bottom: 1px solid "
+                       .. C.cyan800 .. "; padding-bottom: 2px;" }),
+          ui:HGroup({ Weight = 0, Spacing = 8,
+            color_col("cue", T("plugin.color_cue")),
+            color_col("section", T("plugin.color_section")) }) }),
         ui:Label({ Text = "", Weight = 3 }) }),
 
       -- 3. Dynamic Status / Progress Label (hidden when idle so there is zero dead space)
@@ -2403,6 +2413,8 @@ function M.main()
       set(id .. "Swatch", "Hidden", not open)
       set(id .. "Mini", "Hidden", open)
     end
+    set("ColorWebAppHdr", "Hidden", not open)
+    set("ColorWebAppMini", "Hidden", open)
     relayout()
   end
 

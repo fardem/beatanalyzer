@@ -296,6 +296,20 @@ class DialogTests(unittest.TestCase):
         self.run_dialog(scenario)
         self.assertEqual(len(self.markers(self.mock.song)), 6)  # beat 2 of both bars is missing
 
+    def test_web_app_colours_grouped_under_one_heading(self):
+        # cue marks and section changes only come from the web app: one heading for both (test 0.6.2 G5)
+        def scenario():
+            self.assertTrue(self.item("ColorWebAppHdr").Hidden)
+            self.assertFalse(self.item("ColorWebAppMini").Hidden)
+            self.check("Colors", True)
+            self.assertFalse(self.item("ColorWebAppHdr").Hidden)
+            self.assertTrue(self.item("ColorWebAppMini").Hidden)
+            self.assertEqual(self.item("ColorWebAppHdr").Text, "Aus der Web-App")
+            self.assertEqual(self.item("ColorCueLabel").Text, "Cue-Marke")
+            self.assertEqual(self.item("ColorSectionLabel").Text, "Abschnittswechsel")
+            self.close()
+        self.run_dialog(scenario)
+
     def test_remove_asks_first(self):
         self.M.apply(self.json_path, None)
 

@@ -146,8 +146,9 @@
     "msg_mp3_shift": "MP3: Marker um {ms} ms nach hinten gesetzt (so viel später spielt Resolve MP3 ab).",
     "note_mp3_json": "MP3: Die Marker werden {ms} ms später gesetzt (so viel später spielt Resolve MP3-Dateien ab).",
     "note_mp3_json_zero": "MP3: kein Ausgleich nötig (die Datei hat keinen Encoder-Vorlauf; Resolve spielt sie ohne Verzögerung ab).",
-    "color_cue": "Cue (Web-App)",
-    "color_section": "Abschnittswechsel"
+    "color_cue": "Cue-Marke",
+    "color_section": "Abschnittswechsel",
+    "color_webapp": "Aus der Web-App"
   },
   "web": {
     "app": {

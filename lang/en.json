@@ -146,8 +146,9 @@
     "msg_mp3_shift": "MP3: markers moved by {ms} ms (Resolve plays MP3 that much later).",
     "note_mp3_json": "MP3: the markers are set {ms} ms later (Resolve plays MP3 files that much later).",
     "note_mp3_json_zero": "MP3: no correction needed (the file has no encoder delay; Resolve plays it on time).",
-    "color_cue": "Cue (web app)",
-    "color_section": "Section change"
+    "color_cue": "Cue mark",
+    "color_section": "Section change",
+    "color_webapp": "From the web app"
   },
   "web": {
     "app": {
