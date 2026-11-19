@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { initialZoomFor, isDragMove, parseDefaultWindow, releaseSeekTime, toggleDefaultWindow } from './waveView';
+import { initialZoomFor, isDragMove, parseDefaultWindow, releaseSeekTime, seekInFrame, toggleDefaultWindow } from './waveView';
 
 test('frame drag released: playhead goes to the time under the mouse', () => {
   assert.equal(releaseSeekTime(150, 100, 200, 180), 45);
@@ -41,4 +41,22 @@ test('zoom when a song loads: the default window, or the whole song if it is too
   assert.equal(initialZoomFor(40, 60, 16), 1);
   assert.equal(initialZoomFor(180, null, 36), 1);
   assert.equal(initialZoomFor(1000, 5, 100), 100);
+});
+
+test('drag released past the right edge while playing: the last window from its start, not a restart at 0', () => {
+  // 16 s song, 5 s frame pushed to the end (11 … 16 s); the mouse is past the right edge (time 16)
+  assert.equal(seekInFrame(16, 11, 5, 16), 11);
+});
+
+test('drag released past the left edge: the start of the song', () => {
+  assert.equal(seekInFrame(0, 0, 5, 16), 0);
+});
+
+test('drag released with the mouse inside the frame: the time under the mouse', () => {
+  assert.equal(seekInFrame(66, 60, 15, 180), 66);
+});
+
+test('drag released in the grab margin beside the frame: the start of the frame', () => {
+  assert.equal(seekInFrame(59.8, 60, 15, 180), 60);
+  assert.equal(seekInFrame(75.2, 60, 15, 180), 60);
 });

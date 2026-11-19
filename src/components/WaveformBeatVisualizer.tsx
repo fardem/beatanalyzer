@@ -7,6 +7,7 @@ import {
   isDragMove,
   parseDefaultWindow,
   releaseSeekTime,
+  seekInFrame,
   toggleDefaultWindow,
 } from '../utils/waveView';
 import { useI18n } from '../i18n';
@@ -1049,8 +1050,14 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       // not with the loop "section": there the left edge of the frame is the start of the loop
       const start = minimapDragStartRef.current;
       const rect = minimapCanvasRef.current?.getBoundingClientRect();
-      if (minimapDragMode === 'pan' && start && rect && followPlayhead && isDragMove(start.startX, e.clientX)) {
-        onSeek(releaseSeekTime(e.clientX, rect.left, rect.width, duration));
+      if (minimapDragMode === 'pan' && start && rect && rect.width > 0 && followPlayhead && isDragMove(start.startX, e.clientX)) {
+        // where the frame now starts (as in the move handler; the state may not be rendered yet)
+        const maxOffset = Math.max(0, duration - visibleDuration);
+        const frameStart = Math.max(
+          0,
+          Math.min(start.startOffsetSec + ((e.clientX - start.startX) / rect.width) * duration, maxOffset)
+        );
+        onSeek(seekInFrame(releaseSeekTime(e.clientX, rect.left, rect.width, duration), frameStart, visibleDuration, duration));
       }
       minimapDragStartRef.current = null;
       setMinimapDragMode('none');

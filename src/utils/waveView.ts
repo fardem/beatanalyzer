@@ -35,3 +35,16 @@ export function initialZoomFor(duration: number, defaultSec: number | null, maxZ
   if (defaultSec === null || !(duration > defaultSec)) return 1;
   return Math.min(maxZoom, duration / defaultSec);
 }
+
+/** a release this close to the end of the song counts as "past the end" (the song would stop at once) */
+const END_MARGIN_SEC = 0.05;
+
+/**
+ * Time to play from after a drag of the blue frame: the time under the mouse when it is inside the frame; the start
+ * of the frame when the mouse is beside it (grab margin, past the right edge) or at the very end of the song – a seek
+ * to the end would stop the song at once and show the start again.
+ */
+export function seekInFrame(time: number, frameStart: number, frameLength: number, duration: number): number {
+  const frameEnd = Math.min(frameStart + frameLength, duration - END_MARGIN_SEC);
+  return time >= frameStart && time < frameEnd ? time : frameStart;
+}

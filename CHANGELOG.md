@@ -8,8 +8,8 @@ Fixes and wishes from the test of 0.6.1.
 
 ### Fixed
 - **Dragging the blue frame during playback** threw the view back to the old playhead. Now, when you release the
-  frame, playback goes on from where the mouse is (left of the overview = start). A click on the frame without moving
-  changes nothing; double-click still plays from its left edge. With the loop "section" the left edge stays the loop
+  frame, playback goes on from where the mouse is (left of the overview = start; right of it = the start of the last
+  window, so the song does not end at once). A click on the frame without moving changes nothing; double-click still plays from its left edge. With the loop "section" the left edge stays the loop
   start.
 
 ### Added
