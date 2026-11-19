@@ -28,7 +28,6 @@ import resolve_plugin  # noqa: E402
 GITHUB_REPO = "fardem/beatanalyzer"
 RELEASE_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 RELEASE_ASSET = "BeatAnalyzer.zip"
-OLD_ASSET = "BeatThis.zip"             # name up to 0.0.4; release.yml still uploads it for older updaters
 TEMP_DIR = "update-temp"
 BACKUP_DIR = "update-backup"
 MANIFEST = ".beatthis-files"           # program files of the installed release, one path per line
@@ -76,7 +75,7 @@ def parse_release(data: dict) -> Optional[dict]:
     if not tag or data.get("draft") or data.get("prerelease") or version_key(tag) == (-1,):
         return None
     assets = {a.get("name"): a for a in data.get("assets", [])}
-    asset = assets.get(RELEASE_ASSET) or assets.get(OLD_ASSET)
+    asset = assets.get(RELEASE_ASSET)
     if not asset:
         return None
     # The API URL of the asset works for public repositories and, with a token, for private ones.
