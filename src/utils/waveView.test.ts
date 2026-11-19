@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { initialZoomFor, isDragMove, parseDefaultWindow, releaseSeekTime, seekInFrame, toggleDefaultWindow } from './waveView';
+import { initialZoomFor, isDragMove, parseDefaultWindow, releaseSeekTime, seekInFrame, toggleDefaultWindow, quickWindowClick } from './waveView';
 
 test('frame drag released: playhead goes to the time under the mouse', () => {
   assert.equal(releaseSeekTime(150, 100, 200, 180), 45);
@@ -59,4 +59,20 @@ test('drag released with the mouse inside the frame: the time under the mouse', 
 test('drag released in the grab margin beside the frame: the start of the frame', () => {
   assert.equal(seekInFrame(59.8, 60, 15, 180), 60);
   assert.equal(seekInFrame(75.2, 60, 15, 180), 60);
+});
+
+test('click on a quick window that is not shown: shown at once', () => {
+  assert.equal(quickWindowClick(15, null, null, 1000), 'show');
+  assert.equal(quickWindowClick(60, 15, { sec: 15, at: 900 }, 1000), 'show');
+});
+
+test('click on the quick window already shown: wait for a second click before going back to the whole file', () => {
+  assert.equal(quickWindowClick(15, 15, null, 1000), 'wait');
+  assert.equal(quickWindowClick(15, 15, { sec: 15, at: 400 }, 1000), 'wait');   // first click 600 ms ago
+});
+
+test('second click on the same quick window within 500 ms: double-click, it becomes the default', () => {
+  assert.equal(quickWindowClick(15, 15, { sec: 15, at: 600 }, 1000), 'default');
+  assert.equal(quickWindowClick(15, null, { sec: 15, at: 600 }, 1000), 'default');
+  assert.equal(quickWindowClick(30, 15, { sec: 15, at: 900 }, 1000), 'show');
 });

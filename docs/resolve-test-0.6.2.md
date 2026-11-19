@@ -15,3 +15,10 @@ und Resolve neu starten (neue Farbfelder). Analysieren mit **beat_this**.
 | G3 | Player: Song und Metronom ein- und ausschalten (Lautsprecher-Knöpfe) | beide sehen gleich aus: an = blauer Lautsprecher, stumm = grauer, durchgestrichener Lautsprecher, Regler grau auf 0. Statt der Wörter stehen nur die Symbole (Note, Metronom); Maus darüber zeigt den Namen. Beim Wiedereinschalten ist die alte Lautstärke wieder da |
 | G4 | Beat-Evidenz → Gefalteter Takt: einen Schritt der Takt-Korrektur ausführen | oben erst **Rückgängig**, dann **Zurücksetzen** (Kreispfeil) – wie in der Beat-Tabelle |
 | G5 | Resolve-Fenster: **Markerfarben anpassen** aufklappen | die Farbfelder haben dieselben Farben wie Resolves eigenes Marker-Menü; keine zwei Felder sehen gleich aus |
+
+## Nachgebessert nach deinem Test von 0.6.2 (G1, G3, G4 bestanden)
+
+| # | Was tun | Was soll passieren |
+|---|---|---|
+| G2b | Auf „15s“ doppelklicken, wenn gerade die ganze Datei zu sehen ist; danach einmal auf das schon aktive „15s“ klicken; dann auf „60s“ und auf den Knopf *ganze Datei* | Doppelklick: das 15-s-Fenster erscheint **ohne Flackern** und wird Standard (fett). Einfacher Klick auf das aktive „15s“: erst nach etwa einer halben Sekunde zurück zur ganzen Datei. „60s“ und *ganze Datei* wirken sofort |
+| G5b | Resolve-Fenster: *Markerfarben anpassen* auf- und zuklappen | aufgeklappt: über **Cue-Marke** und **Abschnittswechsel** steht einmal „Aus der Web-App“ mit einer Linie über beiden; zugeklappt: ein feiner Strich vor den letzten zwei Farbfeldern (Maus darüber: „Aus der Web-App“) |
