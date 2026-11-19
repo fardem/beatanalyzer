@@ -748,20 +748,7 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                   </span>
                 )}
                 <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={onResetGrid}
-                    disabled={!canResetGrid}
-                    aria-label={t('web.evidence.fix_reset')}
-                    title={t('web.evidence.fix_reset_tip')}
-                    className={`inline-flex items-center justify-center p-1 rounded border transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-                      canResetGrid
-                        ? 'border-slate-700 bg-slate-900 text-slate-300 hover:text-white hover:border-slate-500 cursor-pointer'
-                        : 'border-slate-800/70 bg-slate-950/50 text-slate-600 cursor-not-allowed'
-                    }`}
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                  </button>
+                  {/* undo first, then reset – as in the beat table (test 0.6.1 F6) */}
                   <button
                     type="button"
                     onClick={onUndoGrid}
@@ -775,6 +762,20 @@ export const BeatEvidenceLab: React.FC<BeatEvidenceLabProps> = ({
                   >
                     <Undo2 className="w-2.5 h-2.5" />
                     <span>{t('web.evidence.fix_undo')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onResetGrid}
+                    disabled={!canResetGrid}
+                    aria-label={t('web.evidence.fix_reset')}
+                    title={t('web.evidence.fix_reset_tip')}
+                    className={`inline-flex items-center justify-center p-1 rounded border transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+                      canResetGrid
+                        ? 'border-slate-700 bg-slate-900 text-slate-300 hover:text-white hover:border-slate-500 cursor-pointer'
+                        : 'border-slate-800/70 bg-slate-950/50 text-slate-600 cursor-not-allowed'
+                    }`}
+                  >
+                    <RotateCcw className="w-3 h-3" />
                   </button>
                 </div>
               </div>
