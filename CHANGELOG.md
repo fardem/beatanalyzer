@@ -15,6 +15,9 @@ Fixes from the test of 0.6.2.
 - **Resolve window:** cue marks and section changes, which only come from the web app, stand under one heading
   *From the web app* (a line over both); collapsed, a thin line marks their two swatches. The cue row is now called
   *Cue mark*.
+- **Documentation:** the READMEs (en/de/tr) say clearly that music with strong rubato, free jazz or no fixed metre
+  needs Smoothing at 0 % – the smoothing is made for a fairly steady grid and could set bar lines where the music
+  has none.
 
 ## [0.6.2] – 2026-11-19
 

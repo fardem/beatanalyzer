@@ -267,3 +267,7 @@ der JSON bleibt (Entscheidung des Nutzers). Testliste: `docs/resolve-test-0.6.2.
 anderes Fenster sofort, das aktive wartet 0,5 s auf einen zweiten Klick. G5: Cue-Marke und Abschnittswechsel im
 Resolve-Fenster unter einer Überschrift „Aus der Web-App“ (beide kommen nur aus der Web-App). Testliste:
 `docs/resolve-test-0.6.3.md`.
+
+**Idee (offen):** Für Rubato / Free Jazz eine Genre-Heuristik, die „Glätten 0 %“ vorschlägt (z. B. bei stark
+schwankendem Tempo-Verlauf oder geringer Downbeat-Sicherheit). Vorerst nur als Hinweis in den READMEs (Abschnitt
+„Glätten“, 2026-11-19).

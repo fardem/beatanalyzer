@@ -162,6 +162,14 @@ işaretlemeniz gerekir:
 **Düzeltme** (%0 = kapalı … %100, varsayılan %90) ölçülerin ne kadar düzenli yerleştirileceğini belirler
 ([Özellikler](#özellikler)). md_beat_this kare başına olasılık vermediği için orada kaydırıcı gizlidir.
 
+> **Güçlü rubato, free jazz, sabit ölçüsü olmayan müzik: Düzeltme'yi %0 yapın.** Düzeltme (arka uçta `smooth_bars`,
+> `REANCHOR_PENALTY` ile bir Viterbi geçişi) oldukça sabit bir ızgarası olan popüler müzik için yapılmıştır: tam
+> ölçüleri saymaya devam eder ve ızgarayı yalnızca model açıkça yeni bir „1“ duyduğunda yeniden başlatır. Güçlü
+> rubatolu klasik müzikte, free jazz'da ya da sabit ölçüsü olmayan müzikte bu, müzikte olmayan yerlere ölçü çizgisi
+> koyabilir. %0 ile ölçüler modelin downbeat'lerini olduğu gibi izler (komut satırı: `--no-smooth-bars`). Düzeltme
+> beat'lerin kendisini asla kaydırmaz – ama bu tür müzikte beat tanıma da daha az emindir; sonucu kulakla kontrol
+> edin. BeatAnalyzer türü tahmin etmez; siz karar verirsiniz.
+
 **2. Resolve'daki çıktı**
 
 - **Timeline'da Subtitle Track oluştur:** şarkı açık Timeline'ın bir ses izindeyse, altına „BeatAnalyzer -
