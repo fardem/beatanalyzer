@@ -262,3 +262,8 @@ spielt nach dem Ziehen ab der Loslass-Stelle (F5), Song/Metronom einheitlich stu
 Metronom-Symbol nach Skizze des Nutzers), Rückgängig vor Zurücksetzen im gefalteten Takt (F6), Resolve-Farbfelder in
 Resolves eigenen Farben (F7), Doppelklick auf Schnellzoom = Standardfenster beim Laden (Wunsch). BPM pro Marker in
 der JSON bleibt (Entscheidung des Nutzers). Testliste: `docs/resolve-test-0.6.2.md`.
+
+**0.6.3 (2026-11-19), Test 0.6.2:** G1, G3, G4 bestanden. G2: Doppelklick auf Schnellzoom flackerte – jetzt wirkt ein
+anderes Fenster sofort, das aktive wartet 0,5 s auf einen zweiten Klick. G5: Cue-Marke und Abschnittswechsel im
+Resolve-Fenster unter einer Überschrift „Aus der Web-App“ (beide kommen nur aus der Web-App). Testliste:
+`docs/resolve-test-0.6.3.md`.
