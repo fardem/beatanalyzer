@@ -17,7 +17,7 @@ export const MetronomeIcon: React.FC<{ className?: string }> = ({ className }) =
     {/* body with an opening on the right, where the pendulum swings out (user's sketch, test 0.6.1) */}
     <path d="M14.3 6.3 13.5 3H8.6L5 21h13.5l-1.4-5.8" />
     {/* pendulum with its weight */}
-    <path d="M10 18.5 17 7.3" />
-    <path d="m16.6 5.4 1.5-.9 1.3 1.1-.5 1.6-1.7.3z" fill="currentColor" />
+    <path d="M10 18.5 18.4 7.1" />
+    <path d="m17.9 5.4 1.5-.9 1.3 1.1-.5 1.6-1.7.3z" fill="currentColor" />
   </svg>
 );
