@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.6.1** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
+**Version 0.6.2** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
 
 BeatAnalyzer erkennt in einem Song **Beats, Downbeats, Tempo und Taktart** und bringt sie nach
 **DaVinci Resolve** – als **farbige Marker auf deinem Audio-Clip** und als **Subtitle Track** unter dem Song. Die
@@ -227,9 +227,9 @@ brauchen keinen Ausgleich – das Fenster sagt es dann.
   Beat-Abstand mit der Schwankung des Rasters (± ms: unter etwa 10 ms sitzen die Marker framegenau), Audiodatei. Der
   Regler **Glätten** in der Kachel Taktart rechnet die Takte sofort neu.
 - **Wellenform & Beat-Raster:** Takte und Beats als Linien, die Kurven des Modells für Beats (BAF) und Downbeats
-  (DAF). Schnellzoom 5 s / 15 s / 30 s / 60 s, Lupe, Übersicht mit verschiebbarem Rahmen.
+  (DAF). Schnellzoom 5 s / 15 s / 30 s / 60 s (Doppelklick: Standard beim Laden), Lupe, Übersicht mit verschiebbarem Rahmen.
 - **Player:** Wiedergabe ab jeder Stelle, **Loop** (grau = aus, gelb A-B = Ausschnitt im blauen Rahmen, grün =
-  ganzer Song), Lautstärke des Songs (Klick auf die Note schaltet den Song stumm – nur das Metronom), samplegenaues **Metronom** auf den erkannten Beats (höherer Klick auf dem Downbeat),
+  ganzer Song), Lautstärke des Songs (der Lautsprecher davor schaltet den Song stumm – nur das Metronom), samplegenaues **Metronom** auf den erkannten Beats (höherer Klick auf dem Downbeat),
   Geschwindigkeit 0,5× bis 1,5×, Tap-Tempo.
 - **Songstruktur & Live:** jeder Takt wird mit jedem anderen verglichen – nach Tönen (Akkorden), Klangfarbe
   (Instrumenten) und Lautstärke; Abschnittswechsel (▲ lauter, ▼ leiser, ◆ anders) sitzen auf ihrer „1“, und Teile,

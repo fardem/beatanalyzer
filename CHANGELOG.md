@@ -2,7 +2,25 @@
 
 ## [Unreleased]
 
+## [0.6.2] – 2026-11-19
+
+Fixes and wishes from the test of 0.6.1.
+
+### Fixed
+- **Dragging the blue frame during playback** threw the view back to the old playhead. Now, when you release the
+  frame, playback goes on from where the mouse is (left of the overview = start). A click on the frame without moving
+  changes nothing; double-click still plays from its left edge. With the loop "section" the left edge stays the loop
+  start.
+
+### Added
+- **Default quick window:** double-click on 5 s / 15 s / 30 s / 60 s makes it the window shown when a song loads
+  (shown bold); double-click on it again clears it.
+
 ### Changed
+- **Song and metronome look the same when muted:** speaker button (crossed out and grey when muted), the slider at 0,
+  and a symbol instead of the word – a note for the song, a metronome for the metronome.
+- **Folded bar:** undo comes before reset, as in the beat table.
+- **Resolve window:** the colour swatches use Resolve's own marker colours (some looked alike under different names).
 - The release only carries `BeatAnalyzer.zip`. The copy `BeatThis.zip` for the updater of 0.0.3/0.0.4 (program name
   BeatThis) is no longer uploaded; such an installation is updated once by hand with the ZIP.
 

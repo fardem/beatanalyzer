@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.6.1** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
+**Version 0.6.2** · [Changelog](CHANGELOG.md) · [Licence](LICENSE) · **English** · [Deutsch](README.de.md) · [Türkçe](README.tr.md)
 
 BeatAnalyzer finds the **beats, downbeats, tempo and time signature** of a song and puts them into
 **DaVinci Resolve** as **coloured markers on your audio clip** and as a **subtitle track** under the song. The
@@ -217,9 +217,9 @@ window shows it before and after. MP3 files without that delay need no correctio
 - **Tiles:** tempo, time signature (with the share of bars that have it), number of bars, tempo stability, beat
   interval with the grid jitter (± ms: below ~10 ms the markers sit frame-exact), audio file. The **Smoothing** slider in the time signature tile recomputes the bars at once.
 - **Waveform & beat grid:** bars and beats as lines, the beat (BAF) and downbeat (DAF) curves of the model.
-  Quick zoom 5 s / 15 s / 30 s / 60 s, magnifier, overview with a frame you can drag.
+  Quick zoom 5 s / 15 s / 30 s / 60 s (double-click: default when a song loads), magnifier, overview with a frame you can drag.
 - **Player:** play from any point, **loop** (grey = off, yellow A-B = the section in the blue frame, green = the
-  whole song), song volume (click the note to mute the song and hear only the metronome), sample-exact **metronome** on the detected beats (higher click on the downbeat), speed
+  whole song), song volume (the speaker next to it mutes the song – only the metronome is heard), sample-exact **metronome** on the detected beats (higher click on the downbeat), speed
   0.5× to 1.5×,
   tap tempo.
 - **Song structure & live:** every bar is compared with every other by its notes (chords), its sound colour
