@@ -256,3 +256,9 @@ Note = Song stumm, Cue-/Abschnittsfarben im Resolve-Fenster (Wunsch des Nutzers,
 JSON / erstem Marker / Untertitel, Doppelklick auf blauen Rahmen spielt Ausschnitt, Rückgängig in der Beat-Tabelle,
 Spuren 1×/2× statt Griff, Hilfe-Punkte in den Farben der Grafiken. Testliste: `docs/resolve-test-0.6.1.md`.
 Testlisten künftig auf Deutsch.
+
+**0.6.2 (2026-11-19), Test 0.6.1:** F2, F3, F4, F8, 22 bestanden; N5 entfällt (keine DAW). Umgesetzt: blauer Rahmen
+spielt nach dem Ziehen ab der Loslass-Stelle (F5), Song/Metronom einheitlich stumm mit Symbolen statt Wörtern (F1,
+Metronom-Symbol nach Skizze des Nutzers), Rückgängig vor Zurücksetzen im gefalteten Takt (F6), Resolve-Farbfelder in
+Resolves eigenen Farben (F7), Doppelklick auf Schnellzoom = Standardfenster beim Laden (Wunsch). BPM pro Marker in
+der JSON bleibt (Entscheidung des Nutzers). Testliste: `docs/resolve-test-0.6.2.md`.

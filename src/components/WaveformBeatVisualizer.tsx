@@ -1,6 +1,15 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { AnalysisResult, BeatItem } from '../types/analyzer';
 import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
+import {
+  DEFAULT_WINDOW_KEY,
+  initialZoomFor,
+  isDragMove,
+  parseDefaultWindow,
+  releaseSeekTime,
+  seekInFrame,
+  toggleDefaultWindow,
+} from '../utils/waveView';
 import { useI18n } from '../i18n';
 
 interface WaveformBeatVisualizerProps {
@@ -156,6 +165,14 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   const [showDaf, setShowDaf] = useState<boolean>(true);
   const [showBeats, setShowBeats] = useState<boolean>(true);
   const [isLoupeEnabled, setIsLoupeEnabled] = useState<boolean>(false);
+  // quick window applied when a song loads; set by double-click on 5 s / 15 s / ... (wish of the user, test 0.6.1)
+  const [defaultWindow, setDefaultWindow] = useState<number | null>(() => {
+    try {
+      return parseDefaultWindow(localStorage.getItem(DEFAULT_WINDOW_KEY), QUICK_WINDOWS_SEC);
+    } catch {
+      return null;
+    }
+  });
 
   // Mouse drag / interaction state
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -218,6 +235,16 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   );
   const opticalMagnification =
     (LOUPE_WIDTH_PX / Math.max(0.5, loupeSpan)) / (safeMainWidth / Math.max(0.5, visibleDuration));
+
+  // a new song: start with the default quick window, if one is set
+  useEffect(() => {
+    if (!audioBuffer || defaultWindow === null) return;
+    const songDur = audioBuffer.duration || duration;
+    const songMaxZoom = Math.max(16.0, songDur / QUICK_WINDOWS_SEC[0]);
+    setZoom(initialZoomFor(songDur, defaultWindow, songMaxZoom));
+    setScrollOffsetSec(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when a new song is loaded
+  }, [audioBuffer]);
 
   // Auto-scroll only when playhead itself moves beyond the visible viewport (so user panning isn't overwritten)
   useEffect(() => {
@@ -1018,7 +1045,20 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       }
     };
 
-    const handleWindowMouseUp = () => {
+    const handleWindowMouseUp = (e: MouseEvent) => {
+      // a drag of the blue frame plays on from where the mouse is released (test 0.6.1 F5);
+      // not with the loop "section": there the left edge of the frame is the start of the loop
+      const start = minimapDragStartRef.current;
+      const rect = minimapCanvasRef.current?.getBoundingClientRect();
+      if (minimapDragMode === 'pan' && start && rect && rect.width > 0 && followPlayhead && isDragMove(start.startX, e.clientX)) {
+        // where the frame now starts (as in the move handler; the state may not be rendered yet)
+        const maxOffset = Math.max(0, duration - visibleDuration);
+        const frameStart = Math.max(
+          0,
+          Math.min(start.startOffsetSec + ((e.clientX - start.startX) / rect.width) * duration, maxOffset)
+        );
+        onSeek(seekInFrame(releaseSeekTime(e.clientX, rect.left, rect.width, duration), frameStart, visibleDuration, duration));
+      }
       minimapDragStartRef.current = null;
       setMinimapDragMode('none');
     };
@@ -1029,7 +1069,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
     };
-  }, [minimapDragMode, duration, visibleDuration, onSeek]);
+  }, [minimapDragMode, duration, visibleDuration, onSeek, followPlayhead]);
 
   const handleZoom = (factor: number) => {
     const nextZoom = Math.max(1.0, Math.min(maxZoom, zoom * factor));
@@ -1047,11 +1087,30 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       handleResetZoom();
       return;
     }
+    showQuickWindow(windowSec);
+  };
+
+  const showQuickWindow = (windowSec: number) => {
     const targetZoom = Math.min(maxZoom, duration / windowSec);
     const nextVisibleDur = duration / targetZoom;
     const nextOffset = Math.max(0, Math.min(currentTime - nextVisibleDur / 2, duration - nextVisibleDur));
     setZoom(targetZoom);
     setScrollOffsetSec(nextOffset);
+  };
+
+  // double-click: this window becomes the default when a song loads, or the default is cleared; the two clicks
+  // before it switched the window on and off again, so it is shown once more
+  const handleQuickWindowDoubleClick = (windowSec: number) => {
+    if (duration <= windowSec) return;
+    const next = toggleDefaultWindow(defaultWindow, windowSec);
+    setDefaultWindow(next);
+    try {
+      if (next === null) localStorage.removeItem(DEFAULT_WINDOW_KEY);
+      else localStorage.setItem(DEFAULT_WINDOW_KEY, String(next));
+    } catch {
+      /* without storage the default holds until the page is reloaded */
+    }
+    showQuickWindow(windowSec);
   };
 
   const handleResetZoom = () => {
@@ -1201,15 +1260,19 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
             <div className="w-px h-3.5 bg-slate-800 mx-0.5 shrink-0" aria-hidden="true" />
             {QUICK_WINDOWS_SEC.map((sec) => {
               const active = activeQuickWindow === sec;
+              const isDefault = defaultWindow === sec;
               const tooShort = duration <= sec;
               return (
                 <button
                   key={sec}
                   type="button"
                   onClick={() => handleQuickWindow(sec)}
+                  onDoubleClick={() => handleQuickWindowDoubleClick(sec)}
                   disabled={tooShort}
                   aria-pressed={active}
-                  className={`px-1.5 py-0.5 rounded text-[11px] font-mono tabular-nums font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
+                  className={`px-1.5 py-0.5 rounded text-[11px] font-mono tabular-nums whitespace-nowrap ${
+                    isDefault ? 'font-bold underline underline-offset-2' : 'font-medium'
+                  } shrink-0 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
                     active
                       ? 'bg-cyan-900/70 text-cyan-200 border border-cyan-700/70'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -1217,9 +1280,9 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
                   title={
                     tooShort
                       ? t('web.wave.quick_too_short', { sec })
-                      : active
-                      ? t('web.wave.quick_back')
-                      : t('web.wave.quick_tip', { sec })
+                      : `${active ? t('web.wave.quick_back') : t('web.wave.quick_tip', { sec })} · ${
+                          isDefault ? t('web.wave.quick_is_default') : t('web.wave.quick_default_tip', { sec })
+                        }`
                   }
                 >
                   {sec}s

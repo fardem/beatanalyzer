@@ -27,7 +27,7 @@ Log:     Workspace -> Console (lines starting with "[BeatAnalyzer]")
 Written for DaVinci Resolve Studio 21.2. The free version blocks file access for scripts.
 ]]
 
-local VERSION = "0.6.1"   -- same as the file VERSION; the installer compares it
+local VERSION = "0.6.2"   -- same as the file VERSION; the installer compares it
 
 local M = { VERSION = VERSION }
 
@@ -2024,16 +2024,19 @@ local COLOR_IDS = { cue = "ColorCue", section = "ColorSection",
                     downbeat = "ColorDownbeat", beat2 = "ColorBeat2", beat3 = "ColorBeat3", beat4 = "ColorBeat4",
                     other = "ColorOther" }
 
+-- Swatches in the colours of Resolve's own marker menu (taken from it, test 0.6.1 F7), so the window shows what
+-- Resolve will set.
 local SWATCH_HEX = {
-  Blue = "#3B82F6", Cyan = "#06B6D4", Green = "#22C55E", Yellow = "#EAB308",
-  Red = "#EF4444", Pink = "#EC4899", Purple = "#A855F7", Fuchsia = "#D946EF",
-  Rose = "#F43F5E", Lavender = "#A78BFA", Sky = "#38BDF8", Mint = "#34D399",
-  Lemon = "#FACC15", Sand = "#D6B88D", Cocoa = "#8B5E3C", Cream = "#F3E8D2",
+  Blue = "#007FE3", Cyan = "#00CED0", Green = "#00AD00", Yellow = "#F09D00",
+  Red = "#E12401", Pink = "#FF44C8", Purple = "#9013FE", Fuchsia = "#C02E6F",
+  Rose = "#FFA1B9", Lavender = "#A193C8", Sky = "#92E2FD", Mint = "#72DB00",
+  Lemon = "#DCE95A", Sand = "#C4915E", Cocoa = "#6E5143", Cream = "#F5EBE1",
 }
+M.SWATCH_HEX = SWATCH_HEX
 
 -- Colours of the web app (Tailwind; the same meaning gets the same colour in both):
 --   slate = surface and text, cyan = main action / chosen / note (beat_this, MP3), amber = licence of
---   md_beat_this, rose = remove / error, emerald = done. Resolve's marker colours (SWATCH_HEX) stay as they are.
+--   md_beat_this, rose = remove / error, emerald = done. Resolve's marker colours (SWATCH_HEX) are Resolve's own.
 local C = {
   slate950 = "#020617", slate900 = "#0F172A", slate800 = "#1E293B", slate700 = "#334155", slate600 = "#475569",
   slate500 = "#64748B", slate400 = "#94A3B8", slate300 = "#CBD5E1", slate200 = "#E2E8F0", slate100 = "#F1F5F9",

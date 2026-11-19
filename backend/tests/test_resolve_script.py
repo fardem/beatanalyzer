@@ -473,6 +473,18 @@ class ResolveScriptTests(unittest.TestCase):
                           "Sky", "Mint", "Lemon", "Sand", "Cocoa", "Cream"])
         self.assertEqual(self.M.NO_MARKER, "none")
 
+    def test_swatch_colours_as_in_resolve(self):
+        # the colours of Resolve's own marker menu (screenshot of the user, test 0.6.1 F7)
+        expected = {
+            "Blue": "#007FE3", "Cyan": "#00CED0", "Green": "#00AD00", "Yellow": "#F09D00", "Red": "#E12401",
+            "Pink": "#FF44C8", "Purple": "#9013FE", "Fuchsia": "#C02E6F", "Rose": "#FFA1B9", "Lavender": "#A193C8",
+            "Sky": "#92E2FD", "Mint": "#72DB00", "Lemon": "#DCE95A", "Sand": "#C4915E", "Cocoa": "#6E5143",
+            "Cream": "#F5EBE1",
+        }
+        swatches = {name: self.M.SWATCH_HEX[name] for name in self.M.MARKER_COLORS.values()}
+        self.assertEqual(swatches, expected)
+        self.assertEqual(len(set(swatches.values())), 16)
+
     def run_job(self, job):
         steps = 0
         while not job.step():

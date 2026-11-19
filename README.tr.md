@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Sürüm 0.6.1** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
+**Sürüm 0.6.2** · [Değişiklikler](CHANGELOG.md) · [Lisans](LICENSE) · [English](README.md) · [Deutsch](README.de.md) · **Türkçe**
 
 BeatAnalyzer bir şarkıdaki **beat'leri, downbeat'leri, tempoyu ve ölçüyü** bulur ve bunları **DaVinci Resolve**'a
 aktarır: **ses klibinizde renkli marker'lar** ve şarkının altında bir **Subtitle Track** olarak. Analiz,
@@ -219,9 +219,9 @@ atlamaz). BeatAnalyzer kesin gecikmeyi dosyadan okur ve marker'larla subtitle'la
 - **Kutucuklar:** tempo, ölçü (bu ölçüdeki ölçülerin payıyla), toplam ölçü, tempo kararlılığı, ızgara sapmasıyla beat aralığı (± ms:
   yaklaşık 10 ms'nin altında marker'lar kare kare doğru oturur), ses dosyası. Ölçü kutucuğundaki **Düzeltme** kaydırıcısı ölçüleri hemen yeniden hesaplar.
 - **Dalga formu ve beat ızgarası:** çizgi olarak ölçüler ve beat'ler, modelin beat (BAF) ve downbeat (DAF) eğrileri.
-  Hızlı yakınlaştırma 5 s / 15 s / 30 s / 60 s, büyüteç, sürüklenebilir çerçeveli genel görünüm.
+  Hızlı yakınlaştırma 5 s / 15 s / 30 s / 60 s (çift tık: yüklemede varsayılan), büyüteç, sürüklenebilir çerçeveli genel görünüm.
 - **Oynatıcı:** istenen yerden çalma, **döngü** (gri = kapalı, sarı A-B = mavi çerçevedeki bölüm, yeşil = tüm
-  şarkı), şarkının ses düzeyi (notaya tıklayınca şarkı susar – yalnızca metronom), algılanan beat'lerde örnek hassasiyetinde **metronom** (downbeat'te daha yüksek tık), hız 0,5× – 1,5×,
+  şarkı), şarkının ses düzeyi (yanındaki hoparlör şarkıyı susturur – yalnızca metronom), algılanan beat'lerde örnek hassasiyetinde **metronom** (downbeat'te daha yüksek tık), hız 0,5× – 1,5×,
   tap tempo.
 - **Şarkı yapısı ve canlı:** her ölçü diğer tüm ölçülerle karşılaştırılır – notalarına (akorlar), ses rengine
   (enstrümanlar) ve ses seviyesine göre; bölüm değişimleri (▲ daha yüksek, ▼ daha sakin, ◆ farklı) kendi “1”lerinde
