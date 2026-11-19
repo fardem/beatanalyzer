@@ -110,7 +110,7 @@
     "sec_output": "2. Resolve'daki çıktı",
     "smooth_label": "Düzeltme",
     "smooth_off": "kapalı",
-    "smooth_tip": "%0 = kapalı: ölçüler beat_this'in duyduğu gibi.\nDaha fazla % = daha düzenli ızgara.\n%100 = tam düzeltme; yalnızca „1“ açıkça başka yerdeyse yeniden başlar.\nBeat'ler değişmez.",
+    "smooth_tip": "%0 = kapalı: ölçüler beat_this'in duyduğu gibi.\nDaha fazla % = daha düzenli ızgara.\n%100 = tam düzeltme; yalnızca „1“ açıkça başka yerdeyse yeniden başlar.\nBeat'ler değişmez.\nRubato, free jazz, sabit ölçü yok: %0 kullanın.",
     "analyze_none": "Media Pool'da tam olarak bir ses klibi seçin.",
     "analyze_many": "Birden fazla klip seçili – lütfen tam olarak bir ses klibi seçin.",
     "analyze_no_path": "Seçili öğenin dosyası yok (ör. Timeline veya Compound Clip).",

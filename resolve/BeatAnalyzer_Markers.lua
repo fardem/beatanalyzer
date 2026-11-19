@@ -153,7 +153,7 @@ local BA = {
       ["plugin.sec_source"] = "1. Source & analysis model",
       ["plugin.smooth_label"] = "Smoothing",
       ["plugin.smooth_off"] = "off",
-      ["plugin.smooth_tip"] = "0 % = off: bars as beat_this hears them.\nMore % = a more even grid.\n100 % = fully smoothed; starts anew only where the '1' is clearly elsewhere.\nThe beats never change.",
+      ["plugin.smooth_tip"] = "0 % = off: bars as beat_this hears them.\nMore % = a more even grid.\n100 % = fully smoothed; starts anew only where the '1' is clearly elsewhere.\nThe beats never change.\nRubato, free jazz, no fixed metre: use 0 %.",
       ["plugin.step_analysis"] = "Analysis of '{clip}'",
       ["plugin.step_analysis_hint"] = "Cancel works only now. Up to here nothing in the project has changed.",
       ["plugin.step_analyze"] = "detecting beats",

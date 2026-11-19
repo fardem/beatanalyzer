@@ -18,6 +18,7 @@ Fixes from the test of 0.6.2.
 - **Documentation:** the READMEs (en/de/tr) say clearly that music with strong rubato, free jazz or no fixed metre
   needs Smoothing at 0 % – the smoothing is made for a fairly steady grid and could set bar lines where the music
   has none.
+  The tooltip of the Smoothing slider (web app and Resolve window, de/en/tr) says the same in one line.
 
 ## [0.6.2] – 2026-11-19
 

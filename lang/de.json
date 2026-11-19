@@ -109,7 +109,7 @@
     "sec_output": "2. Ausgabe in Resolve",
     "smooth_label": "Glätten",
     "smooth_off": "aus",
-    "smooth_tip": "0 % = aus: Takte wie von beat_this.\nMehr % = gleichmäßigeres Raster.\n100 % = voll geglättet; neu angesetzt nur bei klar anderer „1“.\nDie Beats bleiben unverändert.",
+    "smooth_tip": "0 % = aus: Takte wie von beat_this.\nMehr % = gleichmäßigeres Raster.\n100 % = voll geglättet; neu angesetzt nur bei klar anderer „1“.\nDie Beats bleiben unverändert.\nRubato, Free Jazz, kein festes Metrum: 0 % nehmen.",
     "analyze_none": "Im Media Pool genau einen Audio-Clip auswählen.",
     "analyze_many": "Mehrere Clips ausgewählt – bitte genau einen Audio-Clip auswählen.",
     "analyze_no_path": "Der ausgewählte Eintrag hat keine Datei (z. B. Timeline oder Compound Clip).",

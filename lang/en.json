@@ -109,7 +109,7 @@
     "sec_output": "2. Output in Resolve",
     "smooth_label": "Smoothing",
     "smooth_off": "off",
-    "smooth_tip": "0 % = off: bars as beat_this hears them.\nMore % = a more even grid.\n100 % = fully smoothed; starts anew only where the '1' is clearly elsewhere.\nThe beats never change.",
+    "smooth_tip": "0 % = off: bars as beat_this hears them.\nMore % = a more even grid.\n100 % = fully smoothed; starts anew only where the '1' is clearly elsewhere.\nThe beats never change.\nRubato, free jazz, no fixed metre: use 0 %.",
     "analyze_none": "Select exactly one audio clip in the Media Pool.",
     "analyze_many": "Several clips selected – please select exactly one audio clip.",
     "analyze_no_path": "The selected item has no file (e.g. a Timeline or a Compound Clip).",
