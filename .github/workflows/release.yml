@@ -24,12 +24,10 @@ jobs:
       - name: Build the ZIP
         run: |
           git archive --format=zip --prefix=BeatAnalyzer/ -o BeatAnalyzer.zip HEAD
-          # The updater up to 0.0.4 (program name BeatThis) looks for BeatThis.zip
-          cp BeatAnalyzer.zip BeatThis.zip
       - name: Create the release if needed and attach the ZIP
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
             || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Changes: see CHANGELOG.md"
-          gh release upload "$GITHUB_REF_NAME" BeatAnalyzer.zip BeatThis.zip --clobber
+          gh release upload "$GITHUB_REF_NAME" BeatAnalyzer.zip --clobber

@@ -44,9 +44,10 @@ class VersionTests(unittest.TestCase):
         self.assertIsNone(updater.parse_release({"tag_name": "0.0.3", "assets": []}))
         self.assertIsNone(updater.parse_release({"tag_name": "0.0.3", "prerelease": True, "assets": data["assets"]}))
 
-    def test_parse_release_takes_old_asset_name(self):
+    def test_parse_release_ignores_old_asset_name(self):
+        # BeatThis.zip (name up to 0.0.4) is no longer uploaded and no longer taken
         old = {"tag_name": "0.0.5", "assets": [{"name": "BeatThis.zip", "url": "https://api/asset/old"}]}
-        self.assertEqual(updater.parse_release(old)["zip"], "https://api/asset/old")
+        self.assertIsNone(updater.parse_release(old))
         both = {"tag_name": "0.0.5", "assets": [{"name": "BeatThis.zip", "url": "https://api/asset/old"},
                                                 {"name": "BeatAnalyzer.zip", "url": "https://api/asset/new"}]}
         self.assertEqual(updater.parse_release(both)["zip"], "https://api/asset/new")

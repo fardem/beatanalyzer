@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- The release only carries `BeatAnalyzer.zip`. The copy `BeatThis.zip` for the updater of 0.0.3/0.0.4 (program name
+  BeatThis) is no longer uploaded; such an installation is updated once by hand with the ZIP.
+
 ## [0.6.1] – 2026-11-18
 
 Fixes and wishes from the test of 0.4.0 – 0.6.0.
