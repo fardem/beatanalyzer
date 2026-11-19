@@ -709,7 +709,7 @@ class AnalysisDialogTests(DialogTests):
             self.assertEqual(self.item("Smooth").ToolTip,
                              "0 % = aus: Takte wie von beat_this.\nMehr % = gleichmäßigeres Raster.\n"
                              "100 % = voll geglättet; neu angesetzt nur bei klar anderer „1“.\n"
-                             "Die Beats bleiben unverändert.")
+                             "Die Beats bleiben unverändert.\nRubato, Free Jazz, kein festes Metrum: 0 % nehmen.")
             self.close()
         self.run_dialog(scenario)
 
