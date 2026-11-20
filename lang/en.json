@@ -501,7 +501,7 @@
       "help_item2": "Dashed amber = the model is unsure here (below 60 %). Check these spots by ear before you cut on them.",
       "help_item3": "BAF / DAF at the bottom: how sure the model is of a beat (cyan) or a “1” (rose) at each moment – high peaks are clear hits.",
       "help_tip": "Tip: zoom to 5–15 s or use the magnifier. A line should sit on the start of the kick or snare, not after it. If all lines are a little early or late, fix it in “Beat evidence & grid fixes”.",
-      "edit_hint": "Shift+click: add beat · Alt+click: remove beat"
+      "edit_hint": "Shift+click: beat + · Alt+click: beat −"
     },
     "spectrum": {
       "mode_live": "Live",

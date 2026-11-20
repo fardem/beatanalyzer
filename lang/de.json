@@ -501,7 +501,7 @@
       "help_item2": "Gelb gestrichelt = hier ist sich das Modell unsicher (unter 60 %). Diese Stellen vor dem Schneiden abhören.",
       "help_item3": "BAF / DAF unten: wie sicher das Modell an jeder Stelle einen Beat (Cyan) oder eine „1“ (Rot) hört – hohe Spitzen sind klare Schläge.",
       "help_tip": "Tipp: Auf 5–15 s zoomen oder die Lupe nutzen. Eine Linie gehört auf den Beginn von Kick oder Snare, nicht dahinter. Liegen alle Linien etwas zu früh oder zu spät, korrigiere es unter „Beat-Evidenz & Takt-Korrektur“.",
-      "edit_hint": "Umschalt+Klick: Beat einfügen · Alt+Klick: Beat löschen"
+      "edit_hint": "Umschalt+Klick: Beat + · Alt+Klick: Beat −"
     },
     "spectrum": {
       "mode_live": "Live",

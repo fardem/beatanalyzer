@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+- **Line above the overview:** only the name and, on the right, the short editing keys of the waveform
+  (Shift+click: beat + · Alt+click: beat −). What the blue frame does is the tooltip of the overview – before, three
+  texts wrapped into each other.
+
 ## [0.6.4] – 2026-11-20
 
 Wishes from the test of 0.6.3.
