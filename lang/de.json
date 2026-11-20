@@ -485,7 +485,7 @@
       "loupe_tip": "Lupe (~{zoom}× / {span} s) beim Überfahren einschalten",
       "overview": "Übersicht",
       "overview_click": "Klick springt an diese Stelle",
-      "overview_drag": "Blauen Rahmen ziehen: verschieben, spielt ab der Loslass-Stelle weiter · Doppelklick spielt ab dem linken Rand · Klick daneben springt",
+      "overview_drag": "Blauen Rahmen ziehen: verschieben, die Wiedergabe folgt der Maus und spielt ab der Loslass-Stelle weiter · Doppelklick spielt ab dem linken Rand · Klick daneben springt",
       "quick_back": "Zurück zur ganzen Datei",
       "quick_default_tip": "Doppelklick: {sec} s als Standard beim Laden",
       "quick_is_default": "Standard beim Laden – Doppelklick hebt ihn auf",

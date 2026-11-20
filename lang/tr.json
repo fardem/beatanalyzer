@@ -486,7 +486,7 @@
       "loupe_tip": "Üzerine gelince büyüteci aç (~{zoom}× / {span} sn)",
       "overview": "Genel bakış",
       "overview_click": "Oraya atlamak için tıklayın",
-      "overview_drag": "Mavi çerçeveyi sürükleyerek taşı, bıraktığın yerden çalmaya devam eder · çift tık sol kenardan çalar · dışına tıklayınca atlar",
+      "overview_drag": "Mavi çerçeveyi sürükleyerek taşı, çalma fareyi izler ve bıraktığın yerden devam eder · çift tık sol kenardan çalar · dışına tıklayınca atlar",
       "quick_back": "Tüm dosyaya dön",
       "quick_default_tip": "Çift tık: yüklemede varsayılan {sec} sn",
       "quick_is_default": "Yüklemede varsayılan – çift tık kaldırır",

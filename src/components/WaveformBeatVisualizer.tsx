@@ -6,10 +6,8 @@ import {
   initialZoomFor,
   QUICK_DOUBLE_CLICK_MS,
   quickWindowClick,
-  isDragMove,
+  frameDragSeek,
   parseDefaultWindow,
-  releaseSeekTime,
-  seekInFrame,
   toggleDefaultWindow,
 } from '../utils/waveView';
 import { useI18n } from '../i18n';
@@ -187,6 +185,8 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
   const [minimapDragMode, setMinimapDragMode] = useState<'none' | 'pan' | 'seek'>('none');
   const [isHoveringViewportBox, setIsHoveringViewportBox] = useState<boolean>(false);
   const minimapDragStartRef = useRef<{ startX: number; startOffsetSec: number } | null>(null);
+  // the frame was dragged (moved 4 px) since it was grabbed: from then on the playhead follows the mouse
+  const frameDraggedRef = useRef<boolean>(false);
   const prevCurrentTimeRef = useRef<number>(currentTime);
   const [containerWidth, setContainerWidth] = useState<number>(800);
   const [hoverInfo, setHoverInfo] = useState<{
@@ -1006,6 +1006,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
 
     if (isInsideViewportHitArea(e.clientX)) {
       minimapDragStartRef.current = { startX: e.clientX, startOffsetSec: scrollOffsetSec };
+      frameDraggedRef.current = false;
       setMinimapDragMode('pan');
       return;
     }
@@ -1040,6 +1041,17 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
           Math.min(minimapDragStartRef.current.startOffsetSec + deltaSec, maxOffset)
         );
         setScrollOffsetSec(clampedOffset);
+        // the playhead follows the mouse inside the frame – scrubbing, as in a drag in the free overview
+        // (test 0.6.3 B1); not with the loop "section": there the left edge of the frame is the start of the loop
+        if (followPlayhead) {
+          const t = frameDragSeek(
+            minimapDragStartRef.current, e.clientX, rect.left, rect.width, duration, visibleDuration, frameDraggedRef.current
+          );
+          if (t !== null) {
+            frameDraggedRef.current = true;
+            onSeek(t);
+          }
+        }
       } else if (minimapDragMode === 'seek') {
         const x = e.clientX - rect.left;
         const frac = Math.max(0, Math.min(1, x / rect.width));
@@ -1058,15 +1070,11 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
       // not with the loop "section": there the left edge of the frame is the start of the loop
       const start = minimapDragStartRef.current;
       const rect = minimapCanvasRef.current?.getBoundingClientRect();
-      if (minimapDragMode === 'pan' && start && rect && rect.width > 0 && followPlayhead && isDragMove(start.startX, e.clientX)) {
-        // where the frame now starts (as in the move handler; the state may not be rendered yet)
-        const maxOffset = Math.max(0, duration - visibleDuration);
-        const frameStart = Math.max(
-          0,
-          Math.min(start.startOffsetSec + ((e.clientX - start.startX) / rect.width) * duration, maxOffset)
-        );
-        onSeek(seekInFrame(releaseSeekTime(e.clientX, rect.left, rect.width, duration), frameStart, visibleDuration, duration));
+      if (minimapDragMode === 'pan' && start && rect && followPlayhead) {
+        const t = frameDragSeek(start, e.clientX, rect.left, rect.width, duration, visibleDuration, frameDraggedRef.current);
+        if (t !== null) onSeek(t);
       }
+      frameDraggedRef.current = false;
       minimapDragStartRef.current = null;
       setMinimapDragMode('none');
     };
