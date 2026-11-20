@@ -502,7 +502,7 @@
       "help_item2": "Kesikli sarı = model burada emin değil (%60'ın altında). Bu yerlerde kesmeden önce dinle.",
       "help_item3": "Alttaki BAF / DAF: modelin her anda bir beat'ten (camgöbeği) veya bir “1”den (kırmızı) ne kadar emin olduğu – yüksek tepeler net vuruşlardır.",
       "help_tip": "İpucu: 5–15 sn'ye yakınlaş ya da büyüteci kullan. Çizgi, kick veya snare'in başında olmalı, arkasında değil. Tüm çizgiler biraz erken ya da geç ise “Beat Kanıtları ve Ölçü Ayarı”nda düzelt.",
-      "edit_hint": "Shift+tık: beat ekle · Alt+tık: beat sil"
+      "edit_hint": "Shift+tık: beat + · Alt+tık: beat −"
     },
     "spectrum": {
       "mode_live": "Canlı",

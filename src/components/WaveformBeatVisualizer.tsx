@@ -1421,14 +1421,15 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
 
       {/* Mini-map Scrubber */}
       <div className="space-y-1">
-        <div className="flex justify-between text-[10px] text-slate-500 font-mono px-0.5">
-          <span>{t('web.wave.overview')}</span>
-          {canEditBeats && <span className="text-slate-400">{t('web.wave.edit_hint')}</span>}
-          <span>
-            {zoom > 1.01
-              ? t('web.wave.overview_drag')
-              : t('web.wave.overview_click')}
-          </span>
+        {/* one short line: the name, and on the right the editing keys of the waveform above; what the frame does is
+            the tooltip of the overview (test 0.6.4: the texts wrapped into each other, "too much text") */}
+        <div className="flex items-baseline justify-between gap-3 text-[10px] text-slate-500 font-mono px-0.5 whitespace-nowrap">
+          <span className="font-semibold text-slate-400">{t('web.wave.overview')}</span>
+          {canEditBeats && (
+            <span className="min-w-0 truncate text-slate-400" title={t('web.wave.edit_hint')}>
+              {t('web.wave.edit_hint')}
+            </span>
+          )}
         </div>
         <div
           className={`relative rounded-lg border border-slate-800 overflow-hidden bg-slate-950 h-9 shadow-inner select-none ${
@@ -1442,6 +1443,7 @@ export const WaveformBeatVisualizer: React.FC<WaveformBeatVisualizerProps> = ({
           onDoubleClick={(e) => {
             if (onPlayFrom && zoom > 1.01 && isInsideViewportHitArea(e.clientX)) onPlayFrom(scrollOffsetSec);
           }}
+          title={zoom > 1.01 ? t('web.wave.overview_drag') : t('web.wave.overview_click')}
           onMouseMove={handleMinimapHoverMove}
           onMouseLeave={() => setIsHoveringViewportBox(false)}
         >
