@@ -2277,8 +2277,10 @@ function M.main()
       -- with a line over both columns says where they come from (test 0.6.2 G5)
       ui:HGroup({ Weight = 0, Spacing = 8,
         ui:VGroup({ Weight = 2, Spacing = 4,
-          ui:Label({ ID = "ColorWebAppHdr", Text = T("plugin.color_webapp"), Weight = 0,
-                     StyleSheet = "color: " .. C.cyan300 .. "; font-size: 11px; border-bottom: 1px solid "
+          -- margin-top: half a line of air above the heading (test 0.6.3 B2: it stuck to the beat colours)
+          ui:Label({ ID = "ColorWebAppHdr", Text = T("plugin.color_webapp"), Weight = 0, MinimumSize = { 0, 26 },
+                     Alignment = { AlignBottom = true, AlignLeft = true },
+                     StyleSheet = "color: " .. C.cyan300 .. "; font-size: 11px; margin-top: 8px; border-bottom: 1px solid "
                        .. C.cyan800 .. "; padding-bottom: 2px;" }),
           ui:HGroup({ Weight = 0, Spacing = 8,
             color_col("cue", T("plugin.color_cue")),

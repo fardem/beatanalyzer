@@ -307,6 +307,10 @@ class DialogTests(unittest.TestCase):
             self.assertEqual(self.item("ColorWebAppHdr").Text, "Aus der Web-App")
             self.assertEqual(self.item("ColorCueLabel").Text, "Cue-Marke")
             self.assertEqual(self.item("ColorSectionLabel").Text, "Abschnittswechsel")
+            # half a line of air above the heading, so it does not stick to the beat colours (test 0.6.3 B2)
+            hdr = self.item("ColorWebAppHdr")
+            self.assertGreaterEqual(list(hdr.MinimumSize.values())[1], 26)
+            self.assertIn("margin-top: 8px", hdr.StyleSheet)
             self.close()
         self.run_dialog(scenario)
 
