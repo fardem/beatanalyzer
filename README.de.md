@@ -1,6 +1,6 @@
 # BeatAnalyzer
 
-**Version 0.6.4** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
+**Version 0.6.5** · [Changelog](CHANGELOG.md) · [Lizenz](LICENSE) · [English](README.md) · **Deutsch** · [Türkçe](README.tr.md)
 
 BeatAnalyzer erkennt in einem Song **Beats, Downbeats, Tempo und Taktart** und bringt sie nach
 **DaVinci Resolve** – als **farbige Marker auf deinem Audio-Clip** und als **Subtitle Track** unter dem Song. Die
