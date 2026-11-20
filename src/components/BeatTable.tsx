@@ -105,36 +105,6 @@ export const BeatTable: React.FC<BeatTableProps> = ({
         </span>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* the same undo / reset as in the fix panel – also here, where the beats are edited (test 0.6.0, 18) */}
-          {onUndoGrid && onResetGrid && (
-            <div className="flex items-center gap-1">
-              {correctionCount > 0 && (
-                <span className="text-[10px] font-medium text-amber-300 whitespace-nowrap" title={t('web.evidence.fix_count_tip')}>
-                  {t('web.evidence.fix_count', { n: correctionCount })}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={onUndoGrid}
-                disabled={correctionCount === 0}
-                title={t('web.evidence.fix_undo_tip')}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-700 bg-slate-900 text-xs text-slate-200 hover:text-white hover:border-slate-500 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
-              >
-                <Undo2 className="w-3 h-3" />
-                {t('web.evidence.fix_undo')}
-              </button>
-              <button
-                type="button"
-                onClick={onResetGrid}
-                disabled={correctionCount === 0}
-                title={t('web.evidence.fix_reset_tip')}
-                aria-label={t('web.evidence.fix_reset')}
-                className="p-1.5 rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:text-white hover:border-slate-500 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
-              >
-                <RotateCcw className="w-3 h-3" />
-              </button>
-            </div>
-          )}
           <label
             className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none"
             title={t('web.table.follow_tip')}
@@ -206,7 +176,42 @@ export const BeatTable: React.FC<BeatTableProps> = ({
               <th className="py-2.5 px-3">Tempo</th>
               <th className="py-2.5 px-3">{t('web.table.col_type')}</th>
               <th className="py-2.5 px-3">Confidence</th>
-              <th className="py-2.5 px-3 text-right">{t('web.table.col_action')}</th>
+              <th className="py-1.5 px-3 text-right">
+                {/* undo / reset (the same as in the fix panel) sit over the action buttons they undo
+                    (test 0.6.0, 18; moved into the header, test 0.6.3 B3) */}
+                <div className="flex items-center justify-end gap-2 normal-case tracking-normal font-normal">
+                  {onUndoGrid && onResetGrid && (
+                    <div className="flex items-center gap-1">
+                      {correctionCount > 0 && (
+                        <span className="text-[10px] font-medium text-amber-300 whitespace-nowrap" title={t('web.evidence.fix_count_tip')}>
+                          {t('web.evidence.fix_count', { n: correctionCount })}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={onUndoGrid}
+                        disabled={correctionCount === 0}
+                        title={t('web.evidence.fix_undo_tip')}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-700 bg-slate-900 text-xs text-slate-200 hover:text-white hover:border-slate-500 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
+                      >
+                        <Undo2 className="w-3 h-3" />
+                        {t('web.evidence.fix_undo')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onResetGrid}
+                        disabled={correctionCount === 0}
+                        title={t('web.evidence.fix_reset_tip')}
+                        aria-label={t('web.evidence.fix_reset')}
+                        className="p-1.5 rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:text-white hover:border-slate-500 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                  <span className="uppercase tracking-wider font-semibold">{t('web.table.col_action')}</span>
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60 font-mono">

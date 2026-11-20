@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.6.4] – 2026-11-20
+
+Wishes from the test of 0.6.3.
+
+### Changed
+- **Dragging the blue frame scrubs:** the playhead follows the mouse inside the frame while you drag – as in a drag in
+  the free overview – and playback goes on where you release it. A click on the frame without moving still changes
+  nothing; with the loop "section" the left edge stays the loop start.
+- **Beat table:** undo, reset and "n step(s) active" sit in the header of the *Action* column, over the buttons they
+  undo.
+- **Resolve window:** half a line of air above *From the web app*.
+
 ## [0.6.3] – 2026-11-19
 
 Fixes from the test of 0.6.2.

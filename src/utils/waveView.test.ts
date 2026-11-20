@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { initialZoomFor, isDragMove, parseDefaultWindow, releaseSeekTime, seekInFrame, toggleDefaultWindow, quickWindowClick } from './waveView';
+import { frameDragSeek, initialZoomFor, isDragMove, parseDefaultWindow, releaseSeekTime, seekInFrame, toggleDefaultWindow, quickWindowClick } from './waveView';
 
 test('frame drag released: playhead goes to the time under the mouse', () => {
   assert.equal(releaseSeekTime(150, 100, 200, 180), 45);
@@ -75,4 +75,31 @@ test('second click on the same quick window within 500 ms: double-click, it beco
   assert.equal(quickWindowClick(15, 15, { sec: 15, at: 600 }, 1000), 'default');
   assert.equal(quickWindowClick(15, null, { sec: 15, at: 600 }, 1000), 'default');
   assert.equal(quickWindowClick(30, 15, { sec: 15, at: 900 }, 1000), 'show');
+});
+
+// overview 200 px wide at x = 100, song 180 s, frame 15 s grabbed at x = 150 while it started at 60 s
+const DRAG = { startX: 150, startOffsetSec: 60 };
+
+test('frame drag: no seek before the mouse moved 4 px (a click on the frame)', () => {
+  assert.equal(frameDragSeek(DRAG, 152, 100, 200, 180, 15), null);
+});
+
+test('frame drag: the time under the mouse while dragging (scrubbing), inside the moved frame', () => {
+  // mouse 20 px right = +18 s: frame 78 … 93 s, mouse at (170-100)/200*180 = 63 s → start of the frame
+  assert.equal(frameDragSeek(DRAG, 170, 100, 200, 180, 15), 78);
+  // frame 36 … 51 s grabbed at 45 s (x = 150), moved 20 px: frame 54 … 69 s, mouse at 63 s
+  assert.ok(Math.abs((frameDragSeek({ startX: 150, startOffsetSec: 36 }, 170, 100, 200, 180, 15) ?? -1) - 63) < 1e-9);
+});
+
+test('frame drag past the left edge: the start of the song', () => {
+  assert.equal(frameDragSeek(DRAG, 0, 100, 200, 180, 15), 0);
+});
+
+test('frame drag past the right edge: the start of the last window', () => {
+  assert.equal(frameDragSeek(DRAG, 900, 100, 200, 180, 15), 165);
+});
+
+test('frame drag back near the grab point after a drag: still scrubbing', () => {
+  // frame 36 … 51 s grabbed at 45 s (x = 150), moved away and back to x = 151
+  assert.ok(Math.abs((frameDragSeek({ startX: 150, startOffsetSec: 36 }, 151, 100, 200, 180, 15, true) ?? -1) - 45.9) < 1e-9);
 });

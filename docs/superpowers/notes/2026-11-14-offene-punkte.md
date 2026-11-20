@@ -294,3 +294,7 @@ Vorschlag der Takt-Korrektur:
   und Resolve-Fenster.
 - *Offen:* Schwellwerte (an echten Rubato-, Free-Jazz- und Pop-Beispielen festlegen; Pop mit Tempowechseln darf keinen
   Fehlalarm auslösen), Text, ob md_beat_this (ohne Regler) einen eigenen Hinweis braucht.
+
+**0.6.4 (2026-11-20), Test 0.6.3:** H1, H2 bestanden. B1: Ziehen des blauen Rahmens scrubbt jetzt (Playhead folgt
+der Maus wie beim Ziehen im freien Feld), B2: Luft über „Aus der Web-App“ im Resolve-Fenster, B3: Rückgängig /
+Zurücksetzen in der Kopfzeile der Spalte „Aktion“ der Beat-Tabelle. Testliste: `docs/resolve-test-0.6.4.md`.

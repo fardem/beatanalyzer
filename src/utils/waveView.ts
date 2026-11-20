@@ -68,3 +68,26 @@ export function quickWindowClick(
   if (last && last.sec === sec && now - last.at < QUICK_DOUBLE_CLICK_MS) return 'default';
   return activeSec === sec ? 'wait' : 'show';
 }
+
+/**
+ * Seek time while the blue frame is dragged and when it is released (test 0.6.3 B1: scrubbing like a drag in the free
+ * overview): null until the mouse moved 4 px (a click on the frame) – once it did (alreadyDragged), also back near the
+ * grab point; else the time under the mouse inside the moved frame (see seekInFrame).
+ */
+export function frameDragSeek(
+  drag: { startX: number; startOffsetSec: number },
+  clientX: number,
+  rectLeft: number,
+  rectWidth: number,
+  duration: number,
+  visibleDuration: number,
+  alreadyDragged = false
+): number | null {
+  if (!(rectWidth > 0) || (!alreadyDragged && !isDragMove(drag.startX, clientX))) return null;
+  const maxOffset = Math.max(0, duration - visibleDuration);
+  const frameStart = Math.max(
+    0,
+    Math.min(drag.startOffsetSec + ((clientX - drag.startX) / rectWidth) * duration, maxOffset)
+  );
+  return seekInFrame(releaseSeekTime(clientX, rectLeft, rectWidth, duration), frameStart, visibleDuration, duration);
+}
