@@ -389,14 +389,16 @@ do
 end
 
 -- 14 SRT on a subtitle track - in a separate test timeline, your timeline stays as it is ---------------------------
+local test_tl = nil
 do
   if not srt_item then
     rec("14", "NA", "Subtitle track + AppendToTimeline", "no imported SRT")
   else
     local _, prev = call(mp, "GetCurrentFolder")
     if probe_bin then call(mp, "SetCurrentFolder", probe_bin) end
-    local _, test_tl = call(mp, "CreateEmptyTimeline", NAME .. " " .. tostring(g("os") and g("os").time and g("os").time() or ""))
+    local _, created = call(mp, "CreateEmptyTimeline", NAME .. " " .. tostring(g("os") and g("os").time and g("os").time() or ""))
     if prev then call(mp, "SetCurrentFolder", prev) end
+    test_tl = created
     if not test_tl then
       rec("14", "NO", "Subtitle track + AppendToTimeline", "CreateEmptyTimeline failed")
     else
@@ -516,11 +518,17 @@ do
   end
 end
 
--- 20 Read the subtitles that are already in the current timeline (SRT as data channel: text + time per item) ---------
+-- 20 Read subtitle items (SRT as data channel: text + time per item) - current timeline, else the test timeline of 14 --
 do
-  if not timeline then
+  local src_tl, src_name = timeline, "current timeline"
+  do
+    local _, n0 = call(timeline, "GetTrackCount", "subtitle")
+    if (tonumber(n0) or 0) == 0 and test_tl then src_tl, src_name = test_tl, "test timeline" end
+  end
+  if not src_tl then
     rec("20", "NA", "Read subtitle items", "no timeline")
   else
+    local timeline = src_tl
     local _, nt = call(timeline, "GetTrackCount", "subtitle")
     nt = tonumber(nt) or 0
     if nt == 0 then
@@ -542,7 +550,7 @@ do
         end
       end
       rec("20", named > 0 and "OK" or "NO", "Read subtitle items",
-        nt .. " track(s), " .. total .. " items | " .. table.concat(parts, " | "))
+        src_name .. ": " .. nt .. " track(s), " .. total .. " items | " .. table.concat(parts, " | "))
     end
   end
 end
@@ -558,6 +566,49 @@ do
   local okm, mp_ = pcall(function() return fu and fu:MapPath("Temp:") end)
   parts[#parts + 1] = "MapPath(Temp:)=" .. tostring(okm and mp_)
   rec("21", "INFO", "Paths", table.concat(parts, " "))
+end
+
+-- 22 Markers on the song where it ALREADY lies in the current timeline (TimelineItem:AddMarker).
+--    Media pool clip markers (test 12) only reach timeline clips inserted afterwards, so the existing uses need
+--    their own markers. Frames count from the start of the source file. They stay; the next run replaces them.
+do
+  if not (timeline and song) then
+    rec("22", "NA", "TimelineItem:AddMarker", "no timeline or no song")
+  else
+    local _, song_id = call(song, "GetMediaId")
+    local _, na = call(timeline, "GetTrackCount", "audio")
+    local fps = 30
+    do
+      local _, f = call(timeline, "GetSetting", "timelineFrameRate")
+      f = tonumber(tostring(f or ""):match("[%d%.]+"))
+      if f and f > 0 then fps = f end
+    end
+    local uses, added, where = 0, 0, {}
+    for t = 1, tonumber(na) or 0 do
+      local _, items = call(timeline, "GetItemListInTrack", "audio", t)
+      for _, it in pairs(type(items) == "table" and items or {}) do
+        local _, mpi = call(it, "GetMediaPoolItem")
+        local _, id = call(mpi, "GetMediaId")
+        if mpi and ((song_id and id == song_id) or mpi == song) then
+          uses = uses + 1
+          where[#where + 1] = "A" .. t
+          call(it, "DeleteMarkerByCustomData", TAG)
+          local colors = { "Blue", "Cyan", "Green", "Yellow" }
+          for i = 1, 4 do
+            local _, ok = call(it, "AddMarker", math.floor(i * fps + 0.5), colors[i], "FreeProbe TL " .. i .. "s",
+              "BeatAnalyzer Free probe test marker on the timeline clip", 1, TAG)
+            if ok then added = added + 1 end
+          end
+        end
+      end
+    end
+    if uses == 0 then
+      rec("22", "NA", "TimelineItem:AddMarker", "song is not in the current timeline")
+    else
+      rec("22", added == uses * 4 and "OK" or "NO", "TimelineItem:AddMarker",
+        "uses=" .. uses .. " (" .. table.concat(where, ",") .. ") markers added " .. added .. "/" .. (uses * 4))
+    end
+  end
 end
 
 -- Show the results in the project ------------------------------------------------------------------------------------
