@@ -18,8 +18,10 @@
 --          Media Pool (otherwise the first clip on A1 is used).
 -- Start:  A) Workspace > Scripts > BeatAnalyzer_FreeProbe
 --         B) if A shows nothing: Workspace > Console, tab "Lua", paste the whole file and press Enter.
--- Leaves behind (delete by hand): bin "BeatAnalyzer_FreeProbe", timeline "BeatAnalyzer_FreeProbe", the marker,
--- and next to the song possibly BeatAnalyzer_FreeProbe_io.txt / BeatAnalyzer_FreeProbe_export.edl.
+-- Leaves behind (delete by hand): bin "BeatAnalyzer_FreeProbe", timeline "BeatAnalyzer_FreeProbe", the purple report
+-- marker on the timeline, 4 test markers "FreeProbe 1s".."4s" on the song clip (replaced on the next run), and in
+-- %TEMP% BeatAnalyzer_FreeProbe_export.edl / _data.setting / folder BeatAnalyzer_FreeProbe (if the routes work).
+-- Run 2+ also shows whether the Fusion prefs survive between runs (test 16, "value from the run before").
 
 -- loadfile self test: when this file is loaded by itself (test 07), stop here and report back.
 if rawget(_G, "BA_FREEPROBE_SELFTEST") then
@@ -215,6 +217,16 @@ do
 end
 
 local SEP = (song_path and song_path:find("\\", 1, true)) and "\\" or "/"
+-- Temp folder for test files (never the music folder)
+local TMP = nil
+do
+  local os_ = g("os")
+  local t = os_ and os_.getenv and (os_.getenv("TEMP") or os_.getenv("TMP") or os_.getenv("TMPDIR")) or nil
+  if t and t ~= "" then
+    local sep = t:find("\\", 1, true) and "\\" or "/"
+    TMP = t:gsub("[/\\]$", "") .. sep
+  end
+end
 local song_dir = song_path and song_path:match("^(.*)[/\\][^/\\]*$") or nil
 local song_base = song_path and (song_path:match("([^/\\]+)$") or ""):gsub("%.[^%.]*$", "") or nil
 local srt_path = song_dir and (song_dir .. SEP .. song_base .. ".srt") or nil
@@ -330,15 +342,30 @@ do
   rec("11", probe_bin and "OK" or "NO", "MediaPool:AddSubFolder", probe_bin and NAME or "could not create bin")
 end
 
--- 12 Marker on the song clip (MediaPoolItem) - added and removed again --------------------------------------------
+-- 12 Markers on the song clip (MediaPoolItem) at 1, 2, 3, 4 s - they STAY so you can see them on the clip;
+--    the next run removes them first (DeleteMarkerByCustomData). Remove by hand: right click > Markers > Delete All.
 do
   if not song then
     rec("12", "NA", "MediaPoolItem:AddMarker", "no song")
   else
-    local ok, added = call(song, "AddMarker", 0, "Purple", "FreeProbe", "test marker, removed again", 1, TAG)
     local _, removed = call(song, "DeleteMarkerByCustomData", TAG)
-    rec("12", (ok and added) and "OK" or "NO", "MediaPoolItem:AddMarker",
-      "added=" .. tostring(added) .. " removed=" .. tostring(removed))
+    local fps = 30
+    do
+      local _, f = call(song, "GetClipProperty", "FPS")
+      f = tonumber(tostring(f or ""):match("[%d%.]+"))
+      if f and f > 0 then fps = f end
+    end
+    local colors = { "Blue", "Cyan", "Green", "Yellow" }
+    local added = 0
+    for i = 1, 4 do
+      local _, ok = call(song, "AddMarker", math.floor(i * fps + 0.5), colors[i], "FreeProbe " .. i .. "s",
+        "BeatAnalyzer Free probe test marker", 1, TAG)
+      if ok then added = added + 1 end
+    end
+    local _, marks = call(song, "GetMarkers")
+    rec("12", added == 4 and "OK" or "NO", "MediaPoolItem:AddMarker",
+      "added " .. added .. "/4 at 1-4 s (fps " .. fps .. "), clip markers now=" .. count(marks) ..
+      ", old removed=" .. tostring(removed))
   end
 end
 
@@ -391,22 +418,146 @@ end
 
 -- 15 Write routes without io: timeline export and Fusion prefs --------------------------------------------------------
 do
-  if timeline and song_dir and resolve.EXPORT_EDL then
-    local p = song_dir .. SEP .. NAME .. "_export.edl"
+  if timeline and TMP and resolve.EXPORT_EDL then
+    local p = TMP .. NAME .. "_export.edl"
     local _, r = call(timeline, "Export", p, resolve.EXPORT_EDL, resolve.EXPORT_NONE)
     rec("15", r and "OK" or "NO", "Timeline:Export (write file without io)", tostring(r) .. " -> " .. p)
   else
-    rec("15", "NA", "Timeline:Export", "no timeline, no song folder or no EXPORT_EDL constant")
+    rec("15", "NA", "Timeline:Export", "no timeline, no temp folder or no EXPORT_EDL constant")
   end
   if fu and fu.SetPrefs then
+    local _, before = call(fu, "GetPrefs", "Global.BeatAnalyzerFreeProbe.Stamp")
     local ok1 = call(fu, "SetPrefs", "Global.BeatAnalyzerFreeProbe.Stamp", tostring(g("os") and g("os").time and g("os").time() or "x"))
     local ok2, saved = call(fu, "SavePrefs")
     local _, back = call(fu, "GetPrefs", "Global.BeatAnalyzerFreeProbe.Stamp")
     rec("16", (ok1 and back) and "OK" or "NO", "Fusion SetPrefs/SavePrefs (mailbox like AutoSubs)",
-      "set=" .. tostring(ok1) .. " save=" .. tostring(ok2 and saved) .. " read back=" .. tostring(back))
+      "set=" .. tostring(ok1) .. " save=" .. tostring(ok2 and saved) .. " read back=" .. tostring(back) .. " value from the run before=" .. tostring(before))
   else
     rec("16", "NA", "Fusion SetPrefs", "no fusion object")
   end
+end
+
+-- 17 loadstring: run Lua text - if any route can deliver file content as a string, this executes it ---------------
+do
+  local ls = g("loadstring") or g("load")
+  if type(ls) ~= "function" then
+    rec("17", "NO", "loadstring", "missing")
+  else
+    local ok, chunk = pcall(ls, "return { beats = { 0.5, 1.0 }, bpm = 120 }")
+    local ok2, t = false, nil
+    if ok and type(chunk) == "function" then ok2, t = pcall(chunk) end
+    rec("17", (ok2 and type(t) == "table" and t.bpm == 120) and "OK" or "NO", "loadstring",
+      ok2 and "data table read from text" or tostring(chunk))
+  end
+end
+
+-- 18 Inventory of the bmd library (Fusion helpers) - shows which file helpers Free still has ------------------------
+local bmd_has = {}
+do
+  if type(bmd) ~= "table" then
+    rec("18", "NO", "bmd inventory", "bmd is " .. type(bmd))
+  else
+    local names = {}
+    for k, v in pairs(bmd) do
+      names[#names + 1] = tostring(k)
+      bmd_has[tostring(k)] = v
+    end
+    table.sort(names)
+    rec("18", "INFO", "bmd inventory (" .. #names .. ")", table.concat(names, ","))
+    -- the full list can be longer than one result line
+    out("bmd full: " .. table.concat(names, ","))
+    BA_FREEPROBE_BMD_FULL = table.concat(names, ",")
+  end
+end
+
+-- 19 bmd file helpers in the temp folder: fileexists, readdir, createdir, writefile/readfile, writestring/readstring --
+do
+  local parts = {}
+  local any = false
+  local function try(label, fn)
+    local ok, r = pcall(fn)
+    local v
+    if not ok then v = "err" elseif type(r) == "table" then v = "table(" .. count(r) .. ")" else v = tostring(r) end
+    parts[#parts + 1] = label .. "=" .. v
+    return ok, r
+  end
+  if bmd_has.fileexists and song_path then
+    local _, r = try("fileexists(song)", function() return bmd.fileexists(song_path) end)
+    if r then any = true end
+  end
+  if bmd_has.direxists and TMP then try("direxists(temp)", function() return bmd.direxists(TMP) end) end
+  if bmd_has.readdir and song_dir then
+    local _, r = try("readdir(songdir)", function() return bmd.readdir(song_dir .. SEP .. "*") end)
+    if type(r) == "table" and count(r) > 0 then any = true end
+  end
+  if TMP then
+    local dir = TMP .. NAME
+    if bmd_has.createdir then try("createdir", function() return bmd.createdir(dir) end) end
+    local f = TMP .. NAME .. "_data.setting"
+    if bmd_has.writefile then
+      try("writefile", function() return bmd.writefile(f, { bpm = 120, beats = { 0.5, 1.0 } }) end)
+    end
+    if bmd_has.readfile then
+      local _, r = try("readfile", function() return bmd.readfile(f) end)
+      if type(r) == "table" and tonumber(r.bpm) == 120 then any = true; parts[#parts + 1] = "readfile bpm=120" end
+    end
+  end
+  if bmd_has.writestring and bmd_has.readstring then
+    local _, s = try("writestring", function() return bmd.writestring({ bpm = 120 }) end)
+    if type(s) == "string" then
+      local _, r = try("readstring", function() return bmd.readstring(s) end)
+      if type(r) == "table" and tonumber(r.bpm) == 120 then any = true end
+    end
+  end
+  if #parts == 0 then
+    rec("19", "NO", "bmd file helpers", "none of fileexists/readdir/readfile/writefile/readstring present")
+  else
+    rec("19", any and "OK" or "NO", "bmd file helpers", table.concat(parts, " "))
+  end
+end
+
+-- 20 Read the subtitles that are already in the current timeline (SRT as data channel: text + time per item) ---------
+do
+  if not timeline then
+    rec("20", "NA", "Read subtitle items", "no timeline")
+  else
+    local _, nt = call(timeline, "GetTrackCount", "subtitle")
+    nt = tonumber(nt) or 0
+    if nt == 0 then
+      rec("20", "NA", "Read subtitle items", "no subtitle track in timeline")
+    else
+      local parts, total, named = {}, 0, 0
+      for t = 1, nt do
+        local _, items = call(timeline, "GetItemListInTrack", "subtitle", t)
+        local list = {}
+        for _, it in pairs(type(items) == "table" and items or {}) do list[#list + 1] = it end
+        total = total + #list
+        for i = 1, math.min(3, #list) do
+          local it = list[i]
+          local _, nm = call(it, "GetName")
+          local _, st = call(it, "GetStart")
+          local _, en = call(it, "GetEnd")
+          if nm and tostring(nm) ~= "" then named = named + 1 end
+          parts[#parts + 1] = string.format("ST%d#%d [%s-%s] '%s'", t, i, tostring(st), tostring(en), tostring(nm))
+        end
+      end
+      rec("20", named > 0 and "OK" or "NO", "Read subtitle items",
+        nt .. " track(s), " .. total .. " items | " .. table.concat(parts, " | "))
+    end
+  end
+end
+
+-- 21 Environment: where an external helper could put files -------------------------------------------------------------
+do
+  local os_ = g("os")
+  local parts = {}
+  for _, k in ipairs({ "TEMP", "APPDATA", "LOCALAPPDATA", "USERPROFILE", "HOME" }) do
+    local ok, v = pcall(function() return os_ and os_.getenv and os_.getenv(k) end)
+    if ok and v then parts[#parts + 1] = k .. "=" .. v end
+  end
+  local okm, mp_ = pcall(function() return fu and fu:MapPath("Temp:") end)
+  parts[#parts + 1] = "MapPath(Temp:)=" .. tostring(okm and mp_)
+  rec("21", "INFO", "Paths", table.concat(parts, " "))
 end
 
 -- Show the results in the project ------------------------------------------------------------------------------------
@@ -431,7 +582,9 @@ end
 if timeline then
   local _, start = call(timeline, "GetStartFrame")
   call(timeline, "DeleteMarkerByCustomData", TAG)
-  local _, ok = call(timeline, "AddMarker", 0, "Purple", "FreeProbe", report, 1, TAG)
+  local note = report
+  if BA_FREEPROBE_BMD_FULL then note = note .. "\n\nbmd: " .. BA_FREEPROBE_BMD_FULL end
+  local _, ok = call(timeline, "AddMarker", 0, "Purple", "FreeProbe", note, 1, TAG)
   out("report marker on the timeline: " .. tostring(ok) .. " (start frame " .. tostring(start) .. ")")
 end
 
