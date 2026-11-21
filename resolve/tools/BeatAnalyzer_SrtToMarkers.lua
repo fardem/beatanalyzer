@@ -1,13 +1,15 @@
--- BeatAnalyzer_SrtToMarkers.lua - PROTOTYPE for DaVinci Resolve FREE (21.1+): turns the beat SRT next to a song into
+-- BeatAnalyzer_SrtToMarkers.lua - PROTOTYPE for DaVinci Resolve FREE (21.1+): turns the beat SRT of a song (in the media pool) into
 -- markers on the song clip in the media pool AND on every use of the song in the open timeline. No window, no file
--- access (Free has neither): Resolve imports the SRT itself, the script reads the subtitles from a temporary
+-- access (Free has neither): the user imports the SRT into the media pool, the script reads the subtitles from a temporary
 -- timeline, deletes that timeline again and takes the beat time from the subtitle TEXT ("... | 1.000s"), because
 -- Resolve shifts subtitle positions when an SRT does not start at 0.
 --
--- Use:   select the song in the media pool (else the first clip on A1 of the open timeline is used);
---        <song>.srt lies next to the audio file (song.flac -> song.srt). If an SRT clip of that name is already in
---        the media pool (any bin) it is used, else the SRT is imported into the bin "BeatAnalyzer".
---        Workspace > Scripts > BeatAnalyzer_SrtToMarkers
+-- Rule:  the beat SRT is imported into the MEDIA POOL by the user (any bin) and has the name of the audio clip
+--        without extension: "04. My Humps.flac" <-> "04. My Humps" (from 04. My Humps.srt). Exactly ONE SRT clip per
+--        name: with two or more the song is skipped and both paths are reported - delete the old one.
+--        Files on disk are not looked at.
+-- Use:   nothing selected = every audio clip in the media pool that has its SRT; selected audio clip(s) = only
+--        those; a selected SRT clip = its audio clip(s). Workspace > Scripts > BeatAnalyzer_SrtToMarkers
 -- Result: markers "Takt x - Beat y" on the clip and the timeline clips (beat 1 red, others blue), old markers of
 --        this script and of the FreeProbe are removed first, markers set by hand stay.
 --        Report: purple timeline marker "BeatAnalyzer Free" at the timeline start, plus "[ba-free]" Console lines.
@@ -16,7 +18,6 @@
 
 local TAG = "beatanalyzer.free.v1"
 local OLD_TAGS = { "beatanalyzer.freeprobe" }
-local BIN = "BeatAnalyzer"
 local TMP_TL = "BeatAnalyzer_tmp_srt"
 local report = {}
 
@@ -69,101 +70,68 @@ local mp = call(project, "GetMediaPool")
 local timeline = call(project, "GetCurrentTimeline")
 if not mp then out("No project open."); return end
 
--- ── Song: selected audio clip, else first clip on A1 ────────────────────────────────────────────────────────────
-local function is_audio(clip)
-  local typ = tostring(call(clip, "GetClipProperty", "Type") or ""):lower()
-  local path = tostring(call(clip, "GetClipProperty", "File Path") or "")
-  return path ~= "" and not typ:find("subtitle") and not typ:find("timeline") and not path:lower():match("%.srt$")
+-- ── Collect the media pool: audio clips and SRT clips, all bins ─────────────────────────────────────────────────
+local function ctype(c) return tostring(call(c, "GetClipProperty", "Type") or ""):lower() end
+local function cpath(c) return tostring(call(c, "GetClipProperty", "File Path") or "") end
+-- Clip name without the extension of its file: "04. My Humps.flac" -> "04. My Humps"; "04. My Humps" stays
+-- (names may contain dots, so only the real file extension is removed).
+local function base_of(c)
+  local n = tostring(call(c, "GetName") or "")
+  local ext = cpath(c):match("(%.[^%.\\/]+)$")
+  if ext and #n > #ext and n:lower():sub(-#ext) == ext:lower() then n = n:sub(1, -#ext - 1) end
+  return n
+end
+local function is_srt(c) return ctype(c):find("subtitle") ~= nil or cpath(c):lower():match("%.srt$") ~= nil end
+local function is_audio(c)
+  local t = ctype(c)
+  return cpath(c) ~= "" and not is_srt(c) and not t:find("timeline") and (t:find("audio") ~= nil or t == "")
 end
 
-local song
-for _, c in ipairs(list(call(mp, "GetSelectedClips"))) do
-  if is_audio(c) then song = c; break end
-end
-if not song and timeline then
-  local it = list(call(timeline, "GetItemListInTrack", "audio", 1))[1]
-  local c = call(it, "GetMediaPoolItem")
-  if c and is_audio(c) then song = c end
-end
-if not song then
-  out("No song: select the audio clip in the media pool (not the SRT) or put it on A1 of the open timeline.")
-  finish(timeline); return
-end
-local song_path = tostring(call(song, "GetClipProperty", "File Path"))
-local song_dir = song_path:match("^(.*)[/\\][^/\\]*$") or ""
-local SEP = song_path:find("\\", 1, true) and "\\" or "/"
-local song_base = (song_path:match("([^/\\]+)$") or ""):gsub("%.[^%.]*$", "")
-local srt_path = song_dir .. SEP .. song_base .. ".srt"
-out("Song: " .. song_path)
-
--- ── SRT clip: already in the media pool (same file preferred, else same name, newest), else import ─────────────────
-local all_clips, bins = {}, {}
+local all_clips = {}
 local function walk(folder, depth)
   if not folder or depth > 20 then return end
-  bins[#bins + 1] = folder
   for _, c in ipairs(list(call(folder, "GetClipList"))) do all_clips[#all_clips + 1] = c end
   for _, s in ipairs(list(call(folder, "GetSubFolderList"))) do walk(s, depth + 1) end
 end
-local root = call(mp, "GetRootFolder")
-walk(root, 0)
+walk(call(mp, "GetRootFolder"), 0)
 
-local srt_clip, how
-do
-  local by_name = {}
-  for _, c in ipairs(all_clips) do
-    local typ = tostring(call(c, "GetClipProperty", "Type") or ""):lower()
-    local p = tostring(call(c, "GetClipProperty", "File Path") or "")
-    if typ:find("subtitle") or p:lower():match("%.srt$") then
-      if p:lower() == srt_path:lower() then srt_clip, how = c, "media pool (same file)"; break end
-      local base = (p:match("([^/\\]+)$") or ""):gsub("%.[^%.]*$", "")
-      if base:lower() == song_base:lower() then by_name[#by_name + 1] = c end
-    end
-  end
-  if not srt_clip then
-    local okx, exists = pcall(function()
-      local bmd = rawget(_G, "bmd"); return bmd and bmd.fileexists and bmd.fileexists(srt_path)
-    end)
-    if okx and exists then
-      local bin
-      for _, s in ipairs(list(call(root, "GetSubFolderList"))) do
-        if call(s, "GetName") == BIN then bin = s end
-      end
-      bin = bin or call(mp, "AddSubFolder", root, BIN)
-      local prev = call(mp, "GetCurrentFolder")
-      if bin then call(mp, "SetCurrentFolder", bin) end
-      srt_clip = list(call(mp, "ImportMedia", { srt_path }))[1]
-      if prev then call(mp, "SetCurrentFolder", prev) end
-      how = srt_clip and ("imported into bin " .. BIN) or nil
-    end
-  end
-  if not srt_clip and #by_name > 0 then
-    -- newest by "Date Added" is not sortable reliably as text; the last one found is usually the newest import
-    srt_clip, how = by_name[#by_name], "media pool (same name, file elsewhere)"
+local srts, audios = {}, {}
+for _, c in ipairs(all_clips) do
+  if is_srt(c) then
+    local k = base_of(c):lower()
+    srts[k] = srts[k] or {}
+    table.insert(srts[k], c)
+  elseif is_audio(c) then
+    audios[#audios + 1] = c
   end
 end
-if not srt_clip then
-  out("No SRT: neither " .. srt_path .. " nor an SRT clip named '" .. song_base .. "' in the media pool.")
+
+-- targets: selection or everything that has an SRT
+local targets, selected = {}, list(call(mp, "GetSelectedClips"))
+local function key_of(c) return base_of(c):lower() end
+if #selected > 0 then
+  local want = {}
+  for _, c in ipairs(selected) do want[key_of(c)] = true end
+  for _, a in ipairs(audios) do if want[key_of(a)] then targets[#targets + 1] = a end end
+  out(string.format("Selection: %d clip(s) -> %d audio clip(s)", #selected, #targets))
+else
+  for _, a in ipairs(audios) do if srts[key_of(a)] then targets[#targets + 1] = a end end
+  out(string.format("No selection: %d audio clip(s) with an SRT in the media pool", #targets))
+end
+if #targets == 0 then
+  out("Nothing to do: import <song>.srt into the media pool (name = audio clip name without extension).")
   finish(timeline); return
 end
-out("SRT: " .. tostring(call(srt_clip, "GetClipProperty", "File Path")) .. " - " .. how)
 
--- ── Read the subtitles in a temporary timeline ──────────────────────────────────────────────────────────────────────
-local beats, skipped, tmp_deleted = {}, 0, "-"
-do
-  -- remove a leftover of an earlier run
-  for _, c in ipairs(all_clips) do
-    if call(c, "GetName") == TMP_TL and tostring(call(c, "GetClipProperty", "Type") or ""):lower():find("timeline") then
-      local n = call(project, "GetTimelineCount") or 0
-      for i = 1, n do
-        local t = call(project, "GetTimelineByIndex", i)
-        if t and call(t, "GetName") == TMP_TL then call(mp, "DeleteTimelines", { t }); break end
-      end
-    end
+-- ── Read one SRT clip in a temporary timeline ───────────────────────────────────────────────────────────────────────
+local function read_srt(srt_clip)
+  -- leftover of an earlier run
+  for i = 1, tonumber(call(project, "GetTimelineCount")) or 0 do
+    local t = call(project, "GetTimelineByIndex", i)
+    if t and call(t, "GetName") == TMP_TL then call(mp, "DeleteTimelines", { t }); break end
   end
-  local prev_folder = call(mp, "GetCurrentFolder")
   local tmp = call(mp, "CreateEmptyTimeline", TMP_TL)
-  if prev_folder then call(mp, "SetCurrentFolder", prev_folder) end
-  if not tmp then out("Could not create the temporary timeline."); finish(timeline); return end
+  if not tmp then return nil, "could not create the temporary timeline" end
   call(project, "SetCurrentTimeline", tmp)
   call(tmp, "AddTrack", "subtitle")
   local nt = tonumber(call(tmp, "GetTrackCount", "subtitle")) or 1
@@ -171,6 +139,7 @@ do
   call(mp, "AppendToTimeline", { srt_clip })
   local tl_fps = num(call(tmp, "GetSetting", "timelineFrameRate")) or 30
   local tl_start = tonumber(call(tmp, "GetStartFrame")) or 0
+  local beats, skipped = {}, 0
   for t = 1, nt do
     for _, it in ipairs(list(call(tmp, "GetItemListInTrack", "subtitle", t))) do
       local text = tostring(call(it, "GetName") or "")
@@ -189,59 +158,77 @@ do
     end
   end
   if timeline then call(project, "SetCurrentTimeline", timeline) end
-  local ok = call(mp, "DeleteTimelines", { tmp })
-  tmp_deleted = tostring(ok)
+  local deleted = call(mp, "DeleteTimelines", { tmp })
+  table.sort(beats, function(a, b) return a.sec < b.sec end)
+  return beats, string.format("%d beats, %d skipped, temp timeline deleted=%s", #beats, skipped, tostring(deleted))
 end
-table.sort(beats, function(a, b) return a.sec < b.sec end)
-out(string.format("Subtitles read: %d beats, %d skipped, temporary timeline deleted=%s", #beats, skipped, tmp_deleted))
-if #beats == 0 then finish(timeline); return end
 
 local function color(b) return b.beat == 1 and "Red" or "Blue" end
 local function name(b)
   return b.bar and string.format("Takt %d - Beat %d", b.bar, b.beat) or string.format("Beat %.3fs", b.sec)
 end
-
--- ── Markers on the clip in the media pool ───────────────────────────────────────────────────────────────────────
-do
-  call(song, "DeleteMarkerByCustomData", TAG)
-  for _, t in ipairs(OLD_TAGS) do call(song, "DeleteMarkerByCustomData", t) end
-  local fps = num(call(song, "GetClipProperty", "FPS")) or num(call(timeline, "GetSetting", "timelineFrameRate")) or 30
-  local n = 0
-  for _, b in ipairs(beats) do
-    if call(song, "AddMarker", math.floor(b.sec * fps + 0.5), color(b), name(b), b.text, 1, TAG) then n = n + 1 end
-  end
-  out(string.format("Media pool clip: %d/%d markers (fps %s)", n, #beats, tostring(fps)))
+local function clear(obj)
+  call(obj, "DeleteMarkerByCustomData", TAG)
+  for _, t in ipairs(OLD_TAGS) do call(obj, "DeleteMarkerByCustomData", t) end
 end
 
--- ── Markers on every use of the song in the open timeline ───────────────────────────────────────────────────────────
-if timeline then
-  local fps = num(call(timeline, "GetSetting", "timelineFrameRate")) or 30
-  local id = call(song, "GetMediaId")
-  local uses, total = {}, 0
-  for t = 1, tonumber(call(timeline, "GetTrackCount", "audio")) or 0 do
-    for _, it in ipairs(list(call(timeline, "GetItemListInTrack", "audio", t))) do
-      local c = call(it, "GetMediaPoolItem")
-      if c and call(c, "GetMediaId") == id then
-        call(it, "DeleteMarkerByCustomData", TAG)
-        for _, tg in ipairs(OLD_TAGS) do call(it, "DeleteMarkerByCustomData", tg) end
-        -- frames count from the start of the source file; only the visible part of a trimmed clip gets markers
-        local left = tonumber(call(it, "GetLeftOffset")) or 0
-        local dur = tonumber(call(it, "GetDuration"))
-        local n = 0
-        for _, b in ipairs(beats) do
-          local f = math.floor(b.sec * fps + 0.5)
-          if f >= left and (not dur or f < left + dur) then
-            if call(it, "AddMarker", f, color(b), name(b), b.text, 1, TAG) then n = n + 1 end
+-- ── Per song: SRT -> markers on the media pool clip and its uses in the open timeline ──────────────────────────────
+local tl_fps = timeline and num(call(timeline, "GetSetting", "timelineFrameRate")) or 30
+local done, skipped_songs = 0, 0
+for _, song in ipairs(targets) do
+  local sname = tostring(call(song, "GetName"))
+  local found = srts[key_of(song)] or {}
+  if #found == 0 then
+    out(sname .. ": no SRT clip '" .. base_of(song) .. "' in the media pool - skipped")
+    skipped_songs = skipped_songs + 1
+  elseif #found > 1 then
+    out(sname .. ": " .. #found .. " SRT clips with this name - delete the old one(s), skipped:")
+    for _, c in ipairs(found) do out("   " .. cpath(c)) end
+    skipped_songs = skipped_songs + 1
+  else
+    local beats, info = read_srt(found[1])
+    out(sname .. ": SRT " .. cpath(found[1]) .. " - " .. tostring(info))
+    if beats and #beats > 0 then
+      clear(song)
+      local fps = num(call(song, "GetClipProperty", "FPS")) or tl_fps
+      local n = 0
+      for _, b in ipairs(beats) do
+        if call(song, "AddMarker", math.floor(b.sec * fps + 0.5), color(b), name(b), b.text, 1, TAG) then n = n + 1 end
+      end
+      local msg = string.format("   media pool clip: %d/%d markers", n, #beats)
+      if timeline then
+        local id = call(song, "GetMediaId")
+        local uses, total = {}, 0
+        for t = 1, tonumber(call(timeline, "GetTrackCount", "audio")) or 0 do
+          for _, it in ipairs(list(call(timeline, "GetItemListInTrack", "audio", t))) do
+            local c = call(it, "GetMediaPoolItem")
+            if c and call(c, "GetMediaId") == id then
+              clear(it)
+              -- frames count from the start of the source file; a trimmed clip gets only its visible part
+              local left = tonumber(call(it, "GetLeftOffset")) or 0
+              local dur = tonumber(call(it, "GetDuration"))
+              local k = 0
+              for _, b in ipairs(beats) do
+                local f = math.floor(b.sec * tl_fps + 0.5)
+                if f >= left and (not dur or f < left + dur) then
+                  if call(it, "AddMarker", f, color(b), name(b), b.text, 1, TAG) then k = k + 1 end
+                end
+              end
+              uses[#uses + 1] = "A" .. t .. ":" .. k
+              total = total + k
+            end
           end
         end
-        uses[#uses + 1] = "A" .. t .. ":" .. n
-        total = total + n
+        msg = msg .. string.format(" | timeline: %d markers on %d clip(s)%s", total, #uses,
+          #uses > 0 and (" (" .. table.concat(uses, ", ") .. ")") or "")
       end
+      out(msg)
+      done = done + 1
+    else
+      skipped_songs = skipped_songs + 1
     end
   end
-  out(string.format("Timeline '%s': %d markers on %d clip(s) %s", tostring(call(timeline, "GetName")), total, #uses,
-    #uses > 0 and ("(" .. table.concat(uses, ", ") .. ")") or "- song not in this timeline"))
 end
 
+out(string.format("done: %d song(s) with markers, %d skipped", done, skipped_songs))
 finish(timeline)
-out("done")
