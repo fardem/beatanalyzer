@@ -374,17 +374,19 @@ local srt_item
 do
   if not srt_path then
     rec("13", "NA", "ImportMedia(SRT)", "no song, so no SRT path")
-  elseif srt_seen == false then
-    rec("13", "NA", "ImportMedia(SRT)", "not found next to the song: " .. srt_path)
   else
+    -- GetFileList lists only media files (no .srt), so check with bmd.fileexists; import is tried in any case
+    local okx, exists = pcall(function() return bmd and bmd.fileexists and bmd.fileexists(srt_path) end)
+    exists = okx and exists or false
     local _, prev = call(mp, "GetCurrentFolder")
     if probe_bin then call(mp, "SetCurrentFolder", probe_bin) end
     local ok, items = call(mp, "ImportMedia", { srt_path })
     if prev then call(mp, "SetCurrentFolder", prev) end
     srt_item = ok and first(items) or nil
     local _, n = call(srt_item, "GetName")
-    rec("13", srt_item and "OK" or "NO", "ImportMedia(SRT)", srt_item and ("imported " .. tostring(n)) or
-      ("failed: " .. tostring(items) .. " " .. srt_path))
+    rec("13", srt_item and "OK" or (exists and "NO" or "NA"), "ImportMedia(SRT)",
+      (srt_item and ("imported " .. tostring(n)) or ("failed: " .. tostring(items))) ..
+      " | fileexists=" .. tostring(exists) .. " " .. srt_path)
   end
 end
 
